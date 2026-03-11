@@ -12,10 +12,15 @@ Através do aplicativo móvel, os usuários podem visualizar startups, consultar
 ## Integrantes
 
 **Caio Ferreira Polo** - RA: 25002823
+
 **Giovanni Bozelli** - RA: 25006837
+
 **Gustavo Alves de Siqueira Costa** - RA: 25001650
+
 **Henrique Leite de Camargo** - RA: 25005997
+
 **Rafael Mendes Valente** - RA: 25002875
+
 ---
 
 ## Tecnologias e Ambiente
