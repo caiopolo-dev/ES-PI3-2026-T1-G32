@@ -1,4 +1,4 @@
-// Autor: Henrique [25005997]
+// Autor: Henrique Leite de Camargo [25005997]
 // Tela de cadastro - Telefone
 
 import 'package:flutter/material.dart';
