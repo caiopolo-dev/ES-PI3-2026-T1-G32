@@ -18,27 +18,33 @@ class InitialPage extends StatelessWidget {
               Center(
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     Image.asset(
                       'assets/MesclaLogoPequena.png',
                       width: 50,
                     ),
                     const SizedBox(width: 8),
-                    ShaderMask(
-                      shaderCallback: (bounds) => const LinearGradient(
-                        colors: [
-                          Color(0xFF000000),
-                          Color(0xFF013593),
-                          Color(0xFF080B11),
-                        ],
-                        stops: [0.0, 0.5, 1.0],
-                      ).createShader(bounds),
-                      child: const Text(
-                        'MesclaInvest',
-                        style: TextStyle(
-                          fontSize: 45,
-                          color: Colors.white,
-                          fontFamily: 'JosefinSans',
+
+                    
+                    Transform.translate(
+                      offset: const Offset(0, 3),
+                      child: ShaderMask(
+                        shaderCallback: (bounds) => const LinearGradient(
+                          colors: [
+                            Color(0xFF000000),
+                            Color(0xFF013593),
+                            Color(0xFF080B11),
+                          ],
+                          stops: [0.0, 0.5, 1.0],
+                        ).createShader(bounds),
+                        child: const Text(
+                          'MesclaInvest',
+                          style: TextStyle(
+                            fontSize: 45,
+                            color: Colors.white,
+                            fontFamily: 'JosefinSans',
+                          ),
                         ),
                       ),
                     ),
@@ -100,8 +106,7 @@ class InitialPage extends StatelessWidget {
                       style: TextStyle(
                         color: Colors.black,
                         fontFamily: 'JosefinSans',
-                        fontSize: 18,
-                        
+                        fontSize: 20,
                       ),
                     ),
                   ),
@@ -110,7 +115,7 @@ class InitialPage extends StatelessWidget {
 
               const SizedBox(height: 16),
 
-              
+             
               Center(
                 child: Container(
                   width: 320,
@@ -150,8 +155,7 @@ class InitialPage extends StatelessWidget {
                       style: TextStyle(
                         color: Colors.black,
                         fontFamily: 'JosefinSans',
-                        fontSize: 18,
-                      
+                        fontSize: 20,
                       ),
                     ),
                   ),
