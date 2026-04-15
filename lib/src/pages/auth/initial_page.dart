@@ -60,10 +60,10 @@ class InitialPage extends StatelessWidget {
 
               const Spacer(),
 
-              // BOTÃO 1
+              
               Center(
                 child: Container(
-                  width: 320,
+                  width: 300,
                   padding: const EdgeInsets.all(1.2),
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(12),

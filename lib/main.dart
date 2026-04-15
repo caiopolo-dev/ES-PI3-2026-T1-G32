@@ -17,7 +17,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      home: const CadastroTelefonePage(),
+      home: const InitialPage(),
     );
   }
 }
