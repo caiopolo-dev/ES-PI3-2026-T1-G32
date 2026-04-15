@@ -30,7 +30,6 @@ class _CadastroTelefonePageState extends State<CadastroTelefonePage> {
             children: [
               const SizedBox(height: 60),
 
-              // Logo
               Center(
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
@@ -68,7 +67,6 @@ class _CadastroTelefonePageState extends State<CadastroTelefonePage> {
 
               const SizedBox(height: 40),
 
-              // Título
               const Text(
                 'Cadastro passo 3 - 4',
                 style: TextStyle(
@@ -81,7 +79,6 @@ class _CadastroTelefonePageState extends State<CadastroTelefonePage> {
 
               const SizedBox(height: 32),
 
-              // Campo de telefone centralizado
               Center(
                 child: SizedBox(
                   width: 320,
@@ -113,7 +110,6 @@ class _CadastroTelefonePageState extends State<CadastroTelefonePage> {
 
               const Spacer(),
 
-              // Botão Continuar
               Center(
                 child: Container(
                   width: 320,
@@ -140,7 +136,6 @@ class _CadastroTelefonePageState extends State<CadastroTelefonePage> {
                   ),
                   child: ElevatedButton(
                     onPressed: () {
-                      // TODO: navegar para próximo passo
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFFE3E3E3),
@@ -164,7 +159,6 @@ class _CadastroTelefonePageState extends State<CadastroTelefonePage> {
 
               const SizedBox(height: 16),
 
-              // Botão Voltar
               Center(
                 child: Container(
                   width: 160,
