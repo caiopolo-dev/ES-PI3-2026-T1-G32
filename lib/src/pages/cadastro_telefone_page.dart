@@ -1,5 +1,5 @@
 // Autor: Henrique [25005997]
-// Tela de cadastro - Telefone nova versão
+// Tela de cadastro - Telefone
 
 import 'package:flutter/material.dart';
 
