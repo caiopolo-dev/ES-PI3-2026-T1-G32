@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 //-------------------------
 //pages
-import 'package:mescla_invest/src/pages/auth/initial_page.dart';
+import 'package:mescla_invest/src/pages/auth/full_name_page.dart';
 //-------------------------
 
 void main() {
@@ -15,7 +15,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      home: const InitialPage(),
+      home: const FullNamePage(),
     );
   }
 }
