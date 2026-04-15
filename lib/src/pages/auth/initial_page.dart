@@ -63,7 +63,7 @@ class InitialPage extends StatelessWidget {
               
               Center(
                 child: Container(
-                  width: 300,
+                  width: 320,
                   padding: const EdgeInsets.all(1.2),
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(12),
@@ -110,7 +110,7 @@ class InitialPage extends StatelessWidget {
 
               const SizedBox(height: 16),
 
-              // BOTÃO 2
+              
               Center(
                 child: Container(
                   width: 320,
