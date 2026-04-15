@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'src/pages/cadastro_telefone_page.dart';
+
 
 void main() {
   runApp(const MyApp());
@@ -30,7 +32,7 @@ class MyApp extends StatelessWidget {
         // tested with just a hot reload.
         colorScheme: .fromSeed(seedColor: Colors.deepPurple),
       ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+      home: const CadastroTelefonePage(),
     );
   }
 }
