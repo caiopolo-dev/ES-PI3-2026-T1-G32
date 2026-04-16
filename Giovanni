@@ -1,0 +1,117 @@
+// Autor: Giovanni [25006837]
+// Autor: Giovanni Bozelli [25006837]
+// Tela de cadastro - RG
+import 'package:flutter/material.dart'
+import 'package:flutter/services.dart';
+void main() {
+  runApp(const Aplicativo());
+}
+
+class Aplicativo extends StatelessWidget {
+  const Aplicativo({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Cadastro de Usuário',
+      theme: ThemeData(primarySwatch: Colors.blue),
+      home: const TelaCadastro(),
+    );
+  }
+}
+
+class TelaCadastro extends StatefulWidget {
+  const TelaCadastro({super.key});
+
+  @override
+  State<TelaCadastro> createState() => _TelaCadastroEstado();
+}
+
+class _TelaCadastroEstado extends State<TelaCadastro> {
+  final _chaveFormulario = GlobalKey<FormState>();
+
+  final TextEditingController controladorNome = TextEditingController();
+  final TextEditingController controladorRG = TextEditingController();
+
+  void cadastrar() {
+    if (_chaveFormulario.currentState!.validate()) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Cadastro realizado com sucesso!')),
+      );
+    }
+  }
+
+  String? validarNome(String? valor) {
+    if (valor == null || valor.isEmpty) {
+      return 'Digite seu nome';
+    }
+    return null;
+  }
+
+  String? validarRG(String? valor) {
+    if (valor == null || valor.isEmpty) {
+      return 'Digite o RG';
+    }
+
+    if (valor.length < 9) {
+      return 'RG inválido';
+    }
+
+    return null;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Tela de Cadastro'),
+        centerTitle: true,
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Form(
+          key: _chaveFormulario,
+          child: Column(
+            children: [
+              TextFormField(
+                controller: controladorNome,
+                decoration: const InputDecoration(
+                  labelText: 'Nome',
+                  border: OutlineInputBorder(),
+                ),
+                validator: validarNome,
+              ),
+
+              const SizedBox(height: 16),
+
+              TextFormField(
+                controller: controladorRG,
+                keyboardType: TextInputType.number,
+                inputFormatters: [
+                  FilteringTextInputFormatter.digitsOnly,
+                  LengthLimitingTextInputFormatter(9),
+                ],
+                decoration: const InputDecoration(
+                  labelText: 'RG',
+                  hintText: 'Apenas números',
+                  border: OutlineInputBorder(),
+                ),
+                validator: validarRG,
+              ),
+
+              const SizedBox(height: 24),
+
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: cadastrar,
+                  child: const Text('Cadastrar'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
