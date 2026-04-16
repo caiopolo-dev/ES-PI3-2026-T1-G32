@@ -1,3 +1,7 @@
+// Autor: Gustavo Costa
+// Data: 15/04/2026
+// Descrição: Tela de cadastro nome completo(Passo 2)
+
 import 'package:flutter/material.dart';
 
 class FullNamePage extends StatelessWidget {
