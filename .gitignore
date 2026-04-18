@@ -49,3 +49,7 @@ app.*.map.json
 /linux/
 /windows/
 /macos/
+
+# Arquivos que contem chaves de acesso
+android/app/google-services.json
+lib/firebase_options.dart
