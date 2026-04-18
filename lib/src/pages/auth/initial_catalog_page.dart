@@ -1,6 +1,6 @@
 // Autor: Gustavo Costa
 // Data: 17/04/2026
-// Descrição: Tela de startups integrada com Firebase
+// Descrição: Tela do catalogo das startups
 
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -93,6 +93,11 @@ class _InitialCatalogPageState extends State<InitialCatalogPage> {
                   stream: FirebaseFirestore.instance.collection('startups').snapshots(),
                   builder: (context, snapshot) {
 
+                    if (snapshot.hasError) {
+                      return Center(
+                        child: Text("Erro: ${snapshot.error}"),
+                      );
+                    }
                     if (snapshot.connectionState == ConnectionState.waiting) {
                       return const Center(child: CircularProgressIndicator());
                     }
@@ -108,9 +113,13 @@ class _InitialCatalogPageState extends State<InitialCatalogPage> {
                       itemBuilder: (context, index) {
                         final data = startups[index].data() as Map<String, dynamic>;
 
+                        print('Documento: $data');
+                        print('price tipo: ${data['price'].runtimeType}');
+                        print('variation tipo: ${data['variation'].runtimeType}');
+
                         final name = data['name'] ?? '';
-                        final price = (data['price'] ?? 0).toDouble();
-                        final variation = (data['variation'] ?? 0).toDouble();
+                        final price = (data['price'] as num?)?.toDouble() ?? 0.0;
+                        final variation = (data['variation'] as num?)?.toDouble() ?? 0.0;
 
                         return StartupCard(
                           name: name,
