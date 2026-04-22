@@ -3,6 +3,7 @@
 // Descrição: Tela de cadastro multi-etapas com validação
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../services/auth_service.dart';
 
 class RegisterPage extends StatefulWidget {
@@ -31,8 +32,13 @@ class _RegisterPageState extends State<RegisterPage> {
 
     switch (currentStep) {
       case 0:
-        if (rgController.text.isEmpty) {
+        String rg = rgController.text.trim();
+        if (rg.isEmpty) {
           errorText = 'RG é obrigatório';
+          return false;
+        }
+        if (!RegExp(r'^[0-9]{7,9}$').hasMatch(rg)) {
+          errorText = 'RG deve ter entre 7 e 9 dígitos';
           return false;
         }
         return true;
@@ -86,7 +92,12 @@ class _RegisterPageState extends State<RegisterPage> {
   Widget buildStepContent() {
     switch (currentStep) {
       case 0:
-        return buildInput(rgController, 'Digite seu RG');
+        return buildInput(
+          rgController,
+          'Digite seu RG',
+          maxLength: 9,
+          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+        );
       case 1:
         return buildInput(emailController, 'Digite seu email');
       case 2:
@@ -106,16 +117,24 @@ class _RegisterPageState extends State<RegisterPage> {
     }
   }
 
-  Widget buildInput(TextEditingController controller, String hint,
-      {bool obscure = false}) {
+  Widget buildInput(
+    TextEditingController controller,
+    String hint, {
+    bool obscure = false,
+    int? maxLength,
+    List<TextInputFormatter>? inputFormatters,
+  }) {
     return TextField(
       controller: controller,
       obscureText: obscure,
+      maxLength: maxLength,
+      inputFormatters: inputFormatters,
       textAlign: TextAlign.center,
       style: const TextStyle(fontFamily: 'JosefinSans', fontSize: 18),
       decoration: InputDecoration(
         hintText: hint,
         hintStyle: const TextStyle(color: Colors.black26),
+        counterText: '',
         enabledBorder: const UnderlineInputBorder(
           borderSide: BorderSide(color: Colors.black26, width: 1),
         ),
