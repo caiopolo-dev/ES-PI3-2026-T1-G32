@@ -1,84 +1,63 @@
-// Autor: Gustavo Costa
-// Data: 17/04/2026
-// Descrição: Tela de login (RG e senha)
+// Caio Ferreira Polo 25002823
+
 
 import 'package:flutter/material.dart';
-import '../services/auth_service.dart';
-import 'auth/initial_catalog_page.dart';
-import 'password_recovery_page.dart';
 
-class LoginPage extends StatefulWidget {
-  const LoginPage({super.key});
+class PasswordRecoveryPage extends StatefulWidget {
+  const PasswordRecoveryPage({super.key});
 
   @override
-  State<LoginPage> createState() => _LoginPageState();
+  State<PasswordRecoveryPage> createState() => _PasswordRecoveryPageState();
 }
 
-class _LoginPageState extends State<LoginPage> {
-  final TextEditingController rgController = TextEditingController();
-  final TextEditingController passwordController = TextEditingController();
+class _PasswordRecoveryPageState extends State<PasswordRecoveryPage> {
+  final TextEditingController emailController = TextEditingController();
 
   String errorText = '';
   bool isLoading = false;
 
-  bool validateLogin() {
+  bool validateEmail() {
     setState(() => errorText = '');
 
-    if (rgController.text.isEmpty) {
-      errorText = 'Digite seu RG';
+    if (emailController.text.isEmpty) {
+      errorText = 'Digite seu email';
       return false;
     }
 
-    if (passwordController.text.isEmpty) {
-      errorText = 'Digite sua senha';
+    if (!emailController.text.contains('@')) {
+      errorText = 'Digite um email válido';
       return false;
     }
 
     return true;
   }
 
-  Future<void> login() async {
-    if (validateLogin()) {
+  Future<void> sendRecoveryEmail() async {
+    if (validateEmail()) {
       setState(() => isLoading = true);
 
       try {
-        final result = await AuthService.loginUser(
-          rg: rgController.text,
-          senha: passwordController.text,
-        );
+        await Future.delayed(const Duration(seconds: 2));
 
         if (!mounted) return;
 
-        if (result['success']) {
-          // Login bem-sucedido
-          final usuario = result['usuario'];
-          
-          // Redireciona para catálogo
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (context) => const InitialCatalogPage(),
-              settings: RouteSettings(arguments: usuario),
-            ),
-          );
-        } else {
-          // Erro no login
-          setState(() {
-            errorText = result['message'] ?? 'Erro ao fazer login';
-          });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Email de recuperação enviado para ${emailController.text}'),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 3),
+          ),
+        );
 
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(result['message'] ?? 'Erro ao fazer login'),
-              backgroundColor: Colors.red,
-              duration: const Duration(seconds: 3),
-            ),
-          );
+        // Aguardar 1 segundo e voltar para login
+        await Future.delayed(const Duration(seconds: 1));
+        if (mounted) {
+          Navigator.pop(context);
         }
       } catch (e) {
         if (mounted) {
           setState(() {
-            errorText = 'Erro de conexão: ${e.toString()}';
+            errorText = 'Erro ao enviar email: ${e.toString()}';
           });
 
           ScaffoldMessenger.of(context).showSnackBar(
@@ -120,7 +99,7 @@ class _LoginPageState extends State<LoginPage> {
 
               // Título
               const Text(
-                'Log-in',
+                'Recuperar Senha',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 30,
@@ -129,35 +108,28 @@ class _LoginPageState extends State<LoginPage> {
                 ),
               ),
 
-              const SizedBox(height: 30),
+              const SizedBox(height: 15),
 
-              // RG
-              TextField(
-                controller: rgController,
+              // Subtítulo
+              const Text(
+                'Informe o email cadastrado para receber as instruções',
                 textAlign: TextAlign.center,
-                style: const TextStyle(fontFamily: 'JosefinSans', fontSize: 18),
-                decoration: const InputDecoration(
-                  hintText: 'Digite seu RG',
-                  hintStyle: TextStyle(color: Colors.black26),
-                  enabledBorder: UnderlineInputBorder(
-                    borderSide: BorderSide(color: Colors.black26),
-                  ),
-                  focusedBorder: UnderlineInputBorder(
-                    borderSide: BorderSide(color: Color(0xFF013593), width: 2),
-                  ),
+                style: TextStyle(
+                  fontSize: 14,
+                  fontFamily: 'JosefinSans',
+                  color: Colors.black54,
                 ),
               ),
 
-              const SizedBox(height: 20),
+              const SizedBox(height: 30),
 
-              // Senha
+              // Email Input
               TextField(
-                controller: passwordController,
-                obscureText: true,
+                controller: emailController,
                 textAlign: TextAlign.center,
                 style: const TextStyle(fontFamily: 'JosefinSans', fontSize: 18),
                 decoration: const InputDecoration(
-                  hintText: 'Digite sua senha',
+                  hintText: 'Digite seu email',
                   hintStyle: TextStyle(color: Colors.black26),
                   enabledBorder: UnderlineInputBorder(
                     borderSide: BorderSide(color: Colors.black26),
@@ -179,34 +151,11 @@ class _LoginPageState extends State<LoginPage> {
 
               const SizedBox(height: 40),
 
-              // Link Recuperar Senha
-              GestureDetector(
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const PasswordRecoveryPage(),
-                    ),
-                  );
-                },
-                child: const Text(
-                  'Esqueci minha senha',
-                  style: TextStyle(
-                    color: Color(0xFF013593),
-                    fontSize: 14,
-                    fontFamily: 'JosefinSans',
-                    decoration: TextDecoration.underline,
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 30),
-
-              // Botão Login
+              // Botão Enviar Email
               SizedBox(
                 width: 250,
                 child: ElevatedButton(
-                  onPressed: isLoading ? null : login,
+                  onPressed: isLoading ? null : sendRecoveryEmail,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFFEEEEEE),
                     foregroundColor: Colors.black,
@@ -227,7 +176,7 @@ class _LoginPageState extends State<LoginPage> {
                           ),
                         )
                       : const Text(
-                          'Entrar',
+                          'Enviar Email',
                           style: TextStyle(
                             fontFamily: 'JosefinSans',
                             fontSize: 18,
@@ -243,7 +192,7 @@ class _LoginPageState extends State<LoginPage> {
                 width: 160,
                 child: ElevatedButton(
                   onPressed: () {
-                    Navigator.pop(context); // volta pra MainPage
+                    Navigator.pop(context);
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFFEEEEEE),
@@ -272,8 +221,7 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   void dispose() {
-    rgController.dispose();
-    passwordController.dispose();
+    emailController.dispose();
     super.dispose();
   }
 }

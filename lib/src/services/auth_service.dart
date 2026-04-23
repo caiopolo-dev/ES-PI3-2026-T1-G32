@@ -104,4 +104,63 @@ class AuthService {
       };
     }
   }
+
+  static Future<Map<String, dynamic>> loginUser({
+    required String rg,
+    required String senha,
+  }) async {
+    if (rg.isEmpty || senha.isEmpty) {
+      return {
+        'success': false,
+        'error': 'Dados incompletos',
+        'message': 'RG e senha são obrigatórios',
+      };
+    }
+
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/loginUser'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'rg': rg,
+          'senha': senha,
+        }),
+      );
+
+      final responseData = jsonDecode(response.body);
+
+      if (response.statusCode == 200) {
+        return {
+          'success': true,
+          'usuario': responseData['usuario'],
+          'message': responseData['message'],
+        };
+      } else if (response.statusCode == 404) {
+        return {
+          'success': false,
+          'error': responseData['error'],
+          'message': responseData['message'],
+        };
+      } else if (response.statusCode == 401) {
+        return {
+          'success': false,
+          'error': responseData['error'],
+          'message': responseData['message'],
+        };
+      } else {
+        return {
+          'success': false,
+          'error': 'Erro ao conectar com servidor',
+          'message': 'Status: ${response.statusCode}',
+        };
+      }
+    } catch (e) {
+      return {
+        'success': false,
+        'error': 'Erro de conexão',
+        'message': e.toString(),
+      };
+    }
+  }
 }
+

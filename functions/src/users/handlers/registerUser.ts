@@ -1,6 +1,6 @@
 // caio ferreira polo 25002823
 
-import * as functions from "firebase-functions";
+import {onRequest} from "firebase-functions/https";
 import {Request, Response} from "express";
 import {UserInput} from "../types";
 import {
@@ -9,7 +9,7 @@ import {
   criarUsuario,
 } from "../repositories/userRepository";
 
-export const registerUser = functions.https.onRequest(
+export const registerUser = onRequest(
   async (request: Request, response: Response) => {
     if (request.method !== "POST") {
       response.status(405).json({error: "Método não permitido"});

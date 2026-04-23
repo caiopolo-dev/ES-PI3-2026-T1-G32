@@ -5,6 +5,12 @@ import * as admin from "firebase-admin";
 const db = admin.firestore();
 const usersCollection = db.collection("users");
 
+// Interface para usuário
+interface Usuario {
+  uid: string;
+  [key: string]: unknown;
+}
+
 /**
  * Verifica se um RG já existe na base de dados.
  * @param {string} rg - O RG a verificar
@@ -66,6 +72,35 @@ export async function criarUsuario(userData: {
     return docRef.id;
   } catch (error) {
     console.error("Erro ao criar usuário:", error);
+    throw error;
+  }
+}
+
+/**
+ * Busca um usuário pelo RG.
+ * @param {string} rg - O RG do usuário
+ * @return {Promise<Usuario | undefined>} Usuário ou undefined
+ */
+export async function buscarUsuarioPorRG(
+  rg: string
+): Promise<Usuario | undefined> {
+  try {
+    const query = await usersCollection
+      .where("RG", "==", rg)
+      .limit(1)
+      .get();
+
+    if (query.empty) {
+      return undefined;
+    }
+
+    const doc = query.docs[0];
+    return {
+      uid: doc.id,
+      ...doc.data(),
+    };
+  } catch (error) {
+    console.error("Erro ao buscar usuário por RG:", error);
     throw error;
   }
 }
