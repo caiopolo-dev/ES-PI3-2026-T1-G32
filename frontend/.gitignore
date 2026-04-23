@@ -77,3 +77,4 @@ functions/lib/
 # iOS - Pods e dependências
 ios/Pods/
 ios/.symlinks/
+.DS_Store
