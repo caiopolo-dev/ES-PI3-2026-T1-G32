@@ -113,10 +113,6 @@ class _InitialCatalogPageState extends State<InitialCatalogPage> {
                       itemBuilder: (context, index) {
                         final data = startups[index].data() as Map<String, dynamic>;
 
-                        print('Documento: $data');
-                        print('price tipo: ${data['price'].runtimeType}');
-                        print('variation tipo: ${data['variation'].runtimeType}');
-
                         final name = data['name'] ?? '';
                         final price = (data['price'] as num?)?.toDouble() ?? 0.0;
                         final variation = (data['variation'] as num?)?.toDouble() ?? 0.0;

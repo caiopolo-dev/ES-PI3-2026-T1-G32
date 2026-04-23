@@ -3,6 +3,8 @@
 // Descrição: Tela de cadastro multi-etapas com validação
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import '../services/auth_service.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -13,8 +15,10 @@ class RegisterPage extends StatefulWidget {
 
 class _RegisterPageState extends State<RegisterPage> {
   int currentStep = 0;
+  bool isLoading = false;
 
   final TextEditingController rgController = TextEditingController();
+  final TextEditingController emailController = TextEditingController();
   final TextEditingController nameController = TextEditingController();
   final TextEditingController phoneController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
@@ -28,27 +32,39 @@ class _RegisterPageState extends State<RegisterPage> {
 
     switch (currentStep) {
       case 0:
-        if (rgController.text.isEmpty) {
+        String rg = rgController.text.trim();
+        if (rg.isEmpty) {
           errorText = 'RG é obrigatório';
+          return false;
+        }
+        if (!RegExp(r'^[0-9]{7,9}$').hasMatch(rg)) {
+          errorText = 'RG deve ter entre 7 e 9 dígitos';
           return false;
         }
         return true;
 
       case 1:
+        if (emailController.text.isEmpty || !emailController.text.contains('@')) {
+          errorText = 'Digite um email válido';
+          return false;
+        }
+        return true;
+
+      case 2:
         if (nameController.text.trim().split(' ').length < 2) {
           errorText = 'Digite seu nome completo';
           return false;
         }
         return true;
 
-      case 2:
+      case 3:
         if (phoneController.text.length < 10) {
           errorText = 'Número inválido';
           return false;
         }
         return true;
 
-      case 3:
+      case 4:
         String password = passwordController.text;
         String confirm = confirmPasswordController.text;
 
@@ -76,12 +92,19 @@ class _RegisterPageState extends State<RegisterPage> {
   Widget buildStepContent() {
     switch (currentStep) {
       case 0:
-        return buildInput(rgController, 'Digite seu RG');
+        return buildInput(
+          rgController,
+          'Digite seu RG',
+          maxLength: 9,
+          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+        );
       case 1:
-        return buildInput(nameController, 'Digite o seu nome completo');
+        return buildInput(emailController, 'Digite seu email');
       case 2:
-        return buildInput(phoneController, 'Digite seu celular');
+        return buildInput(nameController, 'Digite o seu nome completo');
       case 3:
+        return buildInput(phoneController, 'Digite seu celular');
+      case 4:
         return Column(
           children: [
             buildInput(passwordController, 'Digite sua senha', obscure: true),
@@ -94,16 +117,24 @@ class _RegisterPageState extends State<RegisterPage> {
     }
   }
 
-  Widget buildInput(TextEditingController controller, String hint,
-      {bool obscure = false}) {
+  Widget buildInput(
+    TextEditingController controller,
+    String hint, {
+    bool obscure = false,
+    int? maxLength,
+    List<TextInputFormatter>? inputFormatters,
+  }) {
     return TextField(
       controller: controller,
       obscureText: obscure,
+      maxLength: maxLength,
+      inputFormatters: inputFormatters,
       textAlign: TextAlign.center,
       style: const TextStyle(fontFamily: 'JosefinSans', fontSize: 18),
       decoration: InputDecoration(
         hintText: hint,
         hintStyle: const TextStyle(color: Colors.black26),
+        counterText: '',
         enabledBorder: const UnderlineInputBorder(
           borderSide: BorderSide(color: Colors.black26, width: 1),
         ),
@@ -114,13 +145,33 @@ class _RegisterPageState extends State<RegisterPage> {
     );
   }
 
-  void nextStep() {
+  void nextStep() async {
     if (validateStep()) {
-      if (currentStep < 3) {
+      if (currentStep < 4) {
         setState(() => currentStep++);
       } else {
-        // ENVIAR AO FIREBASE AQUI
-        print("Cadastro completo!");
+        setState(() => isLoading = true);
+
+        final result = await AuthService.registerUser(
+          rg: rgController.text,
+          email: emailController.text,
+          nome: nameController.text,
+          telefone: phoneController.text,
+          senha: passwordController.text,
+        );
+
+        setState(() => isLoading = false);
+
+        if (result['success']) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Cadastro realizado com sucesso!')),
+          );
+          Navigator.pop(context);
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(result['message'] ?? 'Erro ao registrar')),
+          );
+        }
       }
     } else {
       setState(() {});
@@ -156,7 +207,7 @@ class _RegisterPageState extends State<RegisterPage> {
 
               // Título dinâmico
               Text(
-                'Cadastro passo ${currentStep + 1} - 4',
+                'Cadastro passo ${currentStep + 1} - 5',
                 textAlign: TextAlign.center,
                 style: const TextStyle(
                   fontSize: 24,
@@ -185,10 +236,9 @@ class _RegisterPageState extends State<RegisterPage> {
               SizedBox(
                 width: 250,
                 child: ElevatedButton(
-                  onPressed: () {
-                    // Se for o ultimo passo, volta para a initial_page
-                  if (currentStep == 3 && validateStep()) {
-                    Navigator.pop(context);
+                  onPressed: isLoading ? null : () {
+                    if (currentStep == 4 && validateStep()) {
+                      Navigator.pop(context);
                     }
                     nextStep();
                   },
@@ -201,13 +251,19 @@ class _RegisterPageState extends State<RegisterPage> {
                       side: const BorderSide(color: Colors.black12),
                     ),
                   ),
-                  child: const Text(
-                    'Continuar',
-                    style: TextStyle(
-                      fontFamily: 'JosefinSans',
-                      fontSize: 18,
-                    ),
-                  ),
+                  child: isLoading
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Text(
+                          'Continuar',
+                          style: TextStyle(
+                            fontFamily: 'JosefinSans',
+                            fontSize: 18,
+                          ),
+                        ),
                 ),
               ),
 
