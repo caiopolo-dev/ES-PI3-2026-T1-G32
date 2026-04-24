@@ -4,7 +4,7 @@
 
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
-import 'auth/initial_catalog_page.dart';
+import 'auth/catalog_page.dart';
 import 'password_recovery_page.dart';
 
 class LoginPage extends StatefulWidget {
