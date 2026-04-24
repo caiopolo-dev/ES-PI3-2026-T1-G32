@@ -1,9 +1,9 @@
-// Autor: Gustavo Costa
-// Data: 17/04/2026
-// Descrição: Tela do catalogo das startups
+// Autor: Gustavo Alves de Siqueira Costa
+// Data: 24/04/2026
+// Descrição: Tela do catálogo das startups, com filtros funcionais
 
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import '../../services/startup_service.dart';
 
 class InitialCatalogPage extends StatefulWidget {
   const InitialCatalogPage({super.key});
@@ -14,15 +14,45 @@ class InitialCatalogPage extends StatefulWidget {
 
 class _InitialCatalogPageState extends State<InitialCatalogPage> {
   int selectedFilter = 0;
+  List<dynamic> startups = [];
+  bool isLoading = true;
+  String? error;
 
-  final List<String> filters = ["Todas", "Novas", "Em operação"];
+  // Mapeamento dos filtros para os valores da API
+  final List<String> filters = ["Todas", "Novas", "Em operação", "Em expansão"];
+  final List<String?> filterValues = [null, "nova", "em_operacao", "em_expansao"];
+
+  @override
+  void initState() {
+    super.initState();
+    fetchStartups();
+  }
+
+  Future<void> fetchStartups() async {
+    setState(() {
+      isLoading = true;
+      error = null;
+    });
+
+    final result = await StartupService.getStartups(
+      estagio: filterValues[selectedFilter],
+    );
+
+    setState(() {
+      isLoading = false;
+      if (result['success']) {
+        startups = result['data'];
+      } else {
+        error = result['message'];
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F5F5),
 
-      // Bottom Navigation
       bottomNavigationBar: BottomNavigationBar(
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.store), label: "Mercado"),
@@ -36,7 +66,6 @@ class _InitialCatalogPageState extends State<InitialCatalogPage> {
           padding: const EdgeInsets.symmetric(horizontal: 20),
           child: Column(
             children: [
-
               const SizedBox(height: 20),
 
               // Barra de busca
@@ -56,77 +85,62 @@ class _InitialCatalogPageState extends State<InitialCatalogPage> {
               const SizedBox(height: 20),
 
               // Filtros
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: List.generate(filters.length, (index) {
-                  bool isSelected = selectedFilter == index;
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: List.generate(filters.length, (index) {
+                    bool isSelected = selectedFilter == index;
 
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 5),
-                    child: GestureDetector(
-                      onTap: () {
-                        setState(() => selectedFilter = index);
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: isSelected ? Colors.black : Colors.grey[300],
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Text(
-                          filters[index],
-                          style: TextStyle(
-                            color: isSelected ? Colors.white : Colors.black,
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 5),
+                      child: GestureDetector(
+                        onTap: () {
+                          setState(() => selectedFilter = index);
+                          fetchStartups();
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: isSelected ? Colors.black : Colors.grey[300],
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text(
+                            filters[index],
+                            style: TextStyle(
+                              color: isSelected ? Colors.white : Colors.black,
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                  );
-                }),
+                    );
+                  }),
+                ),
               ),
 
               const SizedBox(height: 20),
 
-              // Lista dinâmica com Firebase
+              // Lista de startups
               Expanded(
-                child: StreamBuilder<QuerySnapshot>(
-                  stream: FirebaseFirestore.instance.collection('startups').snapshots(),
-                  builder: (context, snapshot) {
+                child: isLoading
+                    ? const Center(child: CircularProgressIndicator())
+                    : error != null
+                        ? Center(child: Text("Erro: $error"))
+                        : startups.isEmpty
+                            ? const Center(child: Text("Nenhuma startup encontrada"))
+                            : ListView.builder(
+                                itemCount: startups.length,
+                                itemBuilder: (context, index) {
+                                  final data = startups[index] as Map<String, dynamic>;
 
-                    if (snapshot.hasError) {
-                      return Center(
-                        child: Text("Erro: ${snapshot.error}"),
-                      );
-                    }
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const Center(child: CircularProgressIndicator());
-                    }
-
-                    if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                      return const Center(child: Text("Nenhuma startup encontrada"));
-                    }
-
-                    final startups = snapshot.data!.docs;
-
-                    return ListView.builder(
-                      itemCount: startups.length,
-                      itemBuilder: (context, index) {
-                        final data = startups[index].data() as Map<String, dynamic>;
-
-                        final name = data['name'] ?? '';
-                        final price = (data['price'] as num?)?.toDouble() ?? 0.0;
-                        final variation = (data['variation'] as num?)?.toDouble() ?? 0.0;
-
-                        return StartupCard(
-                          name: name,
-                          price: "R\$ ${price.toStringAsFixed(2)}",
-                          variation: "${variation >= 0 ? '+' : ''}${variation.toStringAsFixed(2)}%",
-                          isPositive: variation >= 0,
-                        );
-                      },
-                    );
-                  },
-                ),
+                                  return StartupCard(
+                                    nome: data['nome'] ?? '',
+                                    setor: data['setor'] ?? '',
+                                    estagio: data['estagio'] ?? '',
+                                    precoToken: (data['precoToken'] as num?)?.toDouble() ?? 0.0,
+                                    totalTokens: (data['totalTokens'] as num?)?.toInt() ?? 0,
+                                  );
+                                },
+                              ),
               ),
             ],
           ),
@@ -138,17 +152,19 @@ class _InitialCatalogPageState extends State<InitialCatalogPage> {
 
 // Card de cada startup
 class StartupCard extends StatelessWidget {
-  final String name;
-  final String price;
-  final String variation;
-  final bool isPositive;
+  final String nome;
+  final String setor;
+  final String estagio;
+  final double precoToken;
+  final int totalTokens;
 
   const StartupCard({
     super.key,
-    required this.name,
-    required this.price,
-    required this.variation,
-    required this.isPositive,
+    required this.nome,
+    required this.setor,
+    required this.estagio,
+    required this.precoToken,
+    required this.totalTokens,
   });
 
   @override
@@ -164,43 +180,52 @@ class StartupCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Nome
           Text(
-            name,
+            nome,
             style: const TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
             ),
           ),
 
+          const SizedBox(height: 6),
+
+          Text(
+            setor,
+            style: TextStyle(color: Colors.grey[600]),
+          ),
+
           const SizedBox(height: 10),
 
-          // Preço
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text("Preço agora"),
-              Text(price),
+              Text("Preço do token"),
+              Text("R\$ ${precoToken.toStringAsFixed(2)}"),
             ],
           ),
 
           const SizedBox(height: 5),
 
-          // Variação
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text("Variação"),
-              Text(
-                variation,
-                style: TextStyle(
-                  color: isPositive ? Colors.green : Colors.red,
-                ),
-              ),
+              Text("Total de tokens"),
+              Text(totalTokens.toString()),
             ],
           ),
 
           const SizedBox(height: 10),
+
+          Text(
+            estagio.replaceAll("_", " "),
+            style: TextStyle(
+              color: Colors.grey[500],
+              fontSize: 12,
+            ),
+          ),
+
+          const SizedBox(height: 6),
 
           const Text(
             "Ver mais >",

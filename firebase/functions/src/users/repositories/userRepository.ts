@@ -1,8 +1,7 @@
 // Caio Ferreira Polo - 25002823
 
 import * as admin from "firebase-admin";
-
-const db = admin.firestore();
+import {db} from "../../shared/firebase"; // importa o db do shared
 const usersCollection = db.collection("users");
 
 // Interface para usuário
