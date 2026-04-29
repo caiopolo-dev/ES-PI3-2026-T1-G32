@@ -1,106 +1,60 @@
-// Caio Ferreira Polo - 25002823
-
-import * as admin from "firebase-admin";
-import {db} from "../../shared/firebase"; // importa o db do shared
-const usersCollection = db.collection("users");
-
-// Interface para usuário
-interface Usuario {
-  uid: string;
-  [key: string]: unknown;
-}
+import {getFirestore} from "firebase-admin/firestore";
+const db = getFirestore();
 
 /**
- * Verifica se um RG já existe na base de dados.
- * @param {string} rg - O RG a verificar
- * @return {Promise<boolean>} True se existe, false caso contrário
+ * Registers a new user in Firestore.
+ * @param {string} uid User`s uid.
+ * @param {string} name User's full name.
+ * @param {string} rg User's RG.
+ * @param {string} telefone User's phone number.
+ * @param {string} email User's email address.
+ * @return {Promise<string>} The ID of the created user document.
+ */
+export async function registerUser(
+  uid: string,
+  name: string,
+  rg: string,
+  telefone: string,
+  email: string
+): Promise<string> {
+  const banco = db.collection("users");
+  await banco.doc(uid).set({
+    name,
+    rg,
+    telefone,
+    email,
+  });
+  return uid;
+}
+
+
+/**
+ * Checks if an RG is already registered in Firestore.
+ * @param {string} rg User's RG.
+ * @return {Promise<boolean>} True if the RG already exists.
  */
 export async function verificarRgExiste(rg: string): Promise<boolean> {
-  try {
-    const query = await usersCollection.where("RG", "==", rg).limit(1).get();
-    return !query.empty;
-  } catch (error) {
-    console.error("Erro ao verificar RG:", error);
-    throw error;
-  }
+  const snapshot = await db
+    .collection("users")
+    .where("rg", "==", rg)
+    .limit(1)
+    .get();
+
+  return !snapshot.empty;
 }
 
+
 /**
- * Verifica se um email já existe na base de dados.
- * @param {string} email - O email a verificar
- * @return {Promise<boolean>} True se existe, false caso contrário
+ * Checks if an RG is already registered in Firestore.
+ * @param {string} email User's email.
+ * @return {Promise<boolean>} True if the email already exists.
  */
 export async function verificarEmailExiste(email: string): Promise<boolean> {
-  try {
-    const query = await usersCollection
-      .where("email", "==", email)
-      .limit(1)
-      .get();
-    return !query.empty;
-  } catch (error) {
-    console.error("Erro ao verificar email:", error);
-    throw error;
-  }
-}
-
-/**
- * Cria um novo usuário na base de dados.
- * @param {Object} userData - Dados do usuário a criar
- * @return {Promise<string>} ID do documento criado
- */
-export async function criarUsuario(userData: {
-  RG: string;
-  email: string;
-  numero: string;
-  nome: string;
-  senha: string;
-}): Promise<string> {
-  try {
-    const novoUsuario = {
-      RG: userData.RG,
-      email: userData.email,
-      telefone: userData.numero,
-      nome_completo: userData.nome,
-      senha: userData.senha,
-      saldo_carteira: 0,
-      dois_fatores: false,
-      data_criacao: admin.firestore.FieldValue.serverTimestamp(),
-    };
-
-    const docRef = await usersCollection.add(novoUsuario);
-    return docRef.id;
-  } catch (error) {
-    console.error("Erro ao criar usuário:", error);
-    throw error;
-  }
-}
-
-/**
- * Busca um usuário pelo RG.
- * @param {string} rg - O RG do usuário
- * @return {Promise<Usuario | undefined>} Usuário ou undefined
- */
-export async function buscarUsuarioPorRG(
-  rg: string
-): Promise<Usuario | undefined> {
-  try {
-    const query = await usersCollection
-      .where("RG", "==", rg)
-      .limit(1)
-      .get();
-
-    if (query.empty) {
-      return undefined;
-    }
-
-    const doc = query.docs[0];
-    return {
-      uid: doc.id,
-      ...doc.data(),
-    };
-  } catch (error) {
-    console.error("Erro ao buscar usuário por RG:", error);
-    throw error;
-  }
+  const snapshot = await db
+    .collection("users")
+    .where("email", "==", email)
+    .limit(1)
+    .get();
+  return !snapshot.empty;
 }
 

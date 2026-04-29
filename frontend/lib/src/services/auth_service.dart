@@ -1,9 +1,8 @@
-import 'package:http/http.dart' as http;
-import 'dart:convert';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_functions/cloud_functions.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class AuthService {
-  static const String baseUrl = "https://us-central1-es-pi3-2026-t1-g32.cloudfunctions.net";
-
   static Map<String, dynamic> validarDados({
     required String rg,
     required String email,
@@ -32,8 +31,12 @@ class AuthService {
     }
 
     final regex = RegExp(r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$');
+
     if (!regex.hasMatch(senha)) {
-      return {'valido': false, 'erro': 'Senha deve ter maiúscula, minúscula e número'};
+      return {
+        'valido': false,
+        'erro': 'Senha deve ter maiúscula, minúscula e número',
+      };
     }
 
     return {'valido': true};
@@ -62,44 +65,50 @@ class AuthService {
       };
     }
 
+    UserCredential? userCredential;
+
     try {
-      final response = await http.post(
-        Uri.parse('$baseUrl/registerUser'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'RG': rg,
-          'email': email,
-          'nome': nome,
-          'numero': telefone,
-          'senha': senha,
-        }),
+      userCredential =
+          await FirebaseAuth.instance.createUserWithEmailAndPassword(
+        email: email.trim(),
+        password: senha,
       );
 
-      final responseData = jsonDecode(response.body);
+      final callable = FirebaseFunctions.instance.httpsCallable('createUser');
 
-      if (response.statusCode == 200) {
-        return {
-          'success': true,
-          'userId': responseData['userId'],
-          'message': responseData['message'],
-        };
-      } else if (response.statusCode == 409) {
-        return {
-          'success': false,
-          'error': responseData['error'],
-          'message': responseData['message'],
-        };
-      } else {
-        return {
-          'success': false,
-          'error': 'Erro ao conectar com servidor',
-          'message': 'Status: ${response.statusCode}',
-        };
-      }
-    } catch (e) {
+      final result = await callable.call({
+        'name': nome.trim(),
+        'rg': rg.trim(),
+        'telefone': telefone.trim(),
+        'email': email.trim(),
+      });
+
+      return {
+        'success': true,
+        'authUid': userCredential.user?.uid,
+        'userId': result.data,
+        'message': 'Cadastro realizado com sucesso!',
+      };
+    } on FirebaseAuthException catch (e) {
       return {
         'success': false,
-        'error': 'Erro de conexão',
+        'error': e.code,
+        'message': e.message ?? 'Erro ao criar usuário',
+      };
+    } on FirebaseFunctionsException catch (e) {
+      await userCredential?.user?.delete();
+
+      return {
+        'success': false,
+        'error': e.code,
+        'message': e.message ?? 'Erro ao salvar dados do usuário',
+      };
+    } catch (e) {
+      await userCredential?.user?.delete();
+
+      return {
+        'success': false,
+        'error': 'Erro inesperado',
         'message': e.toString(),
       };
     }
@@ -109,7 +118,7 @@ class AuthService {
     required String rg,
     required String senha,
   }) async {
-    if (rg.isEmpty || senha.isEmpty) {
+    if (rg.trim().isEmpty || senha.isEmpty) {
       return {
         'success': false,
         'error': 'Dados incompletos',
@@ -118,49 +127,71 @@ class AuthService {
     }
 
     try {
-      final response = await http.post(
-        Uri.parse('$baseUrl/loginUser'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'rg': rg,
-          'senha': senha,
-        }),
-      );
+      final snapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .where('rg', isEqualTo: rg.trim())
+          .limit(1)
+          .get();
 
-      final responseData = jsonDecode(response.body);
-
-      if (response.statusCode == 200) {
-        return {
-          'success': true,
-          'usuario': responseData['usuario'],
-          'message': responseData['message'],
-        };
-      } else if (response.statusCode == 404) {
+      if (snapshot.docs.isEmpty) {
         return {
           'success': false,
-          'error': responseData['error'],
-          'message': responseData['message'],
-        };
-      } else if (response.statusCode == 401) {
-        return {
-          'success': false,
-          'error': responseData['error'],
-          'message': responseData['message'],
-        };
-      } else {
-        return {
-          'success': false,
-          'error': 'Erro ao conectar com servidor',
-          'message': 'Status: ${response.statusCode}',
+          'error': 'Usuário não encontrado',
+          'message': 'RG não cadastrado',
         };
       }
+
+      final usuario = snapshot.docs.first.data();
+      final email = usuario['email'];
+
+      if (email == null || email.toString().isEmpty) {
+        return {
+          'success': false,
+          'error': 'Email não encontrado',
+          'message': 'Não foi possível localizar o e-mail deste usuário',
+        };
+      }
+
+      final userCredential =
+          await FirebaseAuth.instance.signInWithEmailAndPassword(
+        email: email.toString(),
+        password: senha,
+      );
+
+      return {
+        'success': true,
+        'usuario': {
+          ...usuario,
+          'uid': userCredential.user?.uid,
+        },
+        'message': 'Login realizado com sucesso!',
+      };
+    } on FirebaseAuthException catch (e) {
+      String message = 'Erro ao fazer login';
+
+      if (e.code == 'wrong-password' || e.code == 'invalid-credential') {
+        message = 'Senha incorreta';
+      } else if (e.code == 'user-not-found') {
+        message = 'Usuário não encontrado';
+      }
+
+      return {
+        'success': false,
+        'error': e.code,
+        'message': message,
+      };
+    } on FirebaseException catch (e) {
+      return {
+        'success': false,
+        'error': e.code,
+        'message': e.message ?? 'Erro ao buscar usuário',
+      };
     } catch (e) {
       return {
         'success': false,
-        'error': 'Erro de conexão',
+        'error': 'Erro inesperado',
         'message': e.toString(),
       };
     }
   }
 }
-
