@@ -10,19 +10,24 @@ class AuthService {
     required String telefone,
     required String senha,
   }) {
-    if (rg.isEmpty) {
+    final rgLimpo = rg.trim();
+    final emailLimpo = email.trim();
+    final nomeLimpo = nome.trim();
+    final telefoneLimpo = telefone.trim();
+
+    if (rgLimpo.isEmpty) {
       return {'valido': false, 'erro': 'RG não pode estar vazio'};
     }
 
-    if (email.isEmpty || !email.contains('@')) {
+    if (emailLimpo.isEmpty || !emailLimpo.contains('@')) {
       return {'valido': false, 'erro': 'Email inválido'};
     }
 
-    if (nome.trim().split(' ').length < 2) {
+    if (nomeLimpo.split(' ').length < 2) {
       return {'valido': false, 'erro': 'Digite seu nome completo'};
     }
 
-    if (telefone.length < 10) {
+    if (telefoneLimpo.length < 10) {
       return {'valido': false, 'erro': 'Número inválido'};
     }
 
@@ -68,19 +73,24 @@ class AuthService {
     UserCredential? userCredential;
 
     try {
+      final emailLimpo = email.trim();
+      final nomeLimpo = nome.trim();
+      final rgLimpo = rg.trim();
+      final telefoneLimpo = telefone.trim();
+
       userCredential =
           await FirebaseAuth.instance.createUserWithEmailAndPassword(
-        email: email.trim(),
+        email: emailLimpo,
         password: senha,
       );
 
       final callable = FirebaseFunctions.instance.httpsCallable('createUser');
 
       final result = await callable.call({
-        'name': nome.trim(),
-        'rg': rg.trim(),
-        'telefone': telefone.trim(),
-        'email': email.trim(),
+        'name': nomeLimpo,
+        'rg': rgLimpo,
+        'telefone': telefoneLimpo,
+        'email': emailLimpo,
       });
 
       return {
@@ -90,10 +100,22 @@ class AuthService {
         'message': 'Cadastro realizado com sucesso!',
       };
     } on FirebaseAuthException catch (e) {
+      String message = 'Erro ao criar usuário';
+
+      if (e.code == 'email-already-in-use') {
+        message = 'Este e-mail já está cadastrado';
+      } else if (e.code == 'invalid-email') {
+        message = 'E-mail inválido';
+      } else if (e.code == 'weak-password') {
+        message = 'Senha muito fraca';
+      } else if (e.message != null) {
+        message = e.message!;
+      }
+
       return {
         'success': false,
         'error': e.code,
-        'message': e.message ?? 'Erro ao criar usuário',
+        'message': message,
       };
     } on FirebaseFunctionsException catch (e) {
       await userCredential?.user?.delete();
@@ -115,64 +137,73 @@ class AuthService {
   }
 
   static Future<Map<String, dynamic>> loginUser({
-    required String rg,
+    required String email,
     required String senha,
   }) async {
-    if (rg.trim().isEmpty || senha.isEmpty) {
+    final emailLimpo = email.trim();
+
+    if (emailLimpo.isEmpty || senha.isEmpty) {
       return {
         'success': false,
         'error': 'Dados incompletos',
-        'message': 'RG e senha são obrigatórios',
+        'message': 'E-mail e senha são obrigatórios',
+      };
+    }
+
+    if (!emailLimpo.contains('@')) {
+      return {
+        'success': false,
+        'error': 'Email inválido',
+        'message': 'Digite um e-mail válido',
       };
     }
 
     try {
-      final snapshot = await FirebaseFirestore.instance
-          .collection('users')
-          .where('rg', isEqualTo: rg.trim())
-          .limit(1)
-          .get();
-
-      if (snapshot.docs.isEmpty) {
-        return {
-          'success': false,
-          'error': 'Usuário não encontrado',
-          'message': 'RG não cadastrado',
-        };
-      }
-
-      final usuario = snapshot.docs.first.data();
-      final email = usuario['email'];
-
-      if (email == null || email.toString().isEmpty) {
-        return {
-          'success': false,
-          'error': 'Email não encontrado',
-          'message': 'Não foi possível localizar o e-mail deste usuário',
-        };
-      }
-
       final userCredential =
           await FirebaseAuth.instance.signInWithEmailAndPassword(
-        email: email.toString(),
+        email: emailLimpo,
         password: senha,
       );
+
+      final user = userCredential.user;
+
+      if (user == null) {
+        return {
+          'success': false,
+          'error': 'Usuário inválido',
+          'message': 'Não foi possível carregar o usuário autenticado',
+        };
+      }
+
+      final userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get();
+
+      final userData = userDoc.data() ?? {};
 
       return {
         'success': true,
         'usuario': {
-          ...usuario,
-          'uid': userCredential.user?.uid,
+          'uid': user.uid,
+          'email': user.email,
+          ...userData,
         },
         'message': 'Login realizado com sucesso!',
       };
     } on FirebaseAuthException catch (e) {
       String message = 'Erro ao fazer login';
 
-      if (e.code == 'wrong-password' || e.code == 'invalid-credential') {
-        message = 'Senha incorreta';
+      if (e.code == 'invalid-email') {
+        message = 'E-mail inválido';
+      } else if (e.code == 'user-disabled') {
+        message = 'Este usuário foi desativado';
       } else if (e.code == 'user-not-found') {
         message = 'Usuário não encontrado';
+      } else if (e.code == 'wrong-password' || e.code == 'invalid-credential') {
+        message = 'E-mail ou senha incorretos';
+      } else if (e.message != null) {
+        message = e.message!;
       }
 
       return {
@@ -184,7 +215,7 @@ class AuthService {
       return {
         'success': false,
         'error': e.code,
-        'message': e.message ?? 'Erro ao buscar usuário',
+        'message': e.message ?? 'Erro ao buscar dados do usuário',
       };
     } catch (e) {
       return {
