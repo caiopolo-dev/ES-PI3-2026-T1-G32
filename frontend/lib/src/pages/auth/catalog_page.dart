@@ -4,6 +4,7 @@
 
 import 'package:flutter/material.dart';
 import '../../services/startup_service.dart';
+import 'package:intl/intl.dart';
 
 class InitialCatalogPage extends StatefulWidget {
   const InitialCatalogPage({super.key});
@@ -54,6 +55,8 @@ class _InitialCatalogPageState extends State<InitialCatalogPage> {
       backgroundColor: const Color(0xFFF5F5F5),
 
       bottomNavigationBar: BottomNavigationBar(
+        currentIndex: 1, // 0 = Mercado, 1 = Catálogo, 2 = Carteira
+        selectedItemColor: Colors.blue,
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.store), label: "Mercado"),
           BottomNavigationBarItem(icon: Icon(Icons.list), label: "Catálogo"),
@@ -72,7 +75,7 @@ class _InitialCatalogPageState extends State<InitialCatalogPage> {
               TextField(
                 decoration: InputDecoration(
                   hintText: "Buscar startup",
-                  prefixIcon: const Icon(Icons.search),
+                  prefixIcon: const Icon(Icons.search, color: Colors.blue),
                   filled: true,
                   fillColor: Colors.grey[200],
                   border: OutlineInputBorder(
@@ -101,7 +104,7 @@ class _InitialCatalogPageState extends State<InitialCatalogPage> {
                         child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                           decoration: BoxDecoration(
-                            color: isSelected ? Colors.black : Colors.grey[300],
+                            color: isSelected ? Colors.blue : Colors.grey[300],
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: Text(
@@ -122,7 +125,7 @@ class _InitialCatalogPageState extends State<InitialCatalogPage> {
               // Lista de startups
               Expanded(
                 child: isLoading
-                    ? const Center(child: CircularProgressIndicator())
+                    ? const Center(child: CircularProgressIndicator(color: Colors.blue))
                     : error != null
                         ? Center(child: Text("Erro: $error"))
                         : startups.isEmpty
@@ -197,21 +200,23 @@ class StartupCard extends StatelessWidget {
 
           const SizedBox(height: 10),
 
+          // Preço do token
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text("Preço do token"),
-              Text("R\$ ${precoToken.toStringAsFixed(2)}"),
+              Text("R\$ ${NumberFormat('#,##0.00', 'pt_BR').format(precoToken)}"),
             ],
           ),
 
           const SizedBox(height: 5),
 
+          // Total de tokens
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text("Total de tokens"),
-              Text(totalTokens.toString()),
+              Text(NumberFormat('#,##0', 'pt_BR').format(totalTokens)),
             ],
           ),
 
@@ -226,11 +231,6 @@ class StartupCard extends StatelessWidget {
           ),
 
           const SizedBox(height: 6),
-
-          const Text(
-            "Ver mais >",
-            style: TextStyle(fontWeight: FontWeight.w500),
-          ),
         ],
       ),
     );
