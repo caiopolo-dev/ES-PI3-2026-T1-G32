@@ -1,9 +1,8 @@
-import 'package:http/http.dart' as http;
-import 'dart:convert';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_functions/cloud_functions.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class AuthService {
-  static const String baseUrl = "https://us-central1-es-pi3-2026-t1-g32.cloudfunctions.net";
-
   static Map<String, dynamic> validarDados({
     required String rg,
     required String email,
@@ -11,19 +10,24 @@ class AuthService {
     required String telefone,
     required String senha,
   }) {
-    if (rg.isEmpty) {
+    final rgLimpo = rg.trim();
+    final emailLimpo = email.trim();
+    final nomeLimpo = nome.trim();
+    final telefoneLimpo = telefone.trim();
+
+    if (rgLimpo.isEmpty) {
       return {'valido': false, 'erro': 'RG não pode estar vazio'};
     }
 
-    if (email.isEmpty || !email.contains('@')) {
+    if (emailLimpo.isEmpty || !emailLimpo.contains('@')) {
       return {'valido': false, 'erro': 'Email inválido'};
     }
 
-    if (nome.trim().split(' ').length < 2) {
+    if (nomeLimpo.split(' ').length < 2) {
       return {'valido': false, 'erro': 'Digite seu nome completo'};
     }
 
-    if (telefone.length < 10) {
+    if (telefoneLimpo.length < 10) {
       return {'valido': false, 'erro': 'Número inválido'};
     }
 
@@ -32,8 +36,12 @@ class AuthService {
     }
 
     final regex = RegExp(r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$');
+
     if (!regex.hasMatch(senha)) {
-      return {'valido': false, 'erro': 'Senha deve ter maiúscula, minúscula e número'};
+      return {
+        'valido': false,
+        'erro': 'Senha deve ter maiúscula, minúscula e número',
+      };
     }
 
     return {'valido': true};
@@ -62,105 +70,159 @@ class AuthService {
       };
     }
 
+    UserCredential? userCredential;
+
     try {
-      final response = await http.post(
-        Uri.parse('$baseUrl/registerUser'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'RG': rg,
-          'email': email,
-          'nome': nome,
-          'numero': telefone,
-          'senha': senha,
-        }),
+      final emailLimpo = email.trim();
+      final nomeLimpo = nome.trim();
+      final rgLimpo = rg.trim();
+      final telefoneLimpo = telefone.trim();
+
+      userCredential =
+          await FirebaseAuth.instance.createUserWithEmailAndPassword(
+        email: emailLimpo,
+        password: senha,
       );
 
-      final responseData = jsonDecode(response.body);
+      final callable = FirebaseFunctions.instance.httpsCallable('createUser');
 
-      if (response.statusCode == 200) {
-        return {
-          'success': true,
-          'userId': responseData['userId'],
-          'message': responseData['message'],
-        };
-      } else if (response.statusCode == 409) {
-        return {
-          'success': false,
-          'error': responseData['error'],
-          'message': responseData['message'],
-        };
-      } else {
-        return {
-          'success': false,
-          'error': 'Erro ao conectar com servidor',
-          'message': 'Status: ${response.statusCode}',
-        };
+      final result = await callable.call({
+        'name': nomeLimpo,
+        'rg': rgLimpo,
+        'telefone': telefoneLimpo,
+        'email': emailLimpo,
+      });
+
+      return {
+        'success': true,
+        'authUid': userCredential.user?.uid,
+        'userId': result.data,
+        'message': 'Cadastro realizado com sucesso!',
+      };
+    } on FirebaseAuthException catch (e) {
+      String message = 'Erro ao criar usuário';
+
+      if (e.code == 'email-already-in-use') {
+        message = 'Este e-mail já está cadastrado';
+      } else if (e.code == 'invalid-email') {
+        message = 'E-mail inválido';
+      } else if (e.code == 'weak-password') {
+        message = 'Senha muito fraca';
+      } else if (e.message != null) {
+        message = e.message!;
       }
-    } catch (e) {
+
       return {
         'success': false,
-        'error': 'Erro de conexão',
+        'error': e.code,
+        'message': message,
+      };
+    } on FirebaseFunctionsException catch (e) {
+      await userCredential?.user?.delete();
+
+      return {
+        'success': false,
+        'error': e.code,
+        'message': e.message ?? 'Erro ao salvar dados do usuário',
+      };
+    } catch (e) {
+      await userCredential?.user?.delete();
+
+      return {
+        'success': false,
+        'error': 'Erro inesperado',
         'message': e.toString(),
       };
     }
   }
 
   static Future<Map<String, dynamic>> loginUser({
-    required String rg,
+    required String email,
     required String senha,
   }) async {
-    if (rg.isEmpty || senha.isEmpty) {
+    final emailLimpo = email.trim();
+
+    if (emailLimpo.isEmpty || senha.isEmpty) {
       return {
         'success': false,
         'error': 'Dados incompletos',
-        'message': 'RG e senha são obrigatórios',
+        'message': 'E-mail e senha são obrigatórios',
+      };
+    }
+
+    if (!emailLimpo.contains('@')) {
+      return {
+        'success': false,
+        'error': 'Email inválido',
+        'message': 'Digite um e-mail válido',
       };
     }
 
     try {
-      final response = await http.post(
-        Uri.parse('$baseUrl/loginUser'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'rg': rg,
-          'senha': senha,
-        }),
+      final userCredential =
+          await FirebaseAuth.instance.signInWithEmailAndPassword(
+        email: emailLimpo,
+        password: senha,
       );
 
-      final responseData = jsonDecode(response.body);
+      final user = userCredential.user;
 
-      if (response.statusCode == 200) {
-        return {
-          'success': true,
-          'usuario': responseData['usuario'],
-          'message': responseData['message'],
-        };
-      } else if (response.statusCode == 404) {
+      if (user == null) {
         return {
           'success': false,
-          'error': responseData['error'],
-          'message': responseData['message'],
-        };
-      } else if (response.statusCode == 401) {
-        return {
-          'success': false,
-          'error': responseData['error'],
-          'message': responseData['message'],
-        };
-      } else {
-        return {
-          'success': false,
-          'error': 'Erro ao conectar com servidor',
-          'message': 'Status: ${response.statusCode}',
+          'error': 'Usuário inválido',
+          'message': 'Não foi possível carregar o usuário autenticado',
         };
       }
+
+      final userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get();
+
+      final userData = userDoc.data() ?? {};
+
+      return {
+        'success': true,
+        'usuario': {
+          'uid': user.uid,
+          'email': user.email,
+          ...userData,
+        },
+        'message': 'Login realizado com sucesso!',
+      };
+    } on FirebaseAuthException catch (e) {
+      String message = 'Erro ao fazer login';
+
+      if (e.code == 'invalid-email') {
+        message = 'E-mail inválido';
+      } else if (e.code == 'user-disabled') {
+        message = 'Este usuário foi desativado';
+      } else if (e.code == 'user-not-found') {
+        message = 'Usuário não encontrado';
+      } else if (e.code == 'wrong-password' || e.code == 'invalid-credential') {
+        message = 'E-mail ou senha incorretos';
+      } else if (e.message != null) {
+        message = e.message!;
+      }
+
+      return {
+        'success': false,
+        'error': e.code,
+        'message': message,
+      };
+    } on FirebaseException catch (e) {
+      return {
+        'success': false,
+        'error': e.code,
+        'message': e.message ?? 'Erro ao buscar dados do usuário',
+      };
     } catch (e) {
       return {
         'success': false,
-        'error': 'Erro de conexão',
+        'error': 'Erro inesperado',
         'message': e.toString(),
       };
     }
   }
 }
-

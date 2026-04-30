@@ -236,12 +236,7 @@ class _RegisterPageState extends State<RegisterPage> {
               SizedBox(
                 width: 250,
                 child: ElevatedButton(
-                  onPressed: isLoading ? null : () {
-                    if (currentStep == 4 && validateStep()) {
-                      Navigator.pop(context);
-                    }
-                    nextStep();
-                  },
+                  onPressed: isLoading ? null : nextStep,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFFEEEEEE),
                     foregroundColor: Colors.black,

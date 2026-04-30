@@ -1,6 +1,6 @@
 // Autor: Gustavo Costa
 // Data: 17/04/2026
-// Descrição: Tela de login (RG e senha)
+// Descrição: Tela de login (email e senha)
 
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
@@ -15,7 +15,7 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
-  final TextEditingController rgController = TextEditingController();
+  final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
 
   String errorText = '';
@@ -24,8 +24,8 @@ class _LoginPageState extends State<LoginPage> {
   bool validateLogin() {
     setState(() => errorText = '');
 
-    if (rgController.text.isEmpty) {
-      errorText = 'Digite seu RG';
+    if (emailController.text.isEmpty) {
+      errorText = 'Digite seu e-mail';
       return false;
     }
 
@@ -43,7 +43,7 @@ class _LoginPageState extends State<LoginPage> {
 
       try {
         final result = await AuthService.loginUser(
-          rg: rgController.text,
+          email: emailController.text,
           senha: passwordController.text,
         );
 
@@ -131,13 +131,14 @@ class _LoginPageState extends State<LoginPage> {
 
               const SizedBox(height: 30),
 
-              // RG
+              // email
               TextField(
-                controller: rgController,
+                keyboardType: TextInputType.emailAddress,
+                controller: emailController,
                 textAlign: TextAlign.center,
                 style: const TextStyle(fontFamily: 'JosefinSans', fontSize: 18),
                 decoration: const InputDecoration(
-                  hintText: 'Digite seu RG',
+                  hintText: 'Digite seu email',
                   hintStyle: TextStyle(color: Colors.black26),
                   enabledBorder: UnderlineInputBorder(
                     borderSide: BorderSide(color: Colors.black26),
@@ -272,7 +273,7 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   void dispose() {
-    rgController.dispose();
+    emailController.dispose();
     passwordController.dispose();
     super.dispose();
   }
