@@ -63,56 +63,31 @@ class InitialPage extends StatelessWidget {
               const Spacer(),
 
               // BOTÃO 1 (Abrir conta)
-              Center(
-                child: Container(
-                  width: 320,
-                  padding: const EdgeInsets.all(1.2),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(12),
-                    gradient: const LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        Color.fromARGB(255, 190, 190, 190),
-                        Color.fromARGB(255, 220, 219, 219),
-                        Color.fromARGB(255, 190, 190, 190),
-                      ],
-                      stops: [0.0, 0.5, 1.0],
+              SizedBox(
+                width: 260,
+                child: ElevatedButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const RegisterPage()),
+                    );
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blue,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(24),
+                      side: const BorderSide(color: Color(0xFF1565C0), width: 0.25),
                     ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.14),
-                        blurRadius: 12,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
+                    elevation: 6,
+                    shadowColor: Colors.blue.withOpacity(0.4),
                   ),
-                  child: ElevatedButton(
-                    // Tela de cadastro
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const RegisterPage(),
-                        ),
-                      );
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFE3E3E3),
-                      padding: const EdgeInsets.symmetric(vertical: 18),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(11),
-                      ),
-                      elevation: 0,
-                    ),
-                    child: const Text(
-                      'Abrir conta',
-                      style: TextStyle(
-                        color: Colors.black,
-                        fontFamily: 'JosefinSans',
-                        fontSize: 18,
-
-                      ),
+                  child: const Text(
+                    'Abrir conta',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontFamily: 'JosefinSans',
+                      fontSize: 22,
                     ),
                   ),
                 ),
@@ -121,56 +96,31 @@ class InitialPage extends StatelessWidget {
               const SizedBox(height: 16),
 
               // BOTÃO 2 (Já tenho conta)
-              Center(
-                child: Container(
-                  width: 320,
-                  padding: const EdgeInsets.all(1.2),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(12),
-                    gradient: const LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        Color.fromARGB(255, 190, 190, 190),
-                        Color.fromARGB(255, 220, 219, 219),
-                        Color.fromARGB(255, 190, 190, 190),
-                      ],
-                      stops: [0.0, 0.5, 1.0],
+              SizedBox(
+                width: 200,
+                child: ElevatedButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const LoginPage()),
+                    );
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFEEEEEE),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                      side: const BorderSide(color: Colors.black12),
                     ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.12),
-                        blurRadius: 12,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
+                    elevation: 3,
+                    shadowColor: Colors.black26,
                   ),
-                  child: ElevatedButton(
-                    // Tela de login
-                    onPressed: () {
-                      Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const LoginPage(),
-                          ),
-                        );
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFE3E3E3),
-                      padding: const EdgeInsets.symmetric(vertical: 18),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(11),
-                      ),
-                      elevation: 0,
-                    ),
-                    child: const Text(
-                      'Já tenho conta',
-                      style: TextStyle(
-                        color: Colors.black,
-                        fontFamily: 'JosefinSans',
-                        fontSize: 18,
-
-                      ),
+                  child: const Text(
+                    'Já tenho conta',
+                    style: TextStyle(
+                      color: Color(0xFF555555),
+                      fontFamily: 'JosefinSans',
+                      fontSize: 18,
                     ),
                   ),
                 ),

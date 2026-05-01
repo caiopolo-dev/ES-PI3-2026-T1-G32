@@ -7,6 +7,5 @@ export interface UserInput{
     email: string;
     numero: string
     nome: string;
-    senha: string;
 }
 

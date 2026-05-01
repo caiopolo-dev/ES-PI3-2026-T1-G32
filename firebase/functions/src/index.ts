@@ -1,7 +1,6 @@
-import * as admin from "firebase-admin";
+import {initializeApp} from "firebase-admin/app";
 
-admin.initializeApp();
-
-// Entry point principal
-// Exportar funcionalidades dos domínios: users, startups, exchange
-export * from "./users";
+initializeApp();
+export {createUser} from "./users/handlers/registerUser";
+export {getStartups} from "./startups/handlers/getStartups";
+export {getStartupById} from "./startups/handlers/getStartupById";
