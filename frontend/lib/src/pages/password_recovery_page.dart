@@ -19,12 +19,7 @@ class _PasswordRecoveryPageState extends State<PasswordRecoveryPage> {
   bool validateEmail() {
     setState(() => errorText = '');
 
-    if (emailController.text.isEmpty) {
-      errorText = 'Digite seu email';
-      return false;
-    }
-
-    if (!emailController.text.contains('@')) {
+    if (!RegExp(r'^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$').hasMatch(emailController.text)) {
       errorText = 'Digite um email válido';
       return false;
     }
@@ -80,90 +75,107 @@ class _PasswordRecoveryPageState extends State<PasswordRecoveryPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          onPressed: () => Navigator.pop(context),
+        ),
+      ),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 40),
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // Logo
-              Center(
-                child: SizedBox(
-                  width: 100,
-                  height: 100,
-                  child: Image.asset('assets/MesclaLogoPequena.png'),
-                ),
-              ),
+              Expanded(
+                child: Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Logo
+                      Center(
+                        child: SizedBox(
+                          width: 100,
+                          height: 100,
+                          child: Image.asset('assets/MesclaLogoPequena.png'),
+                        ),
+                      ),
 
-              const SizedBox(height: 40),
+                      const SizedBox(height: 40),
 
-              // Título
-              const Text(
-                'Recuperar Senha',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 30,
-                  fontWeight: FontWeight.bold,
-                  fontFamily: 'JosefinSans',
-                ),
-              ),
+                      // Título
+                      const Text(
+                        'Recuperar Senha',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 30,
+                          fontWeight: FontWeight.bold,
+                          fontFamily: 'JosefinSans',
+                        ),
+                      ),
 
-              const SizedBox(height: 15),
+                      const SizedBox(height: 2),
 
-              // Subtítulo
-              const Text(
-                'Informe o email cadastrado para receber as instruções',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 14,
-                  fontFamily: 'JosefinSans',
-                  color: Colors.black54,
-                ),
-              ),
+                      // Subtítulo
+                      const Text(
+                        'Informe o email cadastrado \n para receber as instruções',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontFamily: 'JosefinSans',
+                          color: Colors.black54,
+                        ),
+                      ),
 
-              const SizedBox(height: 30),
+                      const SizedBox(height: 30),
 
-              // Email Input
-              TextField(
-                controller: emailController,
-                textAlign: TextAlign.center,
-                style: const TextStyle(fontFamily: 'JosefinSans', fontSize: 18),
-                decoration: const InputDecoration(
-                  hintText: 'Digite seu email',
-                  hintStyle: TextStyle(color: Colors.black26),
-                  enabledBorder: UnderlineInputBorder(
-                    borderSide: BorderSide(color: Colors.black26),
+                      // Email Input
+                      TextField(
+                        controller: emailController,
+                        keyboardType: TextInputType.emailAddress,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(fontFamily: 'JosefinSans', fontSize: 18),
+                        decoration: const InputDecoration(
+                          hintText: 'Digite seu email',
+                          hintStyle: TextStyle(color: Colors.black26),
+                          enabledBorder: UnderlineInputBorder(
+                            borderSide: BorderSide(color: Colors.black26),
+                          ),
+                          focusedBorder: UnderlineInputBorder(
+                            borderSide: BorderSide(color: Color(0xFF013593), width: 2),
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(height: 20),
+
+                      // Erro
+                      if (errorText.isNotEmpty)
+                        Text(
+                          errorText,
+                          style: const TextStyle(color: Colors.red),
+                        ),
+                    ],
                   ),
-                  focusedBorder: UnderlineInputBorder(
-                    borderSide: BorderSide(color: Color(0xFF013593), width: 2),
-                  ),
                 ),
               ),
-
-              const SizedBox(height: 20),
-
-              // Erro
-              if (errorText.isNotEmpty)
-                Text(
-                  errorText,
-                  style: const TextStyle(color: Colors.red),
-                ),
-
-              const SizedBox(height: 40),
 
               // Botão Enviar Email
               SizedBox(
-                width: 250,
+                width: 260,
                 child: ElevatedButton(
                   onPressed: isLoading ? null : sendRecoveryEmail,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFEEEEEE),
-                    foregroundColor: Colors.black,
-                    padding: const EdgeInsets.symmetric(vertical: 18),
+                    backgroundColor: Colors.blue,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20),
-                      side: const BorderSide(color: Colors.black12),
+                      borderRadius: BorderRadius.circular(24),
+                      side: const BorderSide(color: Color(0xFF1565C0), width: 0.25),
                     ),
+                    elevation: 6,
+                    shadowColor: Colors.blue.withOpacity(0.4),
                   ),
                   child: isLoading
                       ? const SizedBox(
@@ -171,47 +183,20 @@ class _PasswordRecoveryPageState extends State<PasswordRecoveryPage> {
                           width: 20,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            valueColor:
-                                AlwaysStoppedAnimation<Color>(Colors.black),
+                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                           ),
                         )
                       : const Text(
                           'Enviar Email',
                           style: TextStyle(
                             fontFamily: 'JosefinSans',
-                            fontSize: 18,
+                            fontSize: 22,
                           ),
                         ),
                 ),
               ),
 
-              const SizedBox(height: 16),
-
-              // Botão Voltar
-              SizedBox(
-                width: 160,
-                child: ElevatedButton(
-                  onPressed: () {
-                    Navigator.pop(context);
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFEEEEEE),
-                    foregroundColor: Colors.black,
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(18),
-                      side: const BorderSide(color: Colors.black12),
-                    ),
-                  ),
-                  child: const Text(
-                    'Voltar',
-                    style: TextStyle(
-                      fontFamily: 'JosefinSans',
-                      fontSize: 16,
-                    ),
-                  ),
-                ),
-              ),
+              const SizedBox(height: 126),
             ],
           ),
         ),
