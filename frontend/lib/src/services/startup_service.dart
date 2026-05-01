@@ -3,6 +3,7 @@
 // Descrição: Service responsável por buscar os dados das startups via callable functions
 
 import 'package:cloud_functions/cloud_functions.dart';
+import 'dart:convert';
 
 class StartupService {
 
@@ -19,11 +20,8 @@ class StartupService {
 
       return {
         'success': true,
-        'data': List<Map<String, dynamic>>.from(
-          (result.data['data'] as List).map(
-            (item) => Map<String, dynamic>.from(item as Map),
-          ),
-        ),
+        'data': (jsonDecode(jsonEncode(result.data['data'])) as List)
+            .cast<Map<String, dynamic>>(),
       };
 
     } on FirebaseFunctionsException catch (e) {
@@ -50,9 +48,9 @@ class StartupService {
       final result = await callable.call({'id': id});
 
       return {
-      'success': true,
-      'data': Map<String, dynamic>.from(result.data['data'] as Map),
-    };
+        'success': true,
+        'data': jsonDecode(jsonEncode(result.data['data'])) as Map<String, dynamic>,
+      };
     } on FirebaseFunctionsException catch (e) {
       return {
         'success': false,

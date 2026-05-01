@@ -16,6 +16,15 @@ export interface Documentos {
   planoNegocios?: string;
 }
 
+export interface Photos {
+  logoPhoto?: string;
+}
+
+export interface Assets {
+  video?: string;
+  photos?: Photos;
+}
+
 export type EstagioStartup = "nova" | "em_operacao" | "em_expansao";
 
 export interface Startup {
@@ -27,7 +36,7 @@ export interface Startup {
   capitalAportado: number;
   totalTokens: number;
   precoToken: number;
-  videos: string[];
+  assets?: Assets;
   documentos: Documentos;
   socios: Socio[];
   conselho: MembroConselho[];

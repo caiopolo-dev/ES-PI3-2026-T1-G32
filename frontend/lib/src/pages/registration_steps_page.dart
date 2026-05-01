@@ -16,71 +16,60 @@ class RegisterPage extends StatefulWidget {
 class _RegisterPageState extends State<RegisterPage> {
   int currentStep = 0;
   bool isLoading = false;
-
-  final TextEditingController rgController = TextEditingController();
-  final TextEditingController emailController = TextEditingController();
-  final TextEditingController nameController = TextEditingController();
-  final TextEditingController phoneController = TextEditingController();
-  final TextEditingController passwordController = TextEditingController();
-  final TextEditingController confirmPasswordController = TextEditingController();
-
   String errorText = '';
 
-  // Validações
+  final nameController = TextEditingController();
+  final rgController = TextEditingController();
+  final emailController = TextEditingController();
+  final phoneController = TextEditingController();
+  final passwordController = TextEditingController();
+  final confirmPasswordController = TextEditingController();
+
+  // Passo 0: Nome + RG | Passo 1: Email + Telefone | Passo 2: Senha
+  static const List<String> _stepTitles = [
+    'Dados pessoais',
+    'Contato',
+    'Senha',
+  ];
+
   bool validateStep() {
     setState(() => errorText = '');
 
     switch (currentStep) {
       case 0:
-        String rg = rgController.text.trim();
-        if (rg.isEmpty) {
-          errorText = 'RG é obrigatório';
+        if (nameController.text.trim().split(' ').length < 2) {
+          errorText = 'Digite seu nome completo';
           return false;
         }
-        if (!RegExp(r'^[0-9]{7,9}$').hasMatch(rg)) {
+        final rg = rgController.text.replaceAll(RegExp(r'[^0-9]'), '');
+        if (rg.isEmpty || rg.length < 7 || rg.length > 9) {
           errorText = 'RG deve ter entre 7 e 9 dígitos';
           return false;
         }
         return true;
 
       case 1:
-        if (emailController.text.isEmpty || !emailController.text.contains('@')) {
+        if (!RegExp(r'^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$').hasMatch(emailController.text)) {
           errorText = 'Digite um email válido';
+          return false;
+        }
+        final phone = phoneController.text.replaceAll(RegExp(r'[^0-9]'), '');
+        if (phone.length < 10) {
+          errorText = 'Número de celular inválido';
           return false;
         }
         return true;
 
       case 2:
-        if (nameController.text.trim().split(' ').length < 2) {
-          errorText = 'Digite seu nome completo';
+        final password = passwordController.text;
+        if (!RegExp(r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$').hasMatch(password)) {
+          errorText = 'Senha deve ter 8+ caracteres, maiúscula, minúscula e número';
           return false;
         }
-        return true;
-
-      case 3:
-        if (phoneController.text.length < 10) {
-          errorText = 'Número inválido';
-          return false;
-        }
-        return true;
-
-      case 4:
-        String password = passwordController.text;
-        String confirm = confirmPasswordController.text;
-
-        final regex = RegExp(r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$');
-
-        if (!regex.hasMatch(password)) {
-          errorText =
-          'Senha deve ter 8+ caracteres, maiúscula, minúscula e número';
-          return false;
-        }
-
-        if (password != confirm) {
+        if (password != confirmPasswordController.text) {
           errorText = 'As senhas não coincidem';
           return false;
         }
-
         return true;
 
       default:
@@ -88,32 +77,61 @@ class _RegisterPageState extends State<RegisterPage> {
     }
   }
 
-  // Conteúdo dinâmico
   Widget buildStepContent() {
     switch (currentStep) {
       case 0:
-        return buildInput(
-          rgController,
-          'Digite seu RG',
-          maxLength: 9,
-          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-        );
-      case 1:
-        return buildInput(emailController, 'Digite seu email');
-      case 2:
-        return buildInput(nameController, 'Digite o seu nome completo');
-      case 3:
-        return buildInput(phoneController, 'Digite seu celular');
-      case 4:
         return Column(
           children: [
-            buildInput(passwordController, 'Digite sua senha', obscure: true),
+            buildInput(nameController, 'Nome completo'),
             const SizedBox(height: 20),
-            buildInput(confirmPasswordController, 'Confirme sua senha', obscure: true),
+            buildInput(
+              rgController,
+              'RG',
+              keyboardType: TextInputType.number,
+              inputFormatters: [_RgFormatter()],
+            ),
+          ],
+        );
+      case 1:
+        return Column(
+          children: [
+            buildInput(emailController, 'Email'),
+            const SizedBox(height: 20),
+            buildInput(
+              phoneController,
+              'Celular',
+              keyboardType: TextInputType.phone,
+              inputFormatters: [_PhoneFormatter()],
+            ),
+          ],
+        );
+      case 2:
+        return Column(
+          children: [
+            buildInput(passwordController, 'Senha', obscure: true),
+            const SizedBox(height: 8),
+            ValueListenableBuilder<TextEditingValue>(
+              valueListenable: passwordController,
+              builder: (context, value, _) {
+                final valid = RegExp(r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$').hasMatch(value.text);
+                if (valid) return const SizedBox.shrink();
+                return const Text(
+                  'A senha deve conter 8+ caracteres, uma maiúscula e uma minúscula',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.black38,
+                    fontFamily: 'JosefinSans',
+                  ),
+                );
+              },
+            ),
+            const SizedBox(height: 20),
+            buildInput(confirmPasswordController, 'Confirme a senha', obscure: true),
           ],
         );
       default:
-        return const Text("Finalizado");
+        return const SizedBox.shrink();
     }
   }
 
@@ -122,12 +140,14 @@ class _RegisterPageState extends State<RegisterPage> {
     String hint, {
     bool obscure = false,
     int? maxLength,
+    TextInputType? keyboardType,
     List<TextInputFormatter>? inputFormatters,
   }) {
     return TextField(
       controller: controller,
       obscureText: obscure,
       maxLength: maxLength,
+      keyboardType: keyboardType,
       inputFormatters: inputFormatters,
       textAlign: TextAlign.center,
       style: const TextStyle(fontFamily: 'JosefinSans', fontSize: 18),
@@ -146,41 +166,39 @@ class _RegisterPageState extends State<RegisterPage> {
   }
 
   void nextStep() async {
-    if (validateStep()) {
-      if (currentStep < 4) {
-        setState(() => currentStep++);
-      } else {
-        setState(() => isLoading = true);
-
-        final result = await AuthService.registerUser(
-          rg: rgController.text,
-          email: emailController.text,
-          nome: nameController.text,
-          telefone: phoneController.text,
-          senha: passwordController.text,
-        );
-
-        setState(() => isLoading = false);
-
-        if (result['success']) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Cadastro realizado com sucesso!')),
-          );
-          Navigator.pop(context);
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(result['message'] ?? 'Erro ao registrar')),
-          );
-        }
-      }
-    } else {
+    if (!validateStep()) {
       setState(() {});
+      return;
     }
-  }
 
-  void previousStep() {
-    if (currentStep > 0) {
-      setState(() => currentStep--);
+    if (currentStep < 2) {
+      setState(() => currentStep++);
+      return;
+    }
+
+    setState(() => isLoading = true);
+
+    final result = await AuthService.registerUser(
+      rg: rgController.text.replaceAll(RegExp(r'[^0-9]'), ''),
+      email: emailController.text,
+      nome: nameController.text,
+      telefone: phoneController.text.replaceAll(RegExp(r'[^0-9]'), ''),
+      senha: passwordController.text,
+    );
+
+    setState(() => isLoading = false);
+
+    if (!mounted) return;
+
+    if (result['success']) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Cadastro realizado com sucesso!')),
+      );
+      Navigator.pop(context);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(result['message'] ?? 'Erro ao registrar')),
+      );
     }
   }
 
@@ -188,13 +206,26 @@ class _RegisterPageState extends State<RegisterPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          onPressed: () {
+            if (currentStep == 0) {
+              Navigator.pop(context);
+            } else {
+              setState(() => currentStep--);
+            }
+          },
+        ),
+      ),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 40),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // Logo
               Center(
                 child: SizedBox(
                   width: 100,
@@ -203,11 +234,10 @@ class _RegisterPageState extends State<RegisterPage> {
                 ),
               ),
 
-              const SizedBox(height: 40),
+              const SizedBox(height: 32),
 
-              // Título dinâmico
               Text(
-                'Cadastro passo ${currentStep + 1} - 5',
+                _stepTitles[currentStep],
                 textAlign: TextAlign.center,
                 style: const TextStyle(
                   fontSize: 24,
@@ -216,87 +246,98 @@ class _RegisterPageState extends State<RegisterPage> {
                 ),
               ),
 
+              Text(
+                'Passo ${currentStep + 1} de 3',
+                style: TextStyle(fontSize: 20, color: Colors.grey[500], fontFamily: 'JosefinSans'),
+              ),
+
               const SizedBox(height: 30),
 
-              // Conteúdo dinâmico
               buildStepContent(),
 
               const SizedBox(height: 20),
 
-              // Erro
               if (errorText.isNotEmpty)
-                Text(
-                  errorText,
-                  style: const TextStyle(color: Colors.red),
-                ),
+                Text(errorText, style: const TextStyle(color: Colors.red)),
 
               const SizedBox(height: 40),
 
-              // Botão continuar
               SizedBox(
-                width: 250,
+                width: 260,
                 child: ElevatedButton(
                   onPressed: isLoading ? null : nextStep,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFEEEEEE),
-                    foregroundColor: Colors.black,
-                    padding: const EdgeInsets.symmetric(vertical: 18),
+                    backgroundColor: Colors.blue,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20),
-                      side: const BorderSide(color: Colors.black12),
+                      borderRadius: BorderRadius.circular(24),
+                      side: const BorderSide(color: Color(0xFF1565C0), width: 0.25),
                     ),
+                    elevation: 6,
+                    shadowColor: Colors.blue.withOpacity(0.4),
                   ),
                   child: isLoading
                       ? const SizedBox(
                           height: 20,
                           width: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2),
+                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                         )
-                      : const Text(
-                          'Continuar',
-                          style: TextStyle(
-                            fontFamily: 'JosefinSans',
-                            fontSize: 18,
-                          ),
+                      : Text(
+                          currentStep == 2 ? 'Finalizar' : 'Continuar',
+                          style: const TextStyle(fontFamily: 'JosefinSans', fontSize: 22),
                         ),
                 ),
               ),
-
-              const SizedBox(height: 16),
-
-              // Botão voltar
-                SizedBox(
-                  width: 160,
-                  child: ElevatedButton(
-                    onPressed: () {
-                      if (currentStep == 0) {
-                        Navigator.pop(context); // volta para a initial_page
-                      } else {
-                        previousStep(); // volta um passo
-                      }
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFEEEEEE),
-                      foregroundColor: Colors.black,
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(18),
-                        side: const BorderSide(color: Colors.black12),
-                      ),
-                    ),
-                    child: const Text(
-                      'Voltar',
-                      style: TextStyle(
-                        fontFamily: 'JosefinSans',
-                        fontSize: 16,
-                      ),
-                    ),
-                  ),
-                ),
             ],
           ),
         ),
       ),
+    );
+  }
+}
+
+// Máscara RG: XX.XXX.XXX-X
+class _RgFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(TextEditingValue oldValue, TextEditingValue newValue) {
+    final digits = newValue.text.replaceAll(RegExp(r'[^0-9]'), '');
+    if (digits.length > 9) return oldValue;
+
+    final buf = StringBuffer();
+    for (int i = 0; i < digits.length; i++) {
+      if (i == 2 || i == 5) buf.write('.');
+      if (i == 8) buf.write('-');
+      buf.write(digits[i]);
+    }
+
+    final text = buf.toString();
+    return TextEditingValue(
+      text: text,
+      selection: TextSelection.collapsed(offset: text.length),
+    );
+  }
+}
+
+// Máscara telefone: (XX) XXXXX-XXXX
+class _PhoneFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(TextEditingValue oldValue, TextEditingValue newValue) {
+    final digits = newValue.text.replaceAll(RegExp(r'[^0-9]'), '');
+    if (digits.length > 11) return oldValue;
+
+    final buf = StringBuffer();
+    for (int i = 0; i < digits.length; i++) {
+      if (i == 0) buf.write('(');
+      if (i == 2) buf.write(') ');
+      if (i == 7) buf.write('-');
+      buf.write(digits[i]);
+    }
+
+    final text = buf.toString();
+    return TextEditingValue(
+      text: text,
+      selection: TextSelection.collapsed(offset: text.length),
     );
   }
 }
