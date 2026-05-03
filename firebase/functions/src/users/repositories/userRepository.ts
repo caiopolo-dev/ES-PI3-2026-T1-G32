@@ -10,6 +10,7 @@ const db = getFirestore();
  * @param {string} rg User's RG.
  * @param {string} telefone User's phone number.
  * @param {string} email User's email address.
+ * @param {number} saldo User's starter money amount.
  * @return {Promise<string>} The ID of the created user document.
  */
 export async function registerUser(
@@ -17,7 +18,8 @@ export async function registerUser(
   name: string,
   rg: string,
   telefone: string,
-  email: string
+  email: string,
+  saldo: number
 ): Promise<string> {
   const banco = db.collection("users");
   await banco.doc(uid).set({
@@ -25,6 +27,8 @@ export async function registerUser(
     rg,
     telefone,
     email,
+    saldo,
+    mfaEnabled: false,
   });
   return uid;
 }

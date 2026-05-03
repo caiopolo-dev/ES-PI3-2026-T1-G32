@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import '../../services/startup_service.dart';
 import 'package:intl/intl.dart';
 import 'startup_detail_page.dart';
+import '../balcao_page.dart';
 
 const Map<String, String> _estagioLabels = {
   'nova': 'Nova',
@@ -92,6 +93,16 @@ class _InitialCatalogPageState extends State<InitialCatalogPage> {
         currentIndex: 1,
         selectedItemColor: Colors.blue,
         onTap: (index) {
+          if (index == 0){
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (_) => const BalcaoNegociacaoPage(),
+              ),
+            );
+            return;
+          }
+
           if (index == 1) return;
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Em breve')),

@@ -2,6 +2,8 @@
 //Pagina do balcão de negociação
 
 import 'package:flutter/material.dart';
+import 'package:cloud_functions/cloud_functions.dart';
+import './auth/catalog_page.dart';
 
 class BalcaoNegociacaoPage extends StatefulWidget {
   const BalcaoNegociacaoPage({super.key});
@@ -9,15 +11,73 @@ class BalcaoNegociacaoPage extends StatefulWidget {
   @override
   State<BalcaoNegociacaoPage> createState() => _BalcaoNegociacaoPageState();
 }
-
 class _BalcaoNegociacaoPageState extends State<BalcaoNegociacaoPage>{
+
+  static const TextStyle _textStyle = TextStyle(fontFamily: "Josefins-sans", fontSize: 17);
+
+  List<dynamic> offers = [];
+  bool isLoading = true;
+  String? errorMessage;
+  @override
+  void initState(){
+    super.initState();
+    loadOffers();
+  }
+  
+
+  Future<void> loadOffers() async{
+    if (!mounted) return;
+    setState(() {
+      isLoading = true;
+      errorMessage = null;
+    });
+
+
+    try{
+      final callable  = FirebaseFunctions.instance.httpsCallable('listOffers');
+      final result = await callable.call();
+      final data = result.data['data'];
+
+      setState(() {
+        offers = List<dynamic>.from(data);
+        isLoading = false;
+      });
+
+    }catch(e){
+      if (!mounted) return;
+      setState(() {
+        errorMessage = "Erro ao carregar ofertas";
+        isLoading = false;
+      });
+    }
+    
+
+  }
+
+    
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-
+      backgroundColor: Colors.white,
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: 0, // 0 = Mercado, 1 = Catálogo, 2 = Carteira
         selectedItemColor: const Color.fromARGB(255, 122, 137, 150),
+        onTap: (index) {
+          if (index == 0)return; 
+
+          if (index == 1) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (_) => const InitialCatalogPage(),
+              ),
+            );
+            return;
+          }
+        },
+        selectedLabelStyle: _textStyle,
+        unselectedLabelStyle: _textStyle,
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.store), label: "Mercado"),
           BottomNavigationBarItem(icon: Icon(Icons.list), label: "Catálogo"),
@@ -33,22 +93,113 @@ class _BalcaoNegociacaoPageState extends State<BalcaoNegociacaoPage>{
             children: [
               const SizedBox(height: 20),
 
-              TextField(
-                decoration: InputDecoration(
-                  hintText: "Buscar startup",
-                  prefixIcon: const Icon(Icons.search, color: Colors.black),
-                  filled: true,
-                  fillColor: Colors.grey[200],
-                  border: OutlineInputBorder(
-                    borderSide: BorderSide(
-                      color: const Color.fromARGB(189, 186, 186, 59),
-                      width: 1.0
+              Center(
+                child: FractionallySizedBox(
+               
+                widthFactor: 0.8,
+                
+                child: TextField(
+                  style: _textStyle,
+                  textAlignVertical: TextAlignVertical.center,
+                  decoration: InputDecoration(
+                    isDense: true,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    hintText: "Buscar startup",
+                    hintStyle: TextStyle(color: Color.fromARGB(70, 0, 0, 0), fontSize: 20, fontFamily: "Josefins-sans"), //arruamar
+                    prefixIcon: const Icon(Icons.search, color: Color.fromARGB(70, 0, 0, 0),),
+                    filled: true,
+                    fillColor: Colors.grey[200],
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(9),
+                      borderSide: BorderSide(color: Color.fromARGB(65, 189,186,186),
+                        width: 3
+                      )
                     ),
-                    borderRadius: BorderRadius.circular(20),
-                  )
-                  
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(9),
+                      borderSide: BorderSide(color: Color.fromARGB(98, 45, 158, 173), width: 3),
+                    ),
+                  ),
+
                 ),
-              )
+              ),
+              ),
+              const SizedBox(height: 35),
+              Row(
+                children: [
+                  Expanded(
+                    flex: 2,
+                    child: Text("Nome", style: _textStyle),
+                  ),
+                  Expanded(
+                    flex: 1,
+                    child: Center(child: Text("Qtd", style: _textStyle)),
+                  ),
+                  Expanded(
+                    flex: 2,
+                    child: Align(
+                      alignment: Alignment.centerRight,
+                      child: Text("valor - un", style: _textStyle),
+                    ),
+                  ),
+                ],
+              ),
+              Divider(
+                height: 18,
+                thickness: 1,
+                color: Colors.black54,
+              ),
+              
+              Expanded(
+                child: isLoading
+                    ? const Center(child: CircularProgressIndicator(color: Colors.blue))
+                    : errorMessage != null
+                    ? Center(child: Text("Erro: $errorMessage", style: _textStyle))
+                        : offers.isEmpty
+                      ? const Center(child: Text("Nenhuma oferta de venda encontrada", style: _textStyle))
+                            : ListView.builder(
+                                itemCount: offers.length,
+                                itemBuilder: (context, index){
+                                  final data = offers[index];
+                                  final startupId = data['startupId'] ?? '';
+                                  final amount = data['amount'] ?? 0;
+                                  final valorCentavos = data['valorUnitarioCentavos'] ?? 0;
+                                  final valorFormatado = 'R\$ ${(valorCentavos / 100).toStringAsFixed(2).replaceAll('.', ',')}';
+
+                                  return Column(
+                                    children: [
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            flex: 2,
+                                            child: Text(startupId, style: _textStyle),
+                                          ),
+                                          Expanded(
+                                            flex: 1,
+                                            child: Center(child: Text(amount.toString(), style: _textStyle)),
+                                          ),
+                                          Expanded(
+                                            flex: 2,
+                                            child: Align(
+                                              alignment: Alignment.centerRight,
+                                              child: Text(valorFormatado, style: _textStyle),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const Divider(
+                                        height: 18,
+                                        thickness: 1,
+                                        color: Colors.black38,
+                                      ),
+                                    ],
+                                  );
+                                },
+                            )
+                
+                
+                ),
+              
             ]
           ),
         ),
