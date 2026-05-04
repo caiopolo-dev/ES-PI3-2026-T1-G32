@@ -86,33 +86,64 @@ class _InitialCatalogPageState extends State<InitialCatalogPage> {
 
   @override
   Widget build(BuildContext context) {
+    final selectedIconColor = const Color(0xFF013593).withOpacity(0.85);
     return Scaffold(
       backgroundColor: const Color(0xFFF5F5F5),
 
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: 1,
-        selectedItemColor: Colors.blue,
-        onTap: (index) {
-          if (index == 0){
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(
-                builder: (_) => const BalcaoNegociacaoPage(),
-              ),
-            );
-            return;
-          }
+      bottomNavigationBar: Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          border: Border(
+            top: BorderSide(color: Color.fromARGB(255, 0, 0, 0), width: 0.8),
+          ),
+        ),
+        child: BottomNavigationBar( 
+          type: BottomNavigationBarType.fixed,
+          backgroundColor: Colors.white,
+          elevation: 0,
+          showSelectedLabels: false,
+          showUnselectedLabels: false,
+          currentIndex: 1,
+          selectedItemColor: Colors.black,
+          unselectedItemColor: Colors.black,
+          onTap: (index) {
+            if (index == 0) {
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const BalcaoNegociacaoPage(),
+                ),
+              );
+              return;
+            }
 
-          if (index == 1) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Em breve')),
-          );
-        },
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.store), label: "Mercado"),
-          BottomNavigationBarItem(icon: Icon(Icons.list), label: "Catálogo"),
-          BottomNavigationBarItem(icon: Icon(Icons.account_balance_wallet), label: "Carteira"),
-        ],
+            if (index == 1) return;
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Em breve')),
+            );
+          },
+          items: [
+            BottomNavigationBarItem(
+              icon: Image.asset("assets/BotaoBalcao.png", width: 40 ,height: 40),
+              label: "",
+            ),
+            BottomNavigationBarItem(
+              activeIcon: Image.asset(
+                "assets/BotaoCatalogo.png",
+                width: 50,
+                height: 50,
+                color: selectedIconColor,
+                colorBlendMode: BlendMode.srcIn,
+              ),
+              icon: Image.asset("assets/BotaoCatalogo.png", width: 50 ,height: 50),
+              label: "",
+            ),
+            BottomNavigationBarItem(
+              icon: Image.asset("assets/BotãoCarteira.png", width: 50 ,height: 50),
+              label: "",
+            ),
+          ],
+        ),
       ),
 
       body: SafeArea(

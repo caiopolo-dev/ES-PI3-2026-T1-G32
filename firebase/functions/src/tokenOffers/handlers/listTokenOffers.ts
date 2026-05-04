@@ -10,7 +10,7 @@ export const listOffers = onCall(async (request)=>{
       "Usuário não autenticado"
     );
   }
-  const offers = await listAllOffers();
+  const offers = await listAllOffers(request.auth.uid);
 
 
   return {

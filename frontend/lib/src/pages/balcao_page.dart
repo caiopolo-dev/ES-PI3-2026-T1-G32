@@ -58,31 +58,62 @@ class _BalcaoNegociacaoPageState extends State<BalcaoNegociacaoPage>{
 
   @override
   Widget build(BuildContext context) {
+    final selectedIconColor = const Color(0xFF013593).withOpacity(0.85);
     return Scaffold(
       backgroundColor: Colors.white,
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: 0, // 0 = Mercado, 1 = Catálogo, 2 = Carteira
-        selectedItemColor: const Color.fromARGB(255, 122, 137, 150),
-        onTap: (index) {
-          if (index == 0)return; 
+      bottomNavigationBar: Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          border: Border(
+            top: BorderSide(color: Color.fromARGB(255, 0, 0, 0), width: 0.8),
+          ),
+        ),
+        child: BottomNavigationBar(
+          type: BottomNavigationBarType.fixed,
+          backgroundColor: Colors.white,
+          elevation: 0,
+          showSelectedLabels: false,
+          showUnselectedLabels: false,
+          currentIndex: 0, // 0 = Mercado, 1 = Catálogo, 2 = Carteira
+          selectedItemColor: Colors.black,
+          unselectedItemColor: Colors.black,
+          onTap: (index) {
+            if (index == 0) return;
 
-          if (index == 1) {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(
-                builder: (_) => const InitialCatalogPage(),
+            if (index == 1) {
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const InitialCatalogPage(),
+                ),
+              );
+              return;
+            }
+          },
+          selectedLabelStyle: _textStyle,
+          unselectedLabelStyle: _textStyle,
+          items: [
+            BottomNavigationBarItem(
+              activeIcon: Image.asset(
+                "assets/BotaoBalcao.png",
+                width: 50,
+                height: 50,
+                color: selectedIconColor,
+                colorBlendMode: BlendMode.srcIn,
               ),
-            );
-            return;
-          }
-        },
-        selectedLabelStyle: _textStyle,
-        unselectedLabelStyle: _textStyle,
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.store), label: "Mercado"),
-          BottomNavigationBarItem(icon: Icon(Icons.list), label: "Catálogo"),
-          BottomNavigationBarItem(icon: Icon(Icons.account_balance_wallet), label: "Carteira"),
-        ],
+              icon: Image.asset("assets/BotaoBalcao.png", width: 40 ,height: 40),
+              label: "",
+            ),
+            BottomNavigationBarItem(
+              icon: Image.asset("assets/BotaoCatalogo.png", width: 50 ,height: 50),
+              label: "",
+            ),
+            BottomNavigationBarItem(
+              icon: Image.asset("assets/BotãoCarteira.png", width: 50 ,height: 50),
+              label: "",
+            ),
+          ],
+        ),
       ),
 
 

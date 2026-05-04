@@ -67,20 +67,43 @@ class _StartupDetailPageState extends State<StartupDetailPage> {
         ),
         centerTitle: true,
       ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: 1,
-        selectedItemColor: Colors.blue,
-        onTap: (index) {
-          if (index == 1) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Em breve')),
-          );
-        },
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.store), label: "Mercado"),
-          BottomNavigationBarItem(icon: Icon(Icons.list), label: "Catálogo"),
-          BottomNavigationBarItem(icon: Icon(Icons.account_balance_wallet), label: "Carteira"),
-        ],
+      bottomNavigationBar: Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          border: Border(
+            top: BorderSide(color: Color.fromARGB(255, 0, 0, 0), width: 0.8),
+          ),
+        ),
+        child: BottomNavigationBar(
+          type: BottomNavigationBarType.fixed,
+          backgroundColor: Colors.white,
+          elevation: 0,
+          showSelectedLabels: false,
+          showUnselectedLabels: false,
+          currentIndex: 1,
+          selectedItemColor: Colors.black,
+          unselectedItemColor: Colors.black,
+          onTap: (index) {
+            if (index == 1) return;
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Em breve')),
+            );
+          },
+          items: [
+            BottomNavigationBarItem(
+              icon: Image.asset("assets/BotaoBalcao.png", width: 40 ,height: 40),
+              label: "",
+            ),
+            BottomNavigationBarItem(
+              icon: Image.asset("assets/BotaoCatalogo.png", width: 50 ,height: 50),
+              label: "",
+            ),
+            BottomNavigationBarItem(
+              icon: Image.asset("assets/BotãoCarteira.png", width: 50 ,height: 50),
+              label: "",
+            ),
+          ],
+        ),
       ),
       body: isLoading
           ? const Center(child: CircularProgressIndicator(color: Colors.blue))

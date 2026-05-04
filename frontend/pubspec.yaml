@@ -51,6 +51,9 @@ flutter:
     - assets/MesclaLogoPequena.png
     - assets/MesclaLogoMedia.png
     - assets/MesclaLogoGrande.png
+    - assets/BotaoBalcao.png
+    - assets/BotaoCatalogo.png
+    - assets/BotãoCarteira.png
   fonts:
     - family: JosefinSans
       fonts:
