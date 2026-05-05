@@ -1,7 +1,7 @@
 // código de Caio Ferreira Polo - RA 25002823
 import 'package:flutter/material.dart';
-import 'auth/login_page.dart';
-import 'auth/registration_steps_page.dart';
+import 'package:mescla_invest/src/pages/auth/login_page.dart';
+import 'package:mescla_invest/src/pages/auth/registration_steps_page.dart';
 
 class InitialPage extends StatelessWidget {
   const InitialPage({super.key});

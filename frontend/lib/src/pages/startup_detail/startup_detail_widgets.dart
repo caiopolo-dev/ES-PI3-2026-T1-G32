@@ -5,7 +5,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:video_player/video_player.dart';
-import 'package:firebase_storage/firebase_storage.dart';
+import 'package:mescla_invest/src/services/storage_service.dart';
 
 class SectionTitle extends StatelessWidget {
   final String title;
@@ -138,25 +138,9 @@ class _StartupVideoPlayerState extends State<StartupVideoPlayer> {
     _resolveAndInit(widget.url);
   }
 
-  Future<String> _toDownloadUrl(String url) async {
-    if (url.startsWith('gs://')) {
-      return FirebaseStorage.instance.refFromURL(url).getDownloadURL();
-    }
-    if (url.startsWith('https://storage.googleapis.com/')) {
-      final uri = Uri.parse(url);
-      final segments = uri.pathSegments;
-      if (segments.length >= 2) {
-        final bucket = segments[0];
-        final path = segments.sublist(1).join('/');
-        return FirebaseStorage.instance.refFromURL('gs://$bucket/$path').getDownloadURL();
-      }
-    }
-    return url;
-  }
-
   Future<void> _resolveAndInit(String url) async {
     try {
-      final downloadUrl = await _toDownloadUrl(url);
+      final downloadUrl = await StorageService.getDownloadUrl(url);
       final controller = VideoPlayerController.networkUrl(Uri.parse(downloadUrl));
       await controller.initialize();
       if (!mounted) { controller.dispose(); return; }

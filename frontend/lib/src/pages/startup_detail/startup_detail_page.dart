@@ -4,13 +4,13 @@
 
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import '../../services/startup_service.dart';
-import '../../services/faq_service.dart';
-import 'startup_detail_widgets.dart';
-import 'startup_detail_faq.dart';
-import '../profile_page.dart';
-import '../balcao_page.dart';
-import '../initial_page.dart';
+import 'package:mescla_invest/src/services/startup_service.dart';
+import 'package:mescla_invest/src/services/faq_service.dart';
+import 'package:mescla_invest/src/pages/startup_detail/startup_detail_widgets.dart';
+import 'package:mescla_invest/src/pages/startup_detail/startup_detail_faq.dart';
+import 'package:mescla_invest/src/pages/profile_page.dart';
+import 'package:mescla_invest/src/pages/balcao_page.dart';
+import 'package:mescla_invest/src/pages/initial_page.dart';
 
 class StartupDetailPage extends StatefulWidget {
   final String startupId;
@@ -126,9 +126,35 @@ class _StartupDetailPageState extends State<StartupDetailPage> {
                   _logout();
                 }
               },
+              color: Colors.white,
+              elevation: 3,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+                side: BorderSide(color: Colors.grey.shade200),
+              ),
               itemBuilder: (_) => [
-                const PopupMenuItem(value: 'perfil', child: Text('Meu Perfil')),
-                const PopupMenuItem(value: 'sair', child: Text('Sair', style: TextStyle(color: Colors.red))),
+                const PopupMenuItem(
+                  value: 'perfil',
+                  child: Row(children: [
+                    Icon(Icons.person_outline, size: 20, color: Colors.black87),
+                    SizedBox(width: 12),
+                    Text('Meu Perfil'),
+                  ]),
+                ),
+                PopupMenuItem<String>(
+                  enabled: false,
+                  height: 8,
+                  padding: EdgeInsets.zero,
+                  child: Divider(indent: 16, endIndent: 16, thickness: 1, height: 1, color: Colors.grey.shade200),
+                ),
+                const PopupMenuItem(
+                  value: 'sair',
+                  child: Row(children: [
+                    Icon(Icons.logout, size: 20, color: Colors.red),
+                    SizedBox(width: 12),
+                    Text('Sair', style: TextStyle(color: Colors.red)),
+                  ]),
+                ),
               ],
               child: CircleAvatar(
                 radius: 18,
