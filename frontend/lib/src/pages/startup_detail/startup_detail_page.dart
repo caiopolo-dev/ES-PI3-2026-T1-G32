@@ -4,13 +4,13 @@
 
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import '../services/startup_service.dart';
-import 'package:intl/intl.dart';
-import 'package:video_player/video_player.dart';
-import 'package:firebase_storage/firebase_storage.dart';
-import 'profile_page.dart';
-import 'balcao_page.dart';
-import 'initial_page.dart';
+import '../../services/startup_service.dart';
+import '../../services/faq_service.dart';
+import 'startup_detail_widgets.dart';
+import 'startup_detail_faq.dart';
+import '../profile_page.dart';
+import '../balcao_page.dart';
+import '../initial_page.dart';
 
 class StartupDetailPage extends StatefulWidget {
   final String startupId;
@@ -34,13 +34,18 @@ class _StartupDetailPageState extends State<StartupDetailPage> {
   String? error;
   int _selectedTab = 0;
   int _selectedPeriod = 3;
+  List<Map<String, dynamic>> _faqs = [];
+  bool _faqsLoading = false;
+  int _faqFilter = 0; // 0=Todas 1=Públicas 2=Privadas
 
   final List<String> _periods = ['Diário', 'Semanal', 'Mensal', '6 meses', 'YTD'];
+  final List<String> _faqFilters = ['Todas', 'Públicas', 'Privadas'];
 
   @override
   void initState() {
     super.initState();
     _fetchDetail();
+    _loadFaqs();
   }
 
   Future<void> _logout() async {
@@ -51,6 +56,28 @@ class _StartupDetailPageState extends State<StartupDetailPage> {
       MaterialPageRoute(builder: (_) => const InitialPage()),
       (_) => false,
     );
+  }
+
+  Future<void> _loadFaqs() async {
+    setState(() => _faqsLoading = true);
+    final result = await FaqService.getFaqs(widget.startupId);
+    if (!mounted) return;
+    setState(() {
+      _faqsLoading = false;
+      if (result['success'] as bool) {
+        _faqs = List<Map<String, dynamic>>.from(result['data'] as List);
+      }
+    });
+  }
+
+  Future<void> _showFaqDialog() async {
+    final result = await showDialog<FaqResult>(
+      context: context,
+      builder: (_) => FaqDialog(startupId: widget.startupId),
+    );
+    if (result != null && mounted) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _loadFaqs());
+    }
   }
 
   Future<void> _fetchDetail() async {
@@ -126,12 +153,12 @@ class _StartupDetailPageState extends State<StartupDetailPage> {
           unselectedItemColor: Colors.grey,
           onTap: (index) {
             if (index == 0) {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (_) => BalcaoNegociacaoPage(usuario: widget.usuario)),
-            );
-            return;
-          }
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (_) => BalcaoNegociacaoPage(usuario: widget.usuario)),
+              );
+              return;
+            }
             if (index == 1) return;
             if (index == 3) {
               Navigator.push(
@@ -161,7 +188,7 @@ class _StartupDetailPageState extends State<StartupDetailPage> {
               : Column(
                   children: [
                     Expanded(child: _buildContent()),
-                    const _BottomActionBar(),
+                    const BottomActionBar(),
                   ],
                 ),
     );
@@ -172,8 +199,14 @@ class _StartupDetailPageState extends State<StartupDetailPage> {
     final precoToken = (data['precoToken'] as num?)?.toDouble() ?? 0.0;
     final totalTokens = (data['totalTokens'] as num?)?.toInt() ?? 0;
     final descricao = data['descricao'] as String? ?? '';
-    final socios = (data['socios'] as List?)?.map((s) => Map<String, dynamic>.from(s as Map)).toList() ?? [];
-    final conselho = (data['conselho'] as List?)?.map((c) => Map<String, dynamic>.from(c as Map)).toList() ?? [];
+    final socios = (data['socios'] as List?)
+            ?.map((s) => Map<String, dynamic>.from(s as Map))
+            .toList() ??
+        [];
+    final conselho = (data['conselho'] as List?)
+            ?.map((c) => Map<String, dynamic>.from(c as Map))
+            .toList() ??
+        [];
     final assets = data['assets'] as Map<String, dynamic>?;
     final videoUrl = assets?['video'] as String?;
 
@@ -183,16 +216,15 @@ class _StartupDetailPageState extends State<StartupDetailPage> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           const SizedBox(height: 20),
-          _PriceRow(precoToken: precoToken),
+          PriceRow(precoToken: precoToken),
           const SizedBox(height: 16),
           const Divider(),
           const SizedBox(height: 12),
-          _TokensInfo(totalTokens: totalTokens),
+          TokensInfo(totalTokens: totalTokens),
           const SizedBox(height: 16),
           const Divider(),
           const SizedBox(height: 16),
 
-          // Tabs
           Row(
             children: [
               _buildTab('Dados do token', 0),
@@ -202,7 +234,6 @@ class _StartupDetailPageState extends State<StartupDetailPage> {
           ),
           const SizedBox(height: 20),
 
-          // Gráfico placeholder
           Container(
             height: 180,
             decoration: BoxDecoration(
@@ -216,7 +247,6 @@ class _StartupDetailPageState extends State<StartupDetailPage> {
           ),
           const SizedBox(height: 14),
 
-          // Filtros de período
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: Row(
@@ -245,9 +275,9 @@ class _StartupDetailPageState extends State<StartupDetailPage> {
           ),
           const SizedBox(height: 28),
 
-          const _SectionTitle(title: 'Apresentação em vídeo'),
+          const SectionTitle(title: 'Apresentação em vídeo'),
           const SizedBox(height: 14),
-          videoUrl != null ? _VideoPlayer(url: videoUrl) : _videoUnavailable(),
+          videoUrl != null ? StartupVideoPlayer(url: videoUrl) : _videoUnavailable(),
           const SizedBox(height: 20),
 
           Text(descricao, style: const TextStyle(fontSize: 15, height: 1.6)),
@@ -268,7 +298,7 @@ class _StartupDetailPageState extends State<StartupDetailPage> {
           ),
           const SizedBox(height: 28),
 
-          const _SectionTitle(title: 'Sócios'),
+          const SectionTitle(title: 'Sócios'),
           const SizedBox(height: 8),
           ...socios.map((s) => _listItem('${s['nome']} - ${s['percentual']}%')),
           const SizedBox(height: 28),
@@ -277,6 +307,106 @@ class _StartupDetailPageState extends State<StartupDetailPage> {
           const SizedBox(height: 8),
           ...conselho.map((c) => _conselhoItem(c)),
           const SizedBox(height: 28),
+
+          const SectionTitle(title: 'Perguntas frequentes'),
+          const SizedBox(height: 16),
+
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: List.generate(_faqFilters.length, (i) {
+                final selected = _faqFilter == i;
+                return Padding(
+                  padding: EdgeInsets.only(right: i < _faqFilters.length - 1 ? 8 : 0),
+                  child: GestureDetector(
+                    onTap: () => setState(() => _faqFilter = i),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: selected ? Colors.blue : Colors.transparent,
+                        border: Border.all(color: selected ? Colors.blue : Colors.grey[400]!),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        _faqFilters[i],
+                        style: TextStyle(fontSize: 13, color: selected ? Colors.white : Colors.black),
+                      ),
+                    ),
+                  ),
+                );
+              }),
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: _showFaqDialog,
+              icon: const Icon(Icons.add_comment_outlined, size: 18, color: Colors.white),
+              label: const Text('Enviar pergunta', style: TextStyle(color: Colors.white)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blue,
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                elevation: 0,
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          if (_faqsLoading)
+            const Center(child: CircularProgressIndicator(color: Colors.blue))
+          else if (_faqs.isEmpty)
+            Center(child: Text('Nenhuma pergunta ainda', style: TextStyle(color: Colors.grey[400])))
+          else
+            ..._faqs.where((faq) {
+              if (_faqFilter == 1) return faq['privada'] == false;
+              if (_faqFilter == 2) return faq['privada'] == true;
+              return true;
+            }).map((faq) {
+              final isPrivada = faq['privada'] == true;
+              return Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: isPrivada ? Colors.grey.shade200 : Colors.white,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: Colors.grey.shade300),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          isPrivada ? Icons.lock_outline : Icons.public,
+                          size: 14,
+                          color: Colors.grey[500],
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          isPrivada ? 'Privada' : 'Pública',
+                          style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+                        ),
+                        const Spacer(),
+                        Text(
+                          faq['nomeUsuario'] as String? ?? '',
+                          style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      faq['pergunta'] as String? ?? '',
+                      style: const TextStyle(fontSize: 14),
+                    ),
+                  ],
+                ),
+              );
+            }),
+
+          const SizedBox(height: 32),
         ],
       ),
     );
@@ -351,207 +481,4 @@ class _StartupDetailPageState extends State<StartupDetailPage> {
           const Expanded(child: Divider()),
         ],
       );
-}
-
-// --- Widgets reutilizáveis ---
-
-class _SectionTitle extends StatelessWidget {
-  final String title;
-  const _SectionTitle({required this.title});
-
-  @override
-  Widget build(BuildContext context) => Row(
-        children: [
-          const Expanded(child: Divider()),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            child: Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-          ),
-          const Expanded(child: Divider()),
-        ],
-      );
-}
-
-class _PriceRow extends StatelessWidget {
-  final double precoToken;
-  const _PriceRow({required this.precoToken});
-
-  @override
-  Widget build(BuildContext context) => IntrinsicHeight(
-        child: Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Preço agora', style: TextStyle(fontSize: 14, color: Colors.grey[600])),
-                  const SizedBox(height: 4),
-                  Text(
-                    'R\$ ${NumberFormat('#,##0.00', 'pt_BR').format(precoToken)}',
-                    style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-                  ),
-                ],
-              ),
-            ),
-            VerticalDivider(color: Colors.grey[300], thickness: 1, width: 32),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text('Variação Hoje', style: TextStyle(fontSize: 14, color: Colors.grey[600])),
-                  const SizedBox(height: 4),
-                  Text('—', style: TextStyle(fontSize: 22, color: Colors.grey[400])),
-                ],
-              ),
-            ),
-          ],
-        ),
-      );
-}
-
-class _TokensInfo extends StatelessWidget {
-  final int totalTokens;
-  const _TokensInfo({required this.totalTokens});
-
-  @override
-  Widget build(BuildContext context) => Column(
-        children: [
-          Text('Tokens em circulação', style: TextStyle(fontSize: 14, color: Colors.grey[600])),
-          const SizedBox(height: 4),
-          Text(
-            NumberFormat('#,##0', 'pt_BR').format(totalTokens),
-            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-          ),
-        ],
-      );
-}
-
-class _BottomActionBar extends StatelessWidget {
-  const _BottomActionBar();
-
-  @override
-  Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          border: Border(top: BorderSide(color: Colors.grey[200]!)),
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              child: OutlinedButton(
-                onPressed: () {},
-                style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  side: BorderSide(color: Colors.grey[400]!),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                ),
-                child: const Text('Vender', style: TextStyle(color: Colors.black, fontSize: 16)),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: ElevatedButton(
-                onPressed: () {},
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.blue,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                  elevation: 0,
-                ),
-                child: const Text('Comprar', style: TextStyle(color: Colors.white, fontSize: 16)),
-              ),
-            ),
-          ],
-        ),
-      );
-}
-
-// --- Player de vídeo ---
-
-class _VideoPlayer extends StatefulWidget {
-  final String url;
-  const _VideoPlayer({required this.url});
-
-  @override
-  State<_VideoPlayer> createState() => _VideoPlayerState();
-}
-
-class _VideoPlayerState extends State<_VideoPlayer> {
-  VideoPlayerController? _controller;
-  bool _initialized = false;
-  bool _hasError = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _resolveAndInit(widget.url);
-  }
-
-  Future<String> _toDownloadUrl(String url) async {
-    if (url.startsWith('gs://')) {
-      return FirebaseStorage.instance.refFromURL(url).getDownloadURL();
-    }
-    if (url.startsWith('https://storage.googleapis.com/')) {
-      final uri = Uri.parse(url);
-      final segments = uri.pathSegments;
-      if (segments.length >= 2) {
-        final bucket = segments[0];
-        final path = segments.sublist(1).join('/');
-        return FirebaseStorage.instance.refFromURL('gs://$bucket/$path').getDownloadURL();
-      }
-    }
-    return url;
-  }
-
-  Future<void> _resolveAndInit(String url) async {
-    try {
-      final downloadUrl = await _toDownloadUrl(url);
-      final controller = VideoPlayerController.networkUrl(Uri.parse(downloadUrl));
-      await controller.initialize();
-      if (!mounted) { controller.dispose(); return; }
-      setState(() { _controller = controller; _initialized = true; });
-    } catch (e) {
-      if (mounted) setState(() => _hasError = true);
-    }
-  }
-
-  @override
-  void dispose() {
-    _controller?.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AspectRatio(
-      aspectRatio: 16 / 9,
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(8),
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            Container(color: Colors.black),
-            if (_hasError)
-              const Text('Erro ao carregar vídeo', style: TextStyle(color: Colors.white54))
-            else if (_initialized)
-              VideoPlayer(_controller!)
-            else
-              const CircularProgressIndicator(color: Colors.white),
-            if (_initialized)
-              GestureDetector(
-                onTap: () => setState(() {
-                  _controller!.value.isPlaying ? _controller!.pause() : _controller!.play();
-                }),
-                child: AnimatedOpacity(
-                  opacity: _controller!.value.isPlaying ? 0.0 : 1.0,
-                  duration: const Duration(milliseconds: 300),
-                  child: const Icon(Icons.play_circle_outline, color: Colors.white, size: 64),
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
 }

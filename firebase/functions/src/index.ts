@@ -4,4 +4,6 @@ initializeApp();
 export {createUser} from "./users/handlers/registerUser";
 export {getStartups} from "./startups/handlers/getStartups";
 export {getStartupById} from "./startups/handlers/getStartupById";
+export {createFaq} from "./startups/handlers/createFaq";
+export {getFaqs} from "./startups/handlers/getFaqs";
 export {listOffers} from "./tokenOffers/handlers/listTokenOffers";
