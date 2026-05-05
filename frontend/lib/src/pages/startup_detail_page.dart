@@ -10,7 +10,7 @@ import 'package:video_player/video_player.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'profile_page.dart';
 import 'balcao_page.dart';
-import 'auth/initial_page.dart';
+import 'initial_page.dart';
 
 class StartupDetailPage extends StatefulWidget {
   final String startupId;

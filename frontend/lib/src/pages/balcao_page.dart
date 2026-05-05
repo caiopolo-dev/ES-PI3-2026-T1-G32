@@ -6,7 +6,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'catalog_page.dart';
 import 'profile_page.dart';
-import 'auth/initial_page.dart';
+import 'initial_page.dart';
 
 class BalcaoNegociacaoPage extends StatefulWidget {
   final Map<String, dynamic>? usuario;

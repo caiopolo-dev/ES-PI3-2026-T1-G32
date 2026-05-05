@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 
-import 'src/pages/auth/initial_page.dart';
+import 'src/pages/initial_page.dart';
 
 
 void main() async {
