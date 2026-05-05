@@ -7,3 +7,4 @@ export {getStartupById} from "./startups/handlers/getStartupById";
 export {createFaq} from "./startups/handlers/createFaq";
 export {getFaqs} from "./startups/handlers/getFaqs";
 export {listOffers} from "./tokenOffers/handlers/listTokenOffers";
+export { sendPasswordRecovery } from "./passwordRecovery";
