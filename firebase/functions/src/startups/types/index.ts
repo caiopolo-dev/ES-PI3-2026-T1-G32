@@ -27,6 +27,15 @@ export interface Assets {
 
 export type EstagioStartup = "nova" | "em_operacao" | "em_expansao";
 
+export interface Faq {
+  id?: string;
+  pergunta: string;
+  privada: boolean;
+  email: string;
+  nomeUsuario: string;
+  criadoEm?: number;
+}
+
 export interface Startup {
   id?: string;
   nome: string;
