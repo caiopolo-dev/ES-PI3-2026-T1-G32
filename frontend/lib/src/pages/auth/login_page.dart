@@ -3,8 +3,8 @@
 // Descrição: Tela de login (email e senha)
 
 import 'package:flutter/material.dart';
-import '../services/auth_service.dart';
-import 'auth/catalog_page.dart';
+import '../../services/auth_service.dart';
+import '../catalog_page.dart';
 import 'password_recovery_page.dart';
 
 class LoginPage extends StatefulWidget {
@@ -57,8 +57,9 @@ class _LoginPageState extends State<LoginPage> {
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(
-              builder: (context) => const InitialCatalogPage(),
-              settings: RouteSettings(arguments: usuario),
+              builder: (context) => InitialCatalogPage(
+                usuario: usuario as Map<String, dynamic>?,
+              ),
             ),
           );
         } else {

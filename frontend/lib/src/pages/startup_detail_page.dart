@@ -3,19 +3,25 @@
 // Descrição: Tela de detalhes de uma startup
 
 import 'package:flutter/material.dart';
-import '../../services/startup_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../services/startup_service.dart';
 import 'package:intl/intl.dart';
 import 'package:video_player/video_player.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'profile_page.dart';
+import 'balcao_page.dart';
+import 'auth/initial_page.dart';
 
 class StartupDetailPage extends StatefulWidget {
   final String startupId;
   final String startupNome;
+  final Map<String, dynamic>? usuario;
 
   const StartupDetailPage({
     super.key,
     required this.startupId,
     required this.startupNome,
+    this.usuario,
   });
 
   @override
@@ -37,6 +43,16 @@ class _StartupDetailPageState extends State<StartupDetailPage> {
     _fetchDetail();
   }
 
+  Future<void> _logout() async {
+    await FirebaseAuth.instance.signOut();
+    if (!mounted) return;
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (_) => const InitialPage()),
+      (_) => false,
+    );
+  }
+
   Future<void> _fetchDetail() async {
     final result = await StartupService.getStartupById(widget.startupId);
     if (!mounted) return;
@@ -52,6 +68,10 @@ class _StartupDetailPageState extends State<StartupDetailPage> {
 
   @override
   Widget build(BuildContext context) {
+    final usuario = widget.usuario ?? {};
+    final nome = (usuario['nome'] ?? usuario['name']) as String? ?? '';
+    final inicial = nome.isNotEmpty ? nome[0].toUpperCase() : '?';
+
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -66,42 +86,71 @@ class _StartupDetailPageState extends State<StartupDetailPage> {
           style: const TextStyle(color: Colors.black, fontSize: 22, fontWeight: FontWeight.w400),
         ),
         centerTitle: true,
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 16),
+            child: PopupMenuButton<String>(
+              onSelected: (value) {
+                if (value == 'perfil') {
+                  Navigator.push(context, MaterialPageRoute(
+                    builder: (_) => ProfilePage(usuario: widget.usuario),
+                  ));
+                } else if (value == 'sair') {
+                  _logout();
+                }
+              },
+              itemBuilder: (_) => [
+                const PopupMenuItem(value: 'perfil', child: Text('Meu Perfil')),
+                const PopupMenuItem(value: 'sair', child: Text('Sair', style: TextStyle(color: Colors.red))),
+              ],
+              child: CircleAvatar(
+                radius: 18,
+                backgroundColor: Colors.blue,
+                child: Text(inicial, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+              ),
+            ),
+          ),
+        ],
       ),
       bottomNavigationBar: Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           color: Colors.white,
-          border: Border(
-            top: BorderSide(color: Color.fromARGB(255, 0, 0, 0), width: 0.8),
-          ),
+          border: Border(top: BorderSide(color: Colors.grey.shade300)),
         ),
         child: BottomNavigationBar(
           type: BottomNavigationBarType.fixed,
           backgroundColor: Colors.white,
           elevation: 0,
-          showSelectedLabels: false,
-          showUnselectedLabels: false,
           currentIndex: 1,
-          selectedItemColor: Colors.black,
-          unselectedItemColor: Colors.black,
+          selectedItemColor: Colors.blue,
+          unselectedItemColor: Colors.grey,
           onTap: (index) {
+            if (index == 0) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (_) => BalcaoNegociacaoPage(usuario: widget.usuario)),
+            );
+            return;
+          }
             if (index == 1) return;
+            if (index == 3) {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => ProfilePage(usuario: widget.usuario),
+                ),
+              );
+              return;
+            }
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(content: Text('Em breve')),
             );
           },
-          items: [
-            BottomNavigationBarItem(
-              icon: Image.asset("assets/BotaoBalcao.png", width: 40 ,height: 40),
-              label: "",
-            ),
-            BottomNavigationBarItem(
-              icon: Image.asset("assets/BotaoCatalogo.png", width: 50 ,height: 50),
-              label: "",
-            ),
-            BottomNavigationBarItem(
-              icon: Image.asset("assets/BotãoCarteira.png", width: 50 ,height: 50),
-              label: "",
-            ),
+          items: const [
+            BottomNavigationBarItem(icon: Icon(Icons.store), label: "Mercado"),
+            BottomNavigationBarItem(icon: Icon(Icons.list), label: "Catálogo"),
+            BottomNavigationBarItem(icon: Icon(Icons.account_balance_wallet), label: "Carteira"),
+            BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: "Perfil"),
           ],
         ),
       ),
