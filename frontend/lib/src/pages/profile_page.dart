@@ -4,7 +4,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'initial_page.dart';
+import 'package:mescla_invest/src/pages/initial_page.dart';
 
 class ProfilePage extends StatefulWidget {
   final Map<String, dynamic>? usuario;
