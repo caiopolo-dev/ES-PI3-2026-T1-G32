@@ -3,9 +3,9 @@
 // Descrição: Tela de login (email e senha)
 
 import 'package:flutter/material.dart';
-import '../../services/auth_service.dart';
-import '../catalog_page.dart';
-import 'password_recovery_page.dart';
+import 'package:mescla_invest/src/services/auth_service.dart';
+import 'package:mescla_invest/src/pages/catalog_page.dart';
+import 'package:mescla_invest/src/pages/auth/password_recovery_page.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});

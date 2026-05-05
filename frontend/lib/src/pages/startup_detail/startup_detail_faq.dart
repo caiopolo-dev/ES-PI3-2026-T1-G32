@@ -3,7 +3,7 @@
 // Descrição: Dialog e modelo de FAQ da tela de detalhes de startup
 
 import 'package:flutter/material.dart';
-import '../../services/faq_service.dart';
+import 'package:mescla_invest/src/services/faq_service.dart';
 
 class FaqResult {
   final String pergunta;
@@ -84,7 +84,7 @@ class _FaqDialogState extends State<FaqDialog> {
                   value: _privada,
                   activeThumbColor: Colors.blue,
                   activeTrackColor: Colors.blue.shade200,
-                  inactiveTrackColor: Colors.grey.shade300,
+                  inactiveTrackColor: Colors.grey.shade200,
                   inactiveThumbColor: Colors.grey,
                   onChanged: (v) => setState(() => _privada = v),
                 ),

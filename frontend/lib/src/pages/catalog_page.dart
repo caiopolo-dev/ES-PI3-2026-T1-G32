@@ -4,12 +4,12 @@
 
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import '../services/startup_service.dart';
 import 'package:intl/intl.dart';
-import 'startup_detail/startup_detail_page.dart';
-import 'balcao_page.dart';
-import 'profile_page.dart';
-import 'initial_page.dart';
+import 'package:mescla_invest/src/services/startup_service.dart';
+import 'package:mescla_invest/src/pages/startup_detail/startup_detail_page.dart';
+import 'package:mescla_invest/src/pages/balcao_page.dart';
+import 'package:mescla_invest/src/pages/profile_page.dart';
+import 'package:mescla_invest/src/pages/initial_page.dart';
 
 const Map<String, String> _estagioLabels = {
   'nova': 'Nova',
@@ -128,11 +128,34 @@ class _InitialCatalogPageState extends State<InitialCatalogPage> {
                   _logout();
                 }
               },
+              color: Colors.white,
+              elevation: 3,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+                side: BorderSide(color: Colors.grey.shade200),
+              ),
               itemBuilder: (_) => [
-                const PopupMenuItem(value: 'perfil', child: Text('Meu Perfil')),
+                const PopupMenuItem(
+                  value: 'perfil',
+                  child: Row(children: [
+                    Icon(Icons.person_outline, size: 20, color: Colors.black87),
+                    SizedBox(width: 12),
+                    Text('Meu Perfil'),
+                  ]),
+                ),
+                PopupMenuItem<String>(
+                  enabled: false,
+                  height: 8,
+                  padding: EdgeInsets.zero,
+                  child: Divider(indent: 16, endIndent: 16, thickness: 1, height: 1, color: Colors.grey.shade200),
+                ),
                 const PopupMenuItem(
                   value: 'sair',
-                  child: Text('Sair', style: TextStyle(color: Colors.red)),
+                  child: Row(children: [
+                    Icon(Icons.logout, size: 20, color: Colors.red),
+                    SizedBox(width: 12),
+                    Text('Sair', style: TextStyle(color: Colors.red)),
+                  ]),
                 ),
               ],
               child: CircleAvatar(
@@ -148,41 +171,47 @@ class _InitialCatalogPageState extends State<InitialCatalogPage> {
         ],
       ),
 
-      bottomNavigationBar: BottomNavigationBar(
-        type: BottomNavigationBarType.fixed,
-        backgroundColor: Colors.white,
-        elevation: 0,
-        currentIndex: 1,
-        selectedItemColor: Colors.blue,
-        unselectedItemColor: Colors.grey,
-        onTap: (index) {
-          if (index == 0) {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (_) => BalcaoNegociacaoPage(usuario: widget.usuario)),
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          border: Border(top: BorderSide(color: Colors.grey.shade300)),
+        ),
+        child: BottomNavigationBar(
+          type: BottomNavigationBarType.fixed,
+          backgroundColor: Colors.white,
+          elevation: 0,
+          currentIndex: 1,
+          selectedItemColor: Colors.blue,
+          unselectedItemColor: Colors.grey,
+          onTap: (index) {
+            if (index == 0) {
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (_) => BalcaoNegociacaoPage(usuario: widget.usuario)),
+              );
+              return;
+            }
+            if (index == 1) return;
+            if (index == 3) {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => ProfilePage(usuario: widget.usuario),
+                ),
+              );
+              return;
+            }
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Em breve')),
             );
-            return;
-          }
-          if (index == 1) return;
-          if (index == 3) {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => ProfilePage(usuario: widget.usuario),
-              ),
-            );
-            return;
-          }
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Em breve')),
-          );
-        },
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.store), label: "Mercado"),
-          BottomNavigationBarItem(icon: Icon(Icons.list), label: "Catálogo"),
-          BottomNavigationBarItem(icon: Icon(Icons.account_balance_wallet), label: "Carteira"),
-          BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: "Perfil"),
-        ],
+          },
+          items: const [
+            BottomNavigationBarItem(icon: Icon(Icons.store), label: "Mercado"),
+            BottomNavigationBarItem(icon: Icon(Icons.list), label: "Catálogo"),
+            BottomNavigationBarItem(icon: Icon(Icons.account_balance_wallet), label: "Carteira"),
+            BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: "Perfil"),
+          ],
+        ),
       ),
 
       body: SafeArea(
