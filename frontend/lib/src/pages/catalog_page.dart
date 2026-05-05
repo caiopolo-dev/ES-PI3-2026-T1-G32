@@ -6,10 +6,10 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/startup_service.dart';
 import 'package:intl/intl.dart';
-import 'startup_detail_page.dart';
+import 'startup_detail/startup_detail_page.dart';
 import 'balcao_page.dart';
 import 'profile_page.dart';
-import 'auth/initial_page.dart';
+import 'initial_page.dart';
 
 const Map<String, String> _estagioLabels = {
   'nova': 'Nova',
