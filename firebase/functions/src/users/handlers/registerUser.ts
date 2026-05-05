@@ -5,7 +5,7 @@ import {registerUser, verificarRgExiste,
 
 export const createUser = onCall(async (request)=>{
   const {name, rg, telefone, email} = request.data;
-
+  const saldoCentavos = 0;
 
   if (!name || !rg || !telefone || !email) {
     throw new HttpsError(
@@ -38,7 +38,8 @@ export const createUser = onCall(async (request)=>{
 
 
   const uid = request.auth.uid;
-  const result = await registerUser(uid, name, rg, telefone, email);
+  const result = await registerUser(
+    uid, name, rg, telefone, email, saldoCentavos);
 
   return result;
 });

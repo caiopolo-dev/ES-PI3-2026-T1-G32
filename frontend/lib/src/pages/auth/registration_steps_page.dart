@@ -4,7 +4,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import '../services/auth_service.dart';
+import '../../services/auth_service.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -109,6 +109,23 @@ class _RegisterPageState extends State<RegisterPage> {
         return Column(
           children: [
             buildInput(passwordController, 'Senha', obscure: true),
+            const SizedBox(height: 8),
+            ValueListenableBuilder<TextEditingValue>(
+              valueListenable: passwordController,
+              builder: (context, value, _) {
+                final valid = RegExp(r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$').hasMatch(value.text);
+                if (valid) return const SizedBox.shrink();
+                return const Text(
+                  'A senha deve conter 8+ caracteres, uma maiúscula e uma minúscula',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.black38,
+                    fontFamily: 'JosefinSans',
+                  ),
+                );
+              },
+            ),
             const SizedBox(height: 20),
             buildInput(confirmPasswordController, 'Confirme a senha', obscure: true),
           ],

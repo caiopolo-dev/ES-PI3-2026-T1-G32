@@ -3,9 +3,13 @@
 // Descrição: Tela do catálogo das startups, com filtros funcionais
 
 import 'package:flutter/material.dart';
-import '../../services/startup_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../services/startup_service.dart';
 import 'package:intl/intl.dart';
 import 'startup_detail_page.dart';
+import 'balcao_page.dart';
+import 'profile_page.dart';
+import 'auth/initial_page.dart';
 
 const Map<String, String> _estagioLabels = {
   'nova': 'Nova',
@@ -14,7 +18,9 @@ const Map<String, String> _estagioLabels = {
 };
 
 class InitialCatalogPage extends StatefulWidget {
-  const InitialCatalogPage({super.key});
+  final Map<String, dynamic>? usuario;
+
+  const InitialCatalogPage({super.key, this.usuario});
 
   @override
   State<InitialCatalogPage> createState() => _InitialCatalogPageState();
@@ -48,6 +54,16 @@ class _InitialCatalogPageState extends State<InitialCatalogPage> {
   void dispose() {
     _searchController.dispose();
     super.dispose();
+  }
+
+  Future<void> _logout() async {
+    await FirebaseAuth.instance.signOut();
+    if (!mounted) return;
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (_) => const InitialPage()),
+      (_) => false,
+    );
   }
 
   Future<void> fetchStartups() async {
@@ -85,14 +101,78 @@ class _InitialCatalogPageState extends State<InitialCatalogPage> {
 
   @override
   Widget build(BuildContext context) {
+    final usuario = widget.usuario ?? {};
+    final nome = (usuario['nome'] ?? usuario['name']) as String? ?? '';
+    final inicial = nome.isNotEmpty ? nome[0].toUpperCase() : '?';
+
     return Scaffold(
       backgroundColor: const Color(0xFFF5F5F5),
 
+      appBar: AppBar(
+        backgroundColor: const Color(0xFFF5F5F5),
+        elevation: 0,
+        automaticallyImplyLeading: false,
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 16),
+            child: PopupMenuButton<String>(
+              onSelected: (value) {
+                if (value == 'perfil') {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => ProfilePage(usuario: widget.usuario),
+                    ),
+                  );
+                } else if (value == 'sair') {
+                  _logout();
+                }
+              },
+              itemBuilder: (_) => [
+                const PopupMenuItem(value: 'perfil', child: Text('Meu Perfil')),
+                const PopupMenuItem(
+                  value: 'sair',
+                  child: Text('Sair', style: TextStyle(color: Colors.red)),
+                ),
+              ],
+              child: CircleAvatar(
+                radius: 18,
+                backgroundColor: Colors.blue,
+                child: Text(
+                  inicial,
+                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+
       bottomNavigationBar: BottomNavigationBar(
+        type: BottomNavigationBarType.fixed,
+        backgroundColor: Colors.white,
+        elevation: 0,
         currentIndex: 1,
         selectedItemColor: Colors.blue,
+        unselectedItemColor: Colors.grey,
         onTap: (index) {
+          if (index == 0) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (_) => BalcaoNegociacaoPage(usuario: widget.usuario)),
+            );
+            return;
+          }
           if (index == 1) return;
+          if (index == 3) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => ProfilePage(usuario: widget.usuario),
+              ),
+            );
+            return;
+          }
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Em breve')),
           );
@@ -101,6 +181,7 @@ class _InitialCatalogPageState extends State<InitialCatalogPage> {
           BottomNavigationBarItem(icon: Icon(Icons.store), label: "Mercado"),
           BottomNavigationBarItem(icon: Icon(Icons.list), label: "Catálogo"),
           BottomNavigationBarItem(icon: Icon(Icons.account_balance_wallet), label: "Carteira"),
+          BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: "Perfil"),
         ],
       ),
 
@@ -186,6 +267,7 @@ class _InitialCatalogPageState extends State<InitialCatalogPage> {
                                         builder: (_) => StartupDetailPage(
                                           startupId: data['id'] as String? ?? '',
                                           startupNome: data['nome'] as String? ?? '',
+                                          usuario: widget.usuario,
                                         ),
                                       ),
                                     ),
