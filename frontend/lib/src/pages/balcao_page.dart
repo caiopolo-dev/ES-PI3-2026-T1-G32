@@ -2,11 +2,16 @@
 //Pagina do balcão de negociação
 
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_functions/cloud_functions.dart';
-import './auth/catalog_page.dart';
+import 'catalog_page.dart';
+import 'profile_page.dart';
+import 'auth/initial_page.dart';
 
 class BalcaoNegociacaoPage extends StatefulWidget {
-  const BalcaoNegociacaoPage({super.key});
+  final Map<String, dynamic>? usuario;
+
+  const BalcaoNegociacaoPage({super.key, this.usuario});
 
   @override
   State<BalcaoNegociacaoPage> createState() => _BalcaoNegociacaoPageState();
@@ -24,6 +29,16 @@ class _BalcaoNegociacaoPageState extends State<BalcaoNegociacaoPage>{
     loadOffers();
   }
   
+
+  Future<void> _logout() async {
+    await FirebaseAuth.instance.signOut();
+    if (!mounted) return;
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (_) => const InitialPage()),
+      (_) => false,
+    );
+  }
 
   Future<void> loadOffers() async{
     if (!mounted) return;
@@ -58,62 +73,49 @@ class _BalcaoNegociacaoPageState extends State<BalcaoNegociacaoPage>{
 
   @override
   Widget build(BuildContext context) {
-    final selectedIconColor = const Color(0xFF013593).withOpacity(0.85);
+    final usuario = widget.usuario ?? {};
+    final nome = (usuario['nome'] ?? usuario['name']) as String? ?? '';
+    final inicial = nome.isNotEmpty ? nome[0].toUpperCase() : '?';
+
     return Scaffold(
       backgroundColor: Colors.white,
-      bottomNavigationBar: Container(
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          border: Border(
-            top: BorderSide(color: Color.fromARGB(255, 0, 0, 0), width: 0.8),
-          ),
-        ),
-        child: BottomNavigationBar(
-          type: BottomNavigationBarType.fixed,
-          backgroundColor: Colors.white,
-          elevation: 0,
-          showSelectedLabels: false,
-          showUnselectedLabels: false,
-          currentIndex: 0, // 0 = Mercado, 1 = Catálogo, 2 = Carteira
-          selectedItemColor: Colors.black,
-          unselectedItemColor: Colors.black,
-          onTap: (index) {
-            if (index == 0) return;
-
-            if (index == 1) {
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => const InitialCatalogPage(),
-                ),
-              );
-              return;
-            }
-          },
-          selectedLabelStyle: _textStyle,
-          unselectedLabelStyle: _textStyle,
-          items: [
-            BottomNavigationBarItem(
-              activeIcon: Image.asset(
-                "assets/BotaoBalcao.png",
-                width: 50,
-                height: 50,
-                color: selectedIconColor,
-                colorBlendMode: BlendMode.srcIn,
+      bottomNavigationBar: BottomNavigationBar(
+        type: BottomNavigationBarType.fixed,
+        backgroundColor: Colors.white,
+        elevation: 0,
+        currentIndex: 0,
+        selectedItemColor: Colors.blue,
+        unselectedItemColor: Colors.grey,
+        onTap: (index) {
+          if (index == 0) return;
+          if (index == 1) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (_) => InitialCatalogPage(usuario: widget.usuario),
               ),
-              icon: Image.asset("assets/BotaoBalcao.png", width: 40 ,height: 40),
-              label: "",
-            ),
-            BottomNavigationBarItem(
-              icon: Image.asset("assets/BotaoCatalogo.png", width: 50 ,height: 50),
-              label: "",
-            ),
-            BottomNavigationBarItem(
-              icon: Image.asset("assets/BotãoCarteira.png", width: 50 ,height: 50),
-              label: "",
-            ),
-          ],
-        ),
+            );
+            return;
+          }
+          if (index == 3) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => ProfilePage(usuario: widget.usuario),
+              ),
+            );
+            return;
+          }
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Em breve')),
+          );
+        },
+        items: const [
+          BottomNavigationBarItem(icon: Icon(Icons.store), label: "Mercado"),
+          BottomNavigationBarItem(icon: Icon(Icons.list), label: "Catálogo"),
+          BottomNavigationBarItem(icon: Icon(Icons.account_balance_wallet), label: "Carteira"),
+          BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: "Perfil"),
+        ],
       ),
 
 
@@ -124,36 +126,59 @@ class _BalcaoNegociacaoPageState extends State<BalcaoNegociacaoPage>{
             children: [
               const SizedBox(height: 20),
 
-              Center(
-                child: FractionallySizedBox(
-               
-                widthFactor: 0.8,
-                
-                child: TextField(
-                  style: _textStyle,
-                  textAlignVertical: TextAlignVertical.center,
-                  decoration: InputDecoration(
-                    isDense: true,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    hintText: "Buscar startup",
-                    hintStyle: TextStyle(color: Color.fromARGB(70, 0, 0, 0), fontSize: 20, fontFamily: "Josefins-sans"), //arruamar
-                    prefixIcon: const Icon(Icons.search, color: Color.fromARGB(70, 0, 0, 0),),
-                    filled: true,
-                    fillColor: Colors.grey[200],
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(9),
-                      borderSide: BorderSide(color: Color.fromARGB(65, 189,186,186),
-                        width: 3
-                      )
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(9),
-                      borderSide: BorderSide(color: Color.fromARGB(98, 45, 158, 173), width: 3),
+              // Linha 1: flecha (esquerda) e avatar do perfil (direita)
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.arrow_back, color: Colors.black),
+                    onPressed: () => Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => InitialCatalogPage(usuario: widget.usuario),
+                      ),
                     ),
                   ),
-
-                ),
+                  Padding(
+                    padding: const EdgeInsets.only(right: 4),
+                    child: PopupMenuButton<String>(
+                      onSelected: (value) {
+                        if (value == 'perfil') {
+                          Navigator.push(context, MaterialPageRoute(
+                            builder: (_) => ProfilePage(usuario: widget.usuario),
+                          ));
+                        } else if (value == 'sair') {
+                          _logout();
+                        }
+                      },
+                      itemBuilder: (_) => [
+                        const PopupMenuItem(value: 'perfil', child: Text('Meu Perfil')),
+                        const PopupMenuItem(value: 'sair', child: Text('Sair', style: TextStyle(color: Colors.red))),
+                      ],
+                      child: CircleAvatar(
+                        radius: 18,
+                        backgroundColor: Colors.blue,
+                        child: Text(inicial, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                      ),
+                    ),
+                  ),
+                ],
               ),
+
+              const SizedBox(height: 12),
+
+              // Linha 2: barra de busca largura total
+              TextField(
+                decoration: InputDecoration(
+                  hintText: "Buscar startup",
+                  prefixIcon: const Icon(Icons.search, color: Colors.blue),
+                  filled: true,
+                  fillColor: Colors.grey[200],
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(20),
+                    borderSide: BorderSide.none,
+                  ),
+                ),
               ),
               const SizedBox(height: 35),
               Row(
@@ -238,7 +263,3 @@ class _BalcaoNegociacaoPageState extends State<BalcaoNegociacaoPage>{
     );
   }
 }
-
-
-  
- 
