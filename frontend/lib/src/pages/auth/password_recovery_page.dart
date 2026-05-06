@@ -1,7 +1,11 @@
 // Caio Ferreira Polo 25002823
 
+// Autor: Gustavo Alves de Siqueira Costa
+// Data: 05/05/2026
+// Descrição: Tela de recuperação de senha
 
 import 'package:flutter/material.dart';
+import 'package:mescla_invest/src/services/auth_service.dart';
 
 class PasswordRecoveryPage extends StatefulWidget {
   const PasswordRecoveryPage({super.key});
@@ -28,46 +32,26 @@ class _PasswordRecoveryPageState extends State<PasswordRecoveryPage> {
   }
 
   Future<void> sendRecoveryEmail() async {
-    if (validateEmail()) {
-      setState(() => isLoading = true);
+    if (!validateEmail()) return;
 
-      try {
-        await Future.delayed(const Duration(seconds: 2));
+    setState(() { isLoading = true; errorText = ''; });
 
-        if (!mounted) return;
+    final result = await AuthService.sendPasswordReset(email: emailController.text);
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Email de recuperação enviado para ${emailController.text}'),
-            backgroundColor: Colors.green,
-            duration: const Duration(seconds: 3),
-          ),
-        );
+    if (!mounted) return;
+    setState(() => isLoading = false);
 
-        // Aguardar 1 segundo e voltar para login
-        await Future.delayed(const Duration(seconds: 1));
-        if (mounted) {
-          Navigator.pop(context);
-        }
-      } catch (e) {
-        if (mounted) {
-          setState(() {
-            errorText = 'Erro ao enviar email: ${e.toString()}';
-          });
-
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Erro: ${e.toString()}'),
-              backgroundColor: Colors.red,
-              duration: const Duration(seconds: 3),
-            ),
-          );
-        }
-      } finally {
-        if (mounted) {
-          setState(() => isLoading = false);
-        }
-      }
+    if (result['success'] as bool) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('E-mail de recuperação enviado com sucesso'),
+          backgroundColor: Colors.green,
+          duration: Duration(seconds: 3),
+        ),
+      );
+      Navigator.pop(context);
+    } else {
+      setState(() => errorText = result['message'] as String? ?? 'Erro ao enviar e-mail');
     }
   }
 
