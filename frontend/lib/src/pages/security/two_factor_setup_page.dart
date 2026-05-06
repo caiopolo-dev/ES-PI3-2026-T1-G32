@@ -5,6 +5,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:qr_flutter/qr_flutter.dart';
+import 'package:mescla_invest/src/services/two_factor_service.dart';
 
 class TwoFactorSetupPage extends StatefulWidget {
   const TwoFactorSetupPage({super.key});
@@ -16,7 +17,6 @@ class TwoFactorSetupPage extends StatefulWidget {
 class _TwoFactorSetupPageState extends State<TwoFactorSetupPage> {
   final TextEditingController _codeController = TextEditingController();
   String? _qrCodeUrl;
-  MultiFactorSession? _session;
   TotpSecret? _totpSecret;
   bool _isLoading = true;
   bool _isVerifying = false;
@@ -29,23 +29,19 @@ class _TwoFactorSetupPageState extends State<TwoFactorSetupPage> {
   }
 
   Future<void> _initTotp() async {
-    try {
-      final user = FirebaseAuth.instance.currentUser!;
-      _session = await user.multiFactor.getSession();
-      _totpSecret = await TotpMultiFactorGenerator.generateSecret(_session!);
+    final result = await TwoFactorService.generateSetup();
 
-      final url = await _totpSecret!.generateQrCodeUrl(
-        accountName: user.email ?? 'usuario',
-        issuer: 'MesclaInvest',
-      );
+    if (!mounted) return;
 
+    if (result['success'] == true) {
       setState(() {
-        _qrCodeUrl = url;
+        _qrCodeUrl = result['qrCodeUrl'] as String;
+        _totpSecret = result['secret'] as TotpSecret;
         _isLoading = false;
       });
-    } catch (e) {
+    } else {
       setState(() {
-        _errorText = 'Erro ao gerar QR Code: ${e.toString()}';
+        _errorText = result['message'] as String? ?? 'Erro ao gerar QR Code';
         _isLoading = false;
       });
     }
@@ -62,30 +58,24 @@ class _TwoFactorSetupPageState extends State<TwoFactorSetupPage> {
       _errorText = '';
     });
 
-    try {
-      final assertion = await TotpMultiFactorGenerator.getAssertionForEnrollment(
-        _totpSecret!,
-        _codeController.text,
-      );
+    final result = await TwoFactorService.enrollTotp(
+      _totpSecret!,
+      _codeController.text,
+    );
 
-      await FirebaseAuth.instance.currentUser!.multiFactor.enroll(
-        assertion,
-        displayName: 'Autenticador',
-      );
+    if (!mounted) return;
 
-      if (!mounted) return;
-
+    if (result['success'] == true) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('2FA ativado com sucesso!'),
           backgroundColor: Colors.green,
         ),
       );
-
       Navigator.pop(context, true);
-    } catch (e) {
+    } else {
       setState(() {
-        _errorText = 'Código inválido. Tente novamente.';
+        _errorText = result['message'] as String? ?? 'Código inválido.';
         _isVerifying = false;
       });
     }
@@ -204,7 +194,7 @@ class _TwoFactorSetupPageState extends State<TwoFactorSetupPage> {
                             borderRadius: BorderRadius.circular(24),
                           ),
                           elevation: 6,
-                          shadowColor: Colors.blue.withOpacity(0.4),
+                          shadowColor: Colors.blue.withValues(alpha: 0.4),
                         ),
                         child: _isVerifying
                             ? const SizedBox(

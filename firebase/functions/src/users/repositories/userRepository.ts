@@ -30,7 +30,6 @@ export async function registerUser(
     rg,
     telefone,
     email,
-    mfaEnabled: false,
   });
   batch.set(walletRef, {
     saldo,

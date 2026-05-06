@@ -4,7 +4,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:mescla_invest/src/services/auth_service.dart';
-import 'package:mescla_invest/src/pages/catalog_page.dart';
+import 'package:mescla_invest/src/pages/home/catalog_page.dart';
 import 'package:mescla_invest/src/pages/auth/password_recovery_page.dart';
 import 'package:mescla_invest/src/pages/auth/two_factor_verify_page.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -202,6 +202,7 @@ class _LoginPageState extends State<LoginPage> {
                       if (errorText.isNotEmpty)
                         Text(
                           errorText,
+                          textAlign: TextAlign.center,
                           style: const TextStyle(color: Colors.red),
                         ),
                     ],

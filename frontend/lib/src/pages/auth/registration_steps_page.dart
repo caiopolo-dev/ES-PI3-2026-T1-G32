@@ -37,8 +37,13 @@ class _RegisterPageState extends State<RegisterPage> {
 
     switch (currentStep) {
       case 0:
-        if (nameController.text.trim().split(' ').length < 2) {
+        final nome = nameController.text.trim();
+        if (nome.split(' ').length < 2) {
           errorText = 'Digite seu nome completo';
+          return false;
+        }
+        if (RegExp(r'[0-9]').hasMatch(nome)) {
+          errorText = 'Nome não pode conter números';
           return false;
         }
         final rg = rgController.text.replaceAll(RegExp(r'[^0-9]'), '');
@@ -82,7 +87,11 @@ class _RegisterPageState extends State<RegisterPage> {
       case 0:
         return Column(
           children: [
-            buildInput(nameController, 'Nome completo'),
+            buildInput(
+              nameController,
+              'Nome completo',
+              inputFormatters: [_NomeFormatter()],
+            ),
             const SizedBox(height: 20),
             buildInput(
               rgController,
@@ -192,7 +201,13 @@ class _RegisterPageState extends State<RegisterPage> {
 
     if (result['success']) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Cadastro realizado com sucesso!')),
+        const SnackBar(
+          content: Text(
+            'Cadastro realizado! Verifique seu e-mail para ativar a conta.',
+          ),
+          backgroundColor: Colors.green,
+          duration: Duration(seconds: 15),
+        ),
       );
       Navigator.pop(context);
     } else {
@@ -298,6 +313,23 @@ class _RegisterPageState extends State<RegisterPage> {
 }
 
 // Máscara RG: XX.XXX.XXX-X
+class _NomeFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    final sanitized = newValue.text.replaceAll(
+      RegExp(r'[^a-zA-ZÀ-ÿ\s]'),
+      '',
+    );
+    return newValue.copyWith(
+      text: sanitized,
+      selection: TextSelection.collapsed(offset: sanitized.length),
+    );
+  }
+}
+
 class _RgFormatter extends TextInputFormatter {
   @override
   TextEditingValue formatEditUpdate(TextEditingValue oldValue, TextEditingValue newValue) {

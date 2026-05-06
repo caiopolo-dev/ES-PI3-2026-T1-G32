@@ -6,9 +6,9 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
 import 'package:mescla_invest/src/services/startup_service.dart';
-import 'package:mescla_invest/src/pages/startup_detail/startup_detail_page.dart';
-import 'package:mescla_invest/src/pages/balcao_page.dart';
-import 'package:mescla_invest/src/pages/profile_page.dart';
+import 'package:mescla_invest/src/pages/home/startup_detail/startup_detail_page.dart';
+import 'package:mescla_invest/src/pages/home/balcao_page.dart';
+import 'package:mescla_invest/src/pages/home/profile_page.dart';
 import 'package:mescla_invest/src/pages/initial_page.dart';
 
 const Map<String, String> _estagioLabels = {

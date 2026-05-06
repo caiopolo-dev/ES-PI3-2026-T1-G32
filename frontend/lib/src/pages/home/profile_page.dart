@@ -5,7 +5,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:mescla_invest/src/pages/initial_page.dart';
-import 'package:mescla_invest/src/pages/auth/two_factor_setup_page.dart';
+import 'package:mescla_invest/src/pages/security/two_factor_setup_page.dart';
 
 class ProfilePage extends StatefulWidget {
   final Map<String, dynamic>? usuario;
@@ -18,6 +18,21 @@ class ProfilePage extends StatefulWidget {
 
 class _ProfilePageState extends State<ProfilePage> {
   bool _twoFactorEnabled = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadTwoFactorStatus();
+  }
+
+  Future<void> _loadTwoFactorStatus() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return;
+      final factors = await user.multiFactor.getEnrolledFactors();
+      if (mounted) setState(() => _twoFactorEnabled = factors.isNotEmpty);
+    } catch (_) {}
+  }
 
   Future<void> _logout() async {
     await FirebaseAuth.instance.signOut();
@@ -118,9 +133,9 @@ class _ProfilePageState extends State<ProfilePage> {
                           'Autenticação de dois fatores',
                           style: TextStyle(fontFamily: 'JosefinSans', fontSize: 15),
                         ),
-                        subtitle: const Text(
-                          'Em breve',
-                          style: TextStyle(
+                        subtitle: Text(
+                          _twoFactorEnabled ? 'Ativo' : 'Inativo',
+                          style: const TextStyle(
                             fontFamily: 'JosefinSans',
                             fontSize: 12,
                             color: Colors.black38,
@@ -128,7 +143,10 @@ class _ProfilePageState extends State<ProfilePage> {
                         ),
                         trailing: Switch(
                           value: _twoFactorEnabled,
-                          activeColor: Colors.blue,
+                          activeThumbColor: Colors.blue,
+                          activeTrackColor: Colors.blue.shade200,
+                          inactiveTrackColor: Colors.grey.shade200,
+                          inactiveThumbColor: Colors.grey,
                           onChanged: (value) async {
                             if (value) {
                               final result = await Navigator.push(

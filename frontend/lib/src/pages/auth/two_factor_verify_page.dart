@@ -4,7 +4,9 @@
 
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:mescla_invest/src/pages/catalog_page.dart';
+import 'package:mescla_invest/src/pages/home/catalog_page.dart';
+import 'package:mescla_invest/src/services/auth_service.dart';
+import 'package:mescla_invest/src/services/two_factor_service.dart';
 
 class TwoFactorVerifyPage extends StatefulWidget {
   final MultiFactorResolver resolver;
@@ -36,25 +38,31 @@ class _TwoFactorVerifyPageState extends State<TwoFactorVerifyPage> {
       _errorText = '';
     });
 
-    try {
-      final assertion = await TotpMultiFactorGenerator.getAssertionForSignIn(
-        widget.resolver.hints.first.uid,
-        _codeController.text,
-      );
+    final result = await TwoFactorService.verifyTotp(
+      widget.resolver,
+      _codeController.text,
+    );
 
-      await widget.resolver.resolveSignIn(assertion);
+    if (!mounted) return;
+
+    if (result['success'] == true) {
+      final data = await AuthService.fetchUserData();
+      final usuario = data['success'] == true
+          ? data['usuario'] as Map<String, dynamic>?
+          : null;
 
       if (!mounted) return;
 
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (_) => InitialCatalogPage(usuario: widget.usuario),
+          builder: (_) => InitialCatalogPage(usuario: usuario),
         ),
       );
-    } catch (e) {
+    } else {
       setState(() {
-        _errorText = 'Código inválido. Tente novamente.';
+        _errorText =
+            result['message'] as String? ?? 'Código inválido. Tente novamente.';
         _isVerifying = false;
       });
     }
@@ -173,7 +181,7 @@ class _TwoFactorVerifyPageState extends State<TwoFactorVerifyPage> {
                       side: const BorderSide(color: Color(0xFF1565C0), width: 0.25),
                     ),
                     elevation: 6,
-                    shadowColor: Colors.blue.withOpacity(0.4),
+                    shadowColor: Colors.blue.withValues(alpha: 0.4),
                   ),
                   child: _isVerifying
                       ? const SizedBox(
