@@ -1,6 +1,9 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_functions/cloud_functions.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+
+// ****** REMOVER E ALTERAR A LOGICA *********
+import 'package:cloud_firestore/cloud_firestore.dart'; 
+// *******************************************
 
 class AuthService {
   static Map<String, dynamic> validarDados({
@@ -133,6 +136,37 @@ class AuthService {
         'error': 'Erro inesperado',
         'message': e.toString(),
       };
+    }
+  }
+
+  static Future<Map<String, dynamic>> sendPasswordReset({
+    required String email,
+  }) async {
+    final emailLimpo = email.trim();
+
+    if (emailLimpo.isEmpty || !emailLimpo.contains('@')) {
+      return {'success': false, 'message': 'Digite um e-mail válido'};
+    }
+
+    try {
+      await FirebaseFunctions.instance
+          .httpsCallable('checkUserExists')
+          .call({'email': emailLimpo});
+
+      await FirebaseAuth.instance.sendPasswordResetEmail(email: emailLimpo);
+      return {'success': true};
+    } on FirebaseFunctionsException catch (e) {
+      String message = 'Erro ao enviar e-mail de recuperação';
+      if (e.code == 'not-found') {
+        message = 'Nenhuma conta encontrada com este e-mail';
+      }
+      return {'success': false, 'message': message};
+    } on FirebaseAuthException catch (e) {
+      String message = 'Erro ao enviar e-mail de recuperação';
+      if (e.code == 'invalid-email') message = 'E-mail inválido';
+      return {'success': false, 'message': message};
+    } catch (e) {
+      return {'success': false, 'message': 'Erro inesperado: ${e.toString()}'};
     }
   }
 
