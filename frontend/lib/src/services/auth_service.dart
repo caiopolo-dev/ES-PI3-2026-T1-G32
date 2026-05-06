@@ -1,10 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 
-// ****** REMOVER E ALTERAR A LOGICA *********
-import 'package:cloud_firestore/cloud_firestore.dart'; 
-// *******************************************
-
 class AuthService {
   static Map<String, dynamic> validarDados({
     required String rg,
@@ -209,12 +205,12 @@ class AuthService {
         };
       }
 
-      final userDoc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .get();
+      final result = await FirebaseFunctions.instance
+          .httpsCallable('getUserData')
+          .call();
 
-      final userData = userDoc.data() ?? {};
+      final userData =
+          Map<String, dynamic>.from(result.data as Map? ?? {});
 
       return {
         'success': true,
@@ -245,7 +241,7 @@ class AuthService {
         'error': e.code,
         'message': message,
       };
-    } on FirebaseException catch (e) {
+    } on FirebaseFunctionsException catch (e) {
       return {
         'success': false,
         'error': e.code,
