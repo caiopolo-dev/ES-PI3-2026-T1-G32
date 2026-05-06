@@ -5,6 +5,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:mescla_invest/src/pages/initial_page.dart';
+import 'package:mescla_invest/src/pages/auth/two_factor_setup_page.dart';
 
 class ProfilePage extends StatefulWidget {
   final Map<String, dynamic>? usuario;
@@ -128,12 +129,25 @@ class _ProfilePageState extends State<ProfilePage> {
                         trailing: Switch(
                           value: _twoFactorEnabled,
                           activeColor: Colors.blue,
-                          onChanged: (_) {
-                            ScaffoldMessenger.of(context).showSnackBar(
+                          onChanged: (value) async {
+                            if (value) {
+                              final result = await Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const TwoFactorSetupPage(),
+                               ),
+                              );
+
+                              if (result == true) {
+                               setState(() => _twoFactorEnabled = true);
+                             }
+                           } else {
+                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
-                                content: Text('Autenticação de dois fatores em breve'),
+                               content: Text('Para desativar, contate o suporte'),
                               ),
-                            );
+                             );
+                           }
                           },
                         ),
                       ),
