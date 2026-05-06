@@ -1,10 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 
-// ****** REMOVER E ALTERAR A LOGICA *********
-import 'package:cloud_firestore/cloud_firestore.dart'; 
-// *******************************************
-
 class AuthService {
   static Map<String, dynamic> validarDados({
     required String rg,
@@ -86,6 +82,8 @@ class AuthService {
         email: emailLimpo,
         password: senha,
       );
+
+      await userCredential.user?.sendEmailVerification();
 
       final callable = FirebaseFunctions.instance.httpsCallable('createUser');
 
@@ -209,12 +207,23 @@ class AuthService {
         };
       }
 
-      final userDoc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .get();
+      if (!user.emailVerified) {
+        await FirebaseAuth.instance.signOut();
+        return {
+          'success': false,
+          'error': 'email-not-verified',
+          'message':
+              'Confirme seu e-mail antes de fazer login. '
+              'Verifique sua caixa de entrada.',
+        };
+      }
 
-      final userData = userDoc.data() ?? {};
+      final result = await FirebaseFunctions.instance
+          .httpsCallable('getUserData')
+          .call();
+
+      final userData =
+          Map<String, dynamic>.from(result.data as Map? ?? {});
 
       return {
         'success': true,
@@ -225,6 +234,8 @@ class AuthService {
         },
         'message': 'Login realizado com sucesso!',
       };
+    } on FirebaseAuthMultiFactorException {
+      rethrow;
     } on FirebaseAuthException catch (e) {
       String message = 'Erro ao fazer login';
 
@@ -245,7 +256,7 @@ class AuthService {
         'error': e.code,
         'message': message,
       };
-    } on FirebaseException catch (e) {
+    } on FirebaseFunctionsException catch (e) {
       return {
         'success': false,
         'error': e.code,
@@ -257,6 +268,38 @@ class AuthService {
         'error': 'Erro inesperado',
         'message': e.toString(),
       };
+    }
+  }
+
+  static Future<Map<String, dynamic>> fetchUserData() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        return {'success': false, 'message': 'Usuário não autenticado'};
+      }
+
+      final result = await FirebaseFunctions.instance
+          .httpsCallable('getUserData')
+          .call();
+
+      final userData =
+          Map<String, dynamic>.from(result.data as Map? ?? {});
+
+      return {
+        'success': true,
+        'usuario': {
+          'uid': user.uid,
+          'email': user.email,
+          ...userData,
+        },
+      };
+    } on FirebaseFunctionsException catch (e) {
+      return {
+        'success': false,
+        'message': e.message ?? 'Erro ao buscar dados do usuário',
+      };
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
     }
   }
 }
