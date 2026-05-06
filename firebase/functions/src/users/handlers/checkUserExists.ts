@@ -1,6 +1,6 @@
 // Autor: Gustavo Alves de Siqueira Costa
 // Data: 05/05/2026
-// Verifica se o email existe no Auth 
+// Verifica se o email existe no Auth
 // antes de enviar recuperação de senha
 
 import {onCall, HttpsError} from "firebase-functions/v2/https";
