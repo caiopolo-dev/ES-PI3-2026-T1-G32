@@ -4,8 +4,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_functions/cloud_functions.dart';
-import 'package:mescla_invest/src/pages/catalog_page.dart';
-import 'package:mescla_invest/src/pages/profile_page.dart';
+import 'package:mescla_invest/src/pages/home/catalog_page.dart';
+import 'package:mescla_invest/src/pages/home/profile_page.dart';
 import 'package:mescla_invest/src/pages/initial_page.dart';
 
 class BalcaoNegociacaoPage extends StatefulWidget {

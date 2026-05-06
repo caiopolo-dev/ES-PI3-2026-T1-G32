@@ -6,10 +6,10 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:mescla_invest/src/services/startup_service.dart';
 import 'package:mescla_invest/src/services/faq_service.dart';
-import 'package:mescla_invest/src/pages/startup_detail/startup_detail_widgets.dart';
-import 'package:mescla_invest/src/pages/startup_detail/startup_detail_faq.dart';
-import 'package:mescla_invest/src/pages/profile_page.dart';
-import 'package:mescla_invest/src/pages/balcao_page.dart';
+import 'package:mescla_invest/src/pages/home/startup_detail/startup_detail_widgets.dart';
+import 'package:mescla_invest/src/pages/home/startup_detail/startup_detail_faq.dart';
+import 'package:mescla_invest/src/pages/home/profile_page.dart';
+import 'package:mescla_invest/src/pages/home/balcao_page.dart';
 import 'package:mescla_invest/src/pages/initial_page.dart';
 
 class StartupDetailPage extends StatefulWidget {

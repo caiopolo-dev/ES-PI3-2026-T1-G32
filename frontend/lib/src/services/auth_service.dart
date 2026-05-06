@@ -83,6 +83,8 @@ class AuthService {
         password: senha,
       );
 
+      await userCredential.user?.sendEmailVerification();
+
       final callable = FirebaseFunctions.instance.httpsCallable('createUser');
 
       final result = await callable.call({
@@ -205,6 +207,17 @@ class AuthService {
         };
       }
 
+      if (!user.emailVerified) {
+        await FirebaseAuth.instance.signOut();
+        return {
+          'success': false,
+          'error': 'email-not-verified',
+          'message':
+              'Confirme seu e-mail antes de fazer login. '
+              'Verifique sua caixa de entrada.',
+        };
+      }
+
       final result = await FirebaseFunctions.instance
           .httpsCallable('getUserData')
           .call();
@@ -221,6 +234,8 @@ class AuthService {
         },
         'message': 'Login realizado com sucesso!',
       };
+    } on FirebaseAuthMultiFactorException {
+      rethrow;
     } on FirebaseAuthException catch (e) {
       String message = 'Erro ao fazer login';
 
@@ -253,6 +268,38 @@ class AuthService {
         'error': 'Erro inesperado',
         'message': e.toString(),
       };
+    }
+  }
+
+  static Future<Map<String, dynamic>> fetchUserData() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        return {'success': false, 'message': 'Usuário não autenticado'};
+      }
+
+      final result = await FirebaseFunctions.instance
+          .httpsCallable('getUserData')
+          .call();
+
+      final userData =
+          Map<String, dynamic>.from(result.data as Map? ?? {});
+
+      return {
+        'success': true,
+        'usuario': {
+          'uid': user.uid,
+          'email': user.email,
+          ...userData,
+        },
+      };
+    } on FirebaseFunctionsException catch (e) {
+      return {
+        'success': false,
+        'message': e.message ?? 'Erro ao buscar dados do usuário',
+      };
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
     }
   }
 }
