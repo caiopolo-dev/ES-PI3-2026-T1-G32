@@ -1,38 +1,17 @@
 // Caio Ferreira Polo = 25002823
 
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 
 class TokenDataService {
-  static void testeUsuarioLogado() {
-    final user = FirebaseAuth.instance.currentUser;
-
-    if (user == null) {
-      print('Sem usuário logado');
-      return;
-    }
-
-    print('Usuário logado: ${user.uid}');
-  }
-
   static Future<int> getWalletBalance() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) {
-      print('Sem usuário logado');
-      return 0 ;
+    try {
+      final result = await FirebaseFunctions.instance
+          .httpsCallable('getWalletBalance')
+          .call();
+      return (result.data['saldo'] as num).toInt();
+    } catch (_) {
+      return 0;
     }
-
-    final walletDoc = await FirebaseFirestore.instance
-    .collection('users')
-    .doc(user.uid)
-    .collection('wallet')
-    .doc('saldo')
-    .get();
-
-    final data = walletDoc.data();
-    final saldo = data?['saldo'] ?? 0;
-    return (saldo as num).toInt();
   }
 
 
