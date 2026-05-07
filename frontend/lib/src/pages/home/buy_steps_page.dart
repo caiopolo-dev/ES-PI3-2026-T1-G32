@@ -1,5 +1,6 @@
 // Caio Ferreira Polo - RA 25002823
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../services/tokenData_service.dart';
 
 class BuyStepsPage extends StatefulWidget {
@@ -27,6 +28,7 @@ class _BuyStepsPageState extends State<BuyStepsPage> {
 
   int tokenAmount = 1;
   int walletBalance = 0;
+  final TextEditingController _quantityController = TextEditingController(text: '1');
 
   static const List<String> _stepTitles = [
     'Compra de token',
@@ -50,6 +52,7 @@ class _BuyStepsPageState extends State<BuyStepsPage> {
     if (tokenAmount < widget.availableQuantity) {
       setState(() {
         tokenAmount++;
+        _quantityController.text = tokenAmount.toString();
       });
     }
   }
@@ -58,6 +61,7 @@ class _BuyStepsPageState extends State<BuyStepsPage> {
     if (tokenAmount > 1) {
       setState(() {
         tokenAmount--;
+        _quantityController.text = tokenAmount.toString();
       });
     }
   }
@@ -105,6 +109,12 @@ class _BuyStepsPageState extends State<BuyStepsPage> {
     loadWalletBalance();
   }
 
+  @override
+  void dispose() {
+    _quantityController.dispose();
+    super.dispose();
+  }
+
 
 
 
@@ -144,12 +154,13 @@ class _BuyStepsPageState extends State<BuyStepsPage> {
     switch (currentStep) {
       case 0:
         return Column(
+          mainAxisSize: MainAxisSize.max,
           children: [
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 const Text(
-                  'Saldo em conta corrente:',
+                  'Saldo em conta:',
                   style: TextStyle(fontSize: 20),
                 ),
                 Text(
@@ -183,7 +194,7 @@ class _BuyStepsPageState extends State<BuyStepsPage> {
               ],
             ),
 
-            const SizedBox(height: 350),
+            const Spacer(),
 
             Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -191,34 +202,55 @@ class _BuyStepsPageState extends State<BuyStepsPage> {
                 const Text(
                   'Quantidade',
                   style: TextStyle(fontSize: 20),
-                  
                 ),
-                
 
                 const SizedBox(height: 10),
 
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      tokenAmount.toString(),
-                      style: const TextStyle(fontSize: 30),
+                    SizedBox(
+                      width: 80,
+                      child: TextField(
+                        controller: _quantityController,
+                        keyboardType: TextInputType.number,
+                        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                        style: const TextStyle(fontSize: 30),
+                        decoration: const InputDecoration(
+                          border: InputBorder.none,
+                          contentPadding: EdgeInsets.zero,
+                          isDense: true,
+                        ),
+                        onChanged: (value) {
+                          final parsed = int.tryParse(value);
+                          if (parsed == null || parsed < 1) {
+                            setState(() => tokenAmount = 1);
+                          } else if (parsed > widget.availableQuantity) {
+                            setState(() {
+                              tokenAmount = widget.availableQuantity;
+                              _quantityController.text = tokenAmount.toString();
+                              _quantityController.selection = TextSelection.collapsed(
+                                offset: _quantityController.text.length,
+                              );
+                            });
+                          } else {
+                            setState(() => tokenAmount = parsed);
+                          }
+                        },
+                      ),
                     ),
 
                     Row(
                       children: [
                         OutlinedButton(
-                          onPressed: tokenSub ,
+                          onPressed: tokenSub,
                           style: OutlinedButton.styleFrom(
                             fixedSize: const Size(42, 42),
                             padding: EdgeInsets.zero,
                             foregroundColor: Colors.black,
-                            side: const BorderSide(
-                              color: Colors.black54,
-                              width: 1,
-                            ),
+                            side: const BorderSide(color: Colors.black38),
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(4),
+                              borderRadius: BorderRadius.circular(12),
                             ),
                           ),
                           child: const Text(
@@ -230,7 +262,7 @@ class _BuyStepsPageState extends State<BuyStepsPage> {
                           ),
                         ),
 
-                        const SizedBox(width: 20),
+                        const SizedBox(width: 12),
 
                         OutlinedButton(
                           onPressed: tokenSum,
@@ -238,12 +270,9 @@ class _BuyStepsPageState extends State<BuyStepsPage> {
                             fixedSize: const Size(42, 42),
                             padding: EdgeInsets.zero,
                             foregroundColor: Colors.black,
-                            side: const BorderSide(
-                              color: Colors.black54,
-                              width: 1,
-                            ),
+                            side: const BorderSide(color: Colors.black38),
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(4),
+                              borderRadius: BorderRadius.circular(12),
                             ),
                           ),
                           child: const Text(
@@ -285,18 +314,20 @@ class _BuyStepsPageState extends State<BuyStepsPage> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 20),
 
-                SizedBox(
-                width: 300,
-                height: 48,
-                child: ElevatedButton(
+                const SizedBox(height: 24),
+
+                ElevatedButton(
                   onPressed: nextStep,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.blue,
                     foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    elevation: 6,
+                    shadowColor: Colors.blue.withValues(alpha: 0.4),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(4),
+                      borderRadius: BorderRadius.circular(24),
+                      side: const BorderSide(color: Color(0xFF1565C0), width: 0.25),
                     ),
                   ),
                   child: const Text(
@@ -307,10 +338,8 @@ class _BuyStepsPageState extends State<BuyStepsPage> {
                     ),
                   ),
                 ),
-              ),
 
-
-
+                const SizedBox(height: 20),
               ],
             ),
           ],
@@ -318,6 +347,7 @@ class _BuyStepsPageState extends State<BuyStepsPage> {
 
       case 1:
         return Column(
+          mainAxisSize: MainAxisSize.max,
           children: [
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -383,53 +413,51 @@ class _BuyStepsPageState extends State<BuyStepsPage> {
               ],
             ),
 
-            const SizedBox(height: 410),
+            const Spacer(),
 
             Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+            const Divider(
+              height: 18,
+              thickness: 1,
+              color: Colors.black38,
+            ),
 
-                const SizedBox(height: 10),
+            const SizedBox(height: 24),
 
-                const Divider(
-                  height: 18,
-                  thickness: 1,
-                  color: Colors.black38,
-                ),
-
-
-                const SizedBox(height: 30),
-
-                SizedBox(
-                width: 300,
-                height: 48,
-                child: ElevatedButton(
-                  onPressed: isLoading ? null : confirmPurchase,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                  ),
-                  child: isLoading
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
-                        ),
-                      )
-                    : const Text(
-                        'Confirmar ordem de compra',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontFamily: 'JosefinSans',
-                        ),
-                      ),
+            ElevatedButton(
+              onPressed: isLoading ? null : confirmPurchase,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blue,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                elevation: 6,
+                shadowColor: Colors.blue.withValues(alpha: 0.4),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(24),
+                  side: const BorderSide(color: Color(0xFF1565C0), width: 0.25),
                 ),
               ),
+              child: isLoading
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  )
+                : const Text(
+                    'Confirmar ordem de compra',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontFamily: 'JosefinSans',
+                    ),
+                  ),
+            ),
+
+            const SizedBox(height: 20),
               ],
             ),
           ],
@@ -552,7 +580,7 @@ class _BuyStepsPageState extends State<BuyStepsPage> {
 
               const SizedBox(height: 30),
 
-              buildStepContent(),
+              Expanded(child: buildStepContent()),
               if (errorText.isNotEmpty)
                 Padding(
                   padding: const EdgeInsets.only(top: 12),

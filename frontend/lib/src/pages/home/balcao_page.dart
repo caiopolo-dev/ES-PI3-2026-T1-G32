@@ -256,21 +256,28 @@ class _BalcaoNegociacaoPageState extends State<BalcaoNegociacaoPage>{
                                   final valorFormatado = 'R\$ ${(valorCentavos / 100).toStringAsFixed(2).replaceAll('.', ',')}';
                                   final offerId = data['offerId'] ?? '';
 
-                                  return InkWell(
-                                    onTap: () {
-                                      Navigator.push(context, 
-                                        MaterialPageRoute(builder: (_) => BuyStepsPage(
-                                          startupName: startupId.toString(), 
-                                          availableQuantity: int.tryParse(amount.toString()) ?? 0, 
-                                          pricePerTokenCents: int.tryParse(valorCentavos.toString()) ?? 0,
-                                          offerId: offerId.toString(),
-                                          ),
-                                        ),
-                                      );
-                                    },
-                                    child: Column(
-                                      children: [
-                                        Row(
+                                  return Container(
+                                    margin: const EdgeInsets.only(bottom: 12),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(15),
+                                      border: Border.all(color: Colors.black12),
+                                    ),
+                                    child: InkWell(
+                                      borderRadius: BorderRadius.circular(15),
+                                      onTap: () {
+                                        Navigator.push(context,
+                                          MaterialPageRoute(builder: (_) => BuyStepsPage(
+                                            startupName: startupId.toString(),
+                                            availableQuantity: int.tryParse(amount.toString()) ?? 0,
+                                            pricePerTokenCents: int.tryParse(valorCentavos.toString()) ?? 0,
+                                            offerId: offerId.toString(),
+                                          )),
+                                        );
+                                      },
+                                      child: Padding(
+                                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                                        child: Row(
                                           children: [
                                             Expanded(
                                               flex: 2,
@@ -289,13 +296,8 @@ class _BalcaoNegociacaoPageState extends State<BalcaoNegociacaoPage>{
                                             ),
                                           ],
                                         ),
-                                        const Divider(
-                                          height: 18,
-                                          thickness: 1,
-                                          color: Colors.black38,
-                                        ),
-                                      ],
-                                    ),                                   
+                                      ),
+                                    ),
                                   );
                                 },
                             )
