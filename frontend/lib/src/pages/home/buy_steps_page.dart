@@ -1,6 +1,6 @@
 // Caio Ferreira Polo - RA 25002823
 import 'package:flutter/material.dart';
-import '../services/tokenData_service.dart';
+import '../../services/tokenData_service.dart';
 
 class BuyStepsPage extends StatefulWidget {
   @override
