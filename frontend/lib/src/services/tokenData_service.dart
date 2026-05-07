@@ -1,6 +1,8 @@
+// Caio Ferreira Polo = 25002823
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-
+import 'package:cloud_functions/cloud_functions.dart';
 
 class TokenDataService {
   static void testeUsuarioLogado() {
@@ -32,6 +34,38 @@ class TokenDataService {
     final saldo = data?['saldo'] ?? 0;
     return (saldo as num).toInt();
   }
+
+
+  static Future<Map<String, dynamic>> buyOffer({
+    required String offerId,
+    required int quantity,
+}) async {
+  try {
+    final callable = FirebaseFunctions.instance.httpsCallable('buyOffer');
+
+    final result = await callable.call({
+      'offerId': offerId,
+      'quantity': quantity,
+    });
+
+    return {
+      'success': true,
+      'data': result.data['data'],
+    };
+  } on FirebaseFunctionsException catch (e) {
+    return {
+      'success': false,
+      'message': e.message ?? 'Erro ao confirmar compra',
+      'error': e.code,
+    };
+  } catch (e) {
+    return {
+      'success': false,
+      'message': e.toString(),
+      'error': 'unexpected',
+    };
+  }
+}
 }
 
 

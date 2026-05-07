@@ -62,6 +62,38 @@ class _BuyStepsPageState extends State<BuyStepsPage> {
     }
   }
 
+  Future<void> confirmPurchase() async {
+  setState(() {
+    isLoading = true;
+    errorText = '';
+  });
+
+  final result = await TokenDataService.buyOffer(
+    offerId: widget.offerId,
+    quantity: tokenAmount,
+  );
+
+  if (!mounted) return;
+
+  setState(() {
+    isLoading = false;
+  });
+
+  if (result['success'] == true) {
+    setState(() {
+      currentStep = 2;
+    });
+  } else {
+    setState(() {
+      errorText = result['message'] ?? 'Erro ao confirmar compra';
+    });
+  }
+}
+
+
+
+
+
   String formatMoney(int cents) {
     final value = (cents / 100).toStringAsFixed(2).replaceAll('.', ',');
     return 'R\$ $value';
@@ -72,6 +104,9 @@ class _BuyStepsPageState extends State<BuyStepsPage> {
     super.initState();
     loadWalletBalance();
   }
+
+
+
 
   bool validateStep() {
     setState(() => errorText = '');
@@ -98,6 +133,12 @@ class _BuyStepsPageState extends State<BuyStepsPage> {
         return false;
     }
   }
+
+
+
+
+
+
 
   Widget buildStepContent() {
     switch (currentStep) {
@@ -363,7 +404,7 @@ class _BuyStepsPageState extends State<BuyStepsPage> {
                 width: 300,
                 height: 48,
                 child: ElevatedButton(
-                  onPressed: nextStep,
+                  onPressed: isLoading ? null : confirmPurchase,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.blue,
                     foregroundColor: Colors.white,
@@ -371,18 +412,24 @@ class _BuyStepsPageState extends State<BuyStepsPage> {
                       borderRadius: BorderRadius.circular(4),
                     ),
                   ),
-                  child: const Text(
-                    'Confirmar ordem de compra',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontFamily: 'JosefinSans',
-                    ),
-                  ),
+                  child: isLoading
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Text(
+                        'Confirmar ordem de compra',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontFamily: 'JosefinSans',
+                        ),
+                      ),
                 ),
               ),
-
-
-
               ],
             ),
           ],
@@ -392,7 +439,54 @@ class _BuyStepsPageState extends State<BuyStepsPage> {
 
 
       case 2:
-        return const Text('Compra realizada com sucesso');
+        return Column(
+          children: [
+            const SizedBox(height: 60),
+
+            Container(
+              width: 120,
+              height: 120,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: const Color(0xFF30476B),
+                  width: 3,
+                ),
+              ),
+              child: const Icon(
+                Icons.currency_exchange,
+                size: 70,
+                color: Colors.black,
+              ),
+            ),
+
+            const SizedBox(height: 55),
+
+            const Text(
+              'Ordem de compra emitida!',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 26,
+                fontWeight: FontWeight.w500,
+                fontFamily: 'JosefinSans',
+              ),
+            ),
+
+            const SizedBox(height: 12),
+
+            const Text(
+              'Seu futuro se transforma e a inovação\nacelera.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 16,
+                fontFamily: 'JosefinSans',
+              ),
+            ),
+
+
+            
+          ],
+        );
 
       default:
         return const SizedBox.shrink();
@@ -422,7 +516,7 @@ class _BuyStepsPageState extends State<BuyStepsPage> {
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.black),
           onPressed: () {
-            if (currentStep == 0) {
+            if (currentStep == 0 || currentStep == 2) {
               Navigator.pop(context);
             } else {
               setState(() {
@@ -459,6 +553,15 @@ class _BuyStepsPageState extends State<BuyStepsPage> {
               const SizedBox(height: 30),
 
               buildStepContent(),
+              if (errorText.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(top: 12),
+                  child: Text(
+                    errorText,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(color: Colors.red),
+                  ),
+                ),
 
             ],
           ),
