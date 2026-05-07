@@ -5,6 +5,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:qr_flutter/qr_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:mescla_invest/src/services/two_factor_service.dart';
 
 class TwoFactorSetupPage extends StatefulWidget {
@@ -130,7 +131,7 @@ class _TwoFactorSetupPageState extends State<TwoFactorSetupPage> {
 
                     const SizedBox(height: 24),
 
-                    if (_qrCodeUrl != null)
+                    if (_qrCodeUrl != null) ...[
                       Center(
                         child: QrImageView(
                           data: _qrCodeUrl!,
@@ -138,6 +139,26 @@ class _TwoFactorSetupPageState extends State<TwoFactorSetupPage> {
                           size: 220,
                         ),
                       ),
+
+                      const SizedBox(height: 12),
+
+                      Center(
+                        child: TextButton(
+                          onPressed: () => launchUrl(
+                            Uri.parse(_qrCodeUrl!),
+                            mode: LaunchMode.externalApplication,
+                          ),
+                          child: const Text(
+                            'Não consigo escanear — abrir link',
+                            style: TextStyle(
+                              fontFamily: 'JosefinSans',
+                              fontSize: 13,
+                              color: Colors.blue,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
 
                     const SizedBox(height: 32),
 
