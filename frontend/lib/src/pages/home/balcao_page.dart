@@ -4,9 +4,10 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_functions/cloud_functions.dart';
-import 'package:mescla_invest/src/pages/home/catalog_page.dart';
-import 'package:mescla_invest/src/pages/home/profile_page.dart';
-import 'package:mescla_invest/src/pages/initial_page.dart';
+import 'catalog_page.dart';
+import 'profile_page.dart';
+import '../initial_page.dart';
+import 'buy_steps_page.dart';
 
 class BalcaoNegociacaoPage extends StatefulWidget {
   final Map<String, dynamic>? usuario;
@@ -253,41 +254,52 @@ class _BalcaoNegociacaoPageState extends State<BalcaoNegociacaoPage>{
                                   final amount = data['amount'] ?? 0;
                                   final valorCentavos = data['valorUnitarioCentavos'] ?? 0;
                                   final valorFormatado = 'R\$ ${(valorCentavos / 100).toStringAsFixed(2).replaceAll('.', ',')}';
+                                  final offerId = data['offerId'] ?? '';
 
-                                  return Column(
-                                    children: [
-                                      Row(
-                                        children: [
-                                          Expanded(
-                                            flex: 2,
-                                            child: Text(startupId, style: _textStyle),
+                                  return InkWell(
+                                    onTap: () {
+                                      Navigator.push(context, 
+                                        MaterialPageRoute(builder: (_) => BuyStepsPage(
+                                          startupName: startupId.toString(), 
+                                          availableQuantity: int.tryParse(amount.toString()) ?? 0, 
+                                          pricePerTokenCents: int.tryParse(valorCentavos.toString()) ?? 0,
+                                          offerId: offerId.toString(),
                                           ),
-                                          Expanded(
-                                            flex: 1,
-                                            child: Center(child: Text(amount.toString(), style: _textStyle)),
-                                          ),
-                                          Expanded(
-                                            flex: 2,
-                                            child: Align(
-                                              alignment: Alignment.centerRight,
-                                              child: Text(valorFormatado, style: _textStyle),
+                                        ),
+                                      );
+                                    },
+                                    child: Column(
+                                      children: [
+                                        Row(
+                                          children: [
+                                            Expanded(
+                                              flex: 2,
+                                              child: Text(startupId, style: _textStyle),
                                             ),
-                                          ),
-                                        ],
-                                      ),
-                                      const Divider(
-                                        height: 18,
-                                        thickness: 1,
-                                        color: Colors.black38,
-                                      ),
-                                    ],
+                                            Expanded(
+                                              flex: 1,
+                                              child: Center(child: Text(amount.toString(), style: _textStyle)),
+                                            ),
+                                            Expanded(
+                                              flex: 2,
+                                              child: Align(
+                                                alignment: Alignment.centerRight,
+                                                child: Text(valorFormatado, style: _textStyle),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        const Divider(
+                                          height: 18,
+                                          thickness: 1,
+                                          color: Colors.black38,
+                                        ),
+                                      ],
+                                    ),                                   
                                   );
                                 },
                             )
-                
-                
                 ),
-              
             ]
           ),
         ),
