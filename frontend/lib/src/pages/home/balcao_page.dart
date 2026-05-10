@@ -24,12 +24,27 @@ class _BalcaoNegociacaoPageState extends State<BalcaoNegociacaoPage>{
   List<dynamic> offers = [];
   bool isLoading = true;
   String? errorMessage;
+  
+
+  final TextEditingController _searchController = TextEditingController();
+  String _search = '';
+
   @override
   void initState(){
     super.initState();
     loadOffers();
+    _searchController.addListener(() {
+      setState(() {
+        _search = _searchController.text.trim().toLowerCase();
+      });
+    });
   }
   
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   Future<void> _logout() async {
     await FirebaseAuth.instance.signOut();
@@ -54,6 +69,9 @@ class _BalcaoNegociacaoPageState extends State<BalcaoNegociacaoPage>{
       final result = await callable.call();
       final data = result.data['data'];
 
+      if (!mounted) return;
+
+
       setState(() {
         offers = List<dynamic>.from(data);
         isLoading = false;
@@ -77,6 +95,13 @@ class _BalcaoNegociacaoPageState extends State<BalcaoNegociacaoPage>{
     final usuario = widget.usuario ?? {};
     final nome = (usuario['nome'] ?? usuario['name']) as String? ?? '';
     final inicial = nome.isNotEmpty ? nome[0].toUpperCase() : '?';
+
+
+    final filteredOffers = offers.where((offer) {
+
+      final startupId = (offer['startupId'] ?? '').toString().toLowerCase();
+      return startupId.contains(_search);
+    }).toList();
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -193,6 +218,7 @@ class _BalcaoNegociacaoPageState extends State<BalcaoNegociacaoPage>{
 
               // Linha 2: barra de busca largura total
               TextField(
+                controller: _searchController,
                 decoration: InputDecoration(
                   hintText: "Buscar startup",
                   prefixIcon: const Icon(Icons.search, color: Colors.blue),
@@ -236,11 +262,23 @@ class _BalcaoNegociacaoPageState extends State<BalcaoNegociacaoPage>{
                     : errorMessage != null
                     ? Center(child: Text("Erro: $errorMessage", style: _textStyle))
                         : offers.isEmpty
-                      ? const Center(child: Text("Nenhuma oferta de venda encontrada", style: _textStyle))
-                            : ListView.builder(
-                                itemCount: offers.length,
-                                itemBuilder: (context, index){
-                                  final data = offers[index];
+                          ? const Center(
+                              child: Text(
+                                "Nenhuma oferta de venda encontrada",
+                                style: _textStyle,
+                              ),
+                            )
+                          : filteredOffers.isEmpty
+                              ? const Center(
+                                  child: Text(
+                                    "Nenhuma startup encontrada",
+                                    style: _textStyle,
+                                  ),
+                                )
+                              : ListView.builder(
+                                  itemCount: filteredOffers.length,
+                                  itemBuilder: (context, index) {
+                                    final data = filteredOffers[index];
                                   final startupId = data['startupId'] ?? '';
                                   final amount = data['amount'] ?? 0;
                                   final valorCentavos = data['valorUnitarioCentavos'] ?? 0;
@@ -256,16 +294,24 @@ class _BalcaoNegociacaoPageState extends State<BalcaoNegociacaoPage>{
                                     ),
                                     child: InkWell(
                                       borderRadius: BorderRadius.circular(15),
-                                      onTap: () {
-                                        Navigator.push(context,
-                                          MaterialPageRoute(builder: (_) => BuyStepsPage(
-                                            startupName: startupId.toString(),
-                                            availableQuantity: int.tryParse(amount.toString()) ?? 0,
-                                            pricePerTokenCents: int.tryParse(valorCentavos.toString()) ?? 0,
-                                            offerId: offerId.toString(),
-                                          )),
+                                      onTap: () async {
+                                        await Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (_) => BuyStepsPage(
+                                              startupName: startupId.toString(),
+                                              availableQuantity: int.tryParse(amount.toString()) ?? 0,
+                                              pricePerTokenCents: int.tryParse(valorCentavos.toString()) ?? 0,
+                                              offerId: offerId.toString(),
+                                            ),
+                                          ),
                                         );
+
+                                        if (!mounted) return;
+                                        await loadOffers();
                                       },
+                                  
+                              
                                       child: Padding(
                                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                                         child: Row(

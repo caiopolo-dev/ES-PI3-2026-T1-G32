@@ -127,11 +127,23 @@ export async function buyTokenOffer(
       .collection("wallet")
       .doc("saldo");
 
+    const buyerTokenRef = db
+      .collection("users")
+      .doc(buyerId)
+      .collection("tokens")
+      .doc(startupId);
+
     const buyerWalletSnap = await transaction.get(buyerWalletRef);
     const sellerWalletSnap = await transaction.get(sellerWalletRef);
+    const buyerTokenSnap = await transaction.get(buyerTokenRef);
 
     const buyerBalance = Number(buyerWalletSnap.data()?.saldo ?? 0);
     const sellerBalance = Number(sellerWalletSnap.data()?.saldo ?? 0);
+    const currentTokenQuantity = Number(buyerTokenSnap.data()?.quantity ?? 0);
+    const currentInvestedCents = Number(
+      buyerTokenSnap.data()?.investedCents ?? 0
+    );
+
 
     if (buyerBalance < totalCents) {
       throw new HttpsError(
@@ -155,6 +167,17 @@ export async function buyTokenOffer(
       sellerWalletRef,
       {
         saldo: sellerBalance + totalCents,
+        updatedAt: FieldValue.serverTimestamp(),
+      },
+      {merge: true}
+    );
+
+    transaction.set(
+      buyerTokenRef,
+      {
+        startupId,
+        quantity: currentTokenQuantity + quantity,
+        investedCents: currentInvestedCents + totalCents,
         updatedAt: FieldValue.serverTimestamp(),
       },
       {merge: true}
