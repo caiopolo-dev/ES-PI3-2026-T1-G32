@@ -8,7 +8,7 @@ class WalletService {
   static Future<Map<String, dynamic>> getWalletData() async {
     try {
       final result = await FirebaseFunctions.instance
-          .httpsCallable('getWalletData')
+          .httpsCallable('getWalletInfo')
           .call();
       return {
         'success': true,
