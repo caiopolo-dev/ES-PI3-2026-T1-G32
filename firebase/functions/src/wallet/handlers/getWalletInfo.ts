@@ -1,4 +1,5 @@
-// Caio Ferreira Polo - 25002823
+// Autor: Caio Ferreira Polo
+// Descrição: Handler para retornar o saldo e resumo da carteira do usuário
 import {onCall, HttpsError} from "firebase-functions/v2/https";
 import {getWalletDataByUserId} from "../repositories/walletRepository";
 

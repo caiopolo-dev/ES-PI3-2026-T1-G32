@@ -21,8 +21,11 @@ export const createFaq = onCall(async (request) => {
   }
 
   const uid = request.auth.uid;
+  // Email e nome são lidos do token/Firestore e nunca do request.data
+  // para evitar que o cliente envie valores falsos.
   const email = request.auth.token.email ?? "";
 
+  // Nome de exibição vem do Firestore (campo 'name') pois o token Auth não o contém.
   const userDoc = await getUserById(uid);
   const nomeUsuario = (userDoc.data()?.name as string) ?? "";
 

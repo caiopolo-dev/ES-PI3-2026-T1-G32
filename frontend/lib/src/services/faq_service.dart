@@ -12,6 +12,8 @@ class FaqService {
           .httpsCallable('getFaqs')
           .call({'startupId': startupId});
 
+      // jsonDecode(jsonEncode(...)) converte o objeto dinâmico do SDK para tipos
+      // Dart nativos, permitindo o cast seguro para List<Map<String, dynamic>>.
       return {
         'success': true,
         'data': (jsonDecode(jsonEncode(result.data['data'])) as List)
@@ -32,12 +34,16 @@ class FaqService {
     }
   }
 
+  // Envia uma nova pergunta para a FAQ de uma startup.
+  // `privada: true` significa que apenas o autor pode ver a pergunta — útil para
+  // dúvidas sensíveis que o usuário não quer expor publicamente.
   static Future<Map<String, dynamic>> createFaq({
     required String startupId,
     required String pergunta,
     required bool privada,
   }) async {
     try {
+      // O backend lê email e nome do token de autenticação — nunca do payload.
       await FirebaseFunctions.instance
           .httpsCallable('createFaq')
           .call({'startupId': startupId, 'pergunta': pergunta, 'privada': privada});

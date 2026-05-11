@@ -16,6 +16,8 @@ export const getFaqs = onCall(async (request) => {
     throw new HttpsError("invalid-argument", "startupId é obrigatório");
   }
 
+  // Email do token é usado no repository para filtrar FAQs privadas:
+  // o usuário só vê as próprias perguntas privadas.
   const email = request.auth.token.email ?? "";
 
   const faqs = await faqsRepository.findByStartup(startupId, email);

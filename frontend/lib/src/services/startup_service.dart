@@ -18,6 +18,8 @@ class StartupService {
         estagio != null ? {'estagio': estagio} : {},
       );
 
+      // jsonDecode(jsonEncode(...)) converte o objeto dinâmico retornado pelo SDK
+      // em tipos Dart nativos (Map/List), necessário para o cast funcionar corretamente.
       return {
         'success': true,
         'data': (jsonDecode(jsonEncode(result.data['data'])) as List)

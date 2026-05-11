@@ -1,4 +1,5 @@
-// Caio Ferreira Polo - RA 25002823
+// Autor: Caio Ferreira Polo
+// Descrição: Tela de compra de tokens em etapas (seleção de quantidade, revisão e confirmação)
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../services/tokenData_service.dart';
@@ -30,12 +31,18 @@ class _BuyStepsPageState extends State<BuyStepsPage> {
   int walletBalance = 0;
   final TextEditingController _quantityController = TextEditingController(text: '1');
 
+  // Step 0: seleção de quantidade e validação de saldo
+  // Step 1: revisão dos valores antes de confirmar
+  // Step 2: tela de agradecimento após compra bem-sucedida
   static const List<String> _stepTitles = [
     'Compra de token',
     'Confirmação de valor',
     'Agradecimento',
   ];
 
+  // Saldo armazenado em centavos para comparação direta com totalCents
+  // sem precisar converter unidades no momento da validação.
+  // Carrega no initState para que já esteja disponível quando o usuário tentar avançar.
   Future<void> loadWalletBalance() async {
     final balance = await TokenDataService.getWalletBalance();
 
@@ -540,6 +547,7 @@ class _BuyStepsPageState extends State<BuyStepsPage> {
     if (currentStep < 2) {
       setState(() => currentStep++);
     } else {
+      // No step 2 (agradecimento) o botão "voltar" fecha a tela por completo.
       Navigator.pop(context);
     }
   }

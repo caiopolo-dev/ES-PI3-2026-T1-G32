@@ -13,6 +13,8 @@ export const checkUserExists = onCall(async (request) => {
     throw new HttpsError("invalid-argument", "E-mail não informado");
   }
 
+  // Verifica antes de chamar sendPasswordResetEmail para evitar revelar
+  // ao usuário se um email existe ou não via mensagem de erro do Firebase.
   try {
     await getAuth().getUserByEmail(email);
   } catch (e: unknown) {

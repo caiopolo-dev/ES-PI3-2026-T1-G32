@@ -32,11 +32,13 @@ class _RegisterPageState extends State<RegisterPage> {
     'Senha',
   ];
 
+  // Valida os campos do passo atual antes de avançar.
+  // Cada case corresponde a um step da tela.
   bool validateStep() {
     setState(() => errorText = '');
 
     switch (currentStep) {
-      case 0:
+      case 0: // Dados pessoais: nome completo e RG
         final nome = nameController.text.trim();
         if (nome.split(' ').length < 2) {
           errorText = 'Digite seu nome completo';
@@ -46,6 +48,7 @@ class _RegisterPageState extends State<RegisterPage> {
           errorText = 'Nome não pode conter números';
           return false;
         }
+        // Remove a máscara do RG antes de validar o comprimento real.
         final rg = rgController.text.replaceAll(RegExp(r'[^0-9]'), '');
         if (rg.isEmpty || rg.length < 7 || rg.length > 9) {
           errorText = 'RG deve ter entre 7 e 9 dígitos';
@@ -53,11 +56,12 @@ class _RegisterPageState extends State<RegisterPage> {
         }
         return true;
 
-      case 1:
+      case 1: // Contato: email e telefone
         if (!RegExp(r'^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$').hasMatch(emailController.text)) {
           errorText = 'Digite um email válido';
           return false;
         }
+        // Remove a máscara do telefone para verificar se há dígitos suficientes.
         final phone = phoneController.text.replaceAll(RegExp(r'[^0-9]'), '');
         if (phone.length < 10) {
           errorText = 'Número de celular inválido';
@@ -65,7 +69,7 @@ class _RegisterPageState extends State<RegisterPage> {
         }
         return true;
 
-      case 2:
+      case 2: // Senha: regex de complexidade + confirmação
         final password = passwordController.text;
         if (!RegExp(r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$').hasMatch(password)) {
           errorText = 'Senha deve ter 8+ caracteres, maiúscula, minúscula e número';
@@ -187,6 +191,7 @@ class _RegisterPageState extends State<RegisterPage> {
 
     setState(() => isLoading = true);
 
+    // Remove as máscaras antes de enviar para o backend.
     final result = await AuthService.registerUser(
       rg: rgController.text.replaceAll(RegExp(r'[^0-9]'), ''),
       email: emailController.text,
@@ -206,6 +211,7 @@ class _RegisterPageState extends State<RegisterPage> {
             'Cadastro realizado! Verifique seu e-mail para ativar a conta.',
           ),
           backgroundColor: Colors.green,
+          // 15 segundos para o usuário ter tempo de ler a instrução de verificar o e-mail.
           duration: Duration(seconds: 15),
         ),
       );
@@ -312,7 +318,8 @@ class _RegisterPageState extends State<RegisterPage> {
   }
 }
 
-// Máscara RG: XX.XXX.XXX-X
+// Formatadores de input: aplicam máscara em tempo real enquanto o usuário digita.
+// _NomeFormatter: bloqueia números e caracteres especiais no campo de nome.
 class _NomeFormatter extends TextInputFormatter {
   @override
   TextEditingValue formatEditUpdate(
@@ -330,6 +337,7 @@ class _NomeFormatter extends TextInputFormatter {
   }
 }
 
+// _RgFormatter: aplica máscara XX.XXX.XXX-X conforme o usuário digita.
 class _RgFormatter extends TextInputFormatter {
   @override
   TextEditingValue formatEditUpdate(TextEditingValue oldValue, TextEditingValue newValue) {
@@ -351,7 +359,7 @@ class _RgFormatter extends TextInputFormatter {
   }
 }
 
-// Máscara telefone: (XX) XXXXX-XXXX
+// _PhoneFormatter: aplica máscara (XX) XXXXX-XXXX conforme o usuário digita.
 class _PhoneFormatter extends TextInputFormatter {
   @override
   TextEditingValue formatEditUpdate(TextEditingValue oldValue, TextEditingValue newValue) {

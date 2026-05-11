@@ -1,3 +1,6 @@
+// Autor: Caio Ferreira Polo
+// Descrição: Tipos e interfaces do domínio de ofertas de tokens
+
 export type BuyTokenOfferParams = {
   offerId: string;
   buyerId: string;

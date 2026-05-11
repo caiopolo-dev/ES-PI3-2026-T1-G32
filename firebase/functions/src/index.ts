@@ -1,3 +1,7 @@
+// Autor: Gustavo Alves de Siqueira Costa
+// Data: 05/05/2026
+// Descrição: Ponto de entrada das Cloud Functions — inicializa o app Firebase e exporta todas as funções
+
 import {initializeApp} from "firebase-admin/app";
 
 initializeApp();
