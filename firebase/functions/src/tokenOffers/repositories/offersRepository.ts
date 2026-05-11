@@ -1,6 +1,7 @@
 // Caio Ferreira Polo - 25002823
 
-import {FieldValue, getFirestore} from "firebase-admin/firestore";
+import {FieldValue} from "firebase-admin/firestore";
+import {db} from "../../shared/firebase";
 import {HttpsError} from "firebase-functions/v2/https";
 
 import {
@@ -8,8 +9,6 @@ import {
   BuyTokenOfferResult,
 } from "../types/tokenOfferTypes";
 
-
-const db = getFirestore();
 /**
  * Lists token offers from Firestore.
  * @param {string=} excludeSellerId User id to exclude from results.
