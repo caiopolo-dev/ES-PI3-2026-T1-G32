@@ -26,6 +26,7 @@ export const faqsRepository = {
   async findByStartup(startupId: string, userEmail: string): Promise<Faq[]> {
     const snapshot = await faqsRef(startupId).get();
 
+    // FAQs privadas só são visíveis para o próprio autor (comparado pelo email do token JWT).
     return snapshot.docs
       .map(docToFaq)
       .filter((faq) => !faq.privada || faq.email === userEmail)

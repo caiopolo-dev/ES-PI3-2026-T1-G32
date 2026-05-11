@@ -66,6 +66,8 @@ export async function getTransactionHistoryByUserId(uid: string) {
  * @return {Promise<object>} Token list.
  */
 export async function getUserTokensByUserId(uid: string) {
+  // Agrega direto de token_transactions para cobrir compras feitas antes
+  // da coleção userTokens existir (retrocompatível com histórico antigo).
   const txSnap = await db
     .collection("token_transactions")
     .where("buyerId", "==", uid)
@@ -74,6 +76,7 @@ export async function getUserTokensByUserId(uid: string) {
 
   if (txSnap.empty) return {tokens: []};
 
+  // Acumula quantidade total e custo total por startup para calcular preço médio.
   const portfolioMap: Record<string, {quantidade: number; totalCost: number}> =
     {};
 

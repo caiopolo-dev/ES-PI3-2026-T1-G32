@@ -1,5 +1,5 @@
-// Caio Ferreira polo - 25002823
-//Pagina do balcão de negociação
+// Autor: Caio Ferreira Polo
+// Descrição: Tela do balcão de negociação — listagem e compra de ofertas de tokens
 
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -43,6 +43,7 @@ class _BalcaoNegociacaoPageState extends State<BalcaoNegociacaoPage>{
   }
 
   Future<void> loadOffers() async{
+    // Guard inicial: widget pode ser desmontado antes do primeiro frame (ex: navegação rápida).
     if (!mounted) return;
     setState(() {
       isLoading = true;
@@ -51,6 +52,7 @@ class _BalcaoNegociacaoPageState extends State<BalcaoNegociacaoPage>{
 
 
     try{
+      // listOffers já filtra as próprias ofertas do usuário no backend (excludeSellerId).
       final callable  = FirebaseFunctions.instance.httpsCallable('listOffers');
       final result = await callable.call();
       final data = result.data['data'];
@@ -251,6 +253,7 @@ class _BalcaoNegociacaoPageState extends State<BalcaoNegociacaoPage>{
                                   final startupId = data['startupId'] ?? '';
                                   final amount = data['amount'] ?? 0;
                                   final valorCentavos = data['valorUnitarioCentavos'] ?? 0;
+                                  // Valor chega em centavos do backend; converte para reais na exibição.
                                   final valorFormatado = 'R\$ ${(valorCentavos / 100).toStringAsFixed(2).replaceAll('.', ',')}';
                                   final offerId = data['offerId'] ?? '';
 

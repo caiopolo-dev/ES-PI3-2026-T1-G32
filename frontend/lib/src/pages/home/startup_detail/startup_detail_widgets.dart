@@ -135,14 +135,19 @@ class _StartupVideoPlayerState extends State<StartupVideoPlayer> {
   @override
   void initState() {
     super.initState();
+    // Inicia a resolução da URL e inicialização do player ao montar o widget.
     _resolveAndInit(widget.url);
   }
 
+  // Converte a URL de armazenamento (gs://) para HTTPS e inicializa o VideoPlayerController.
+  // O VideoPlayerController só aceita HTTPS — gs:// é o formato interno do Firebase Storage.
   Future<void> _resolveAndInit(String url) async {
     try {
+      // Converte o gs:// do Firestore para uma URL HTTPS com token de acesso.
       final downloadUrl = await StorageService.getDownloadUrl(url);
       final controller = VideoPlayerController.networkUrl(Uri.parse(downloadUrl));
       await controller.initialize();
+      // Se o widget foi destruído durante o await, descarta o controller para evitar leak.
       if (!mounted) { controller.dispose(); return; }
       setState(() { _controller = controller; _initialized = true; });
     } catch (e) {
@@ -152,6 +157,7 @@ class _StartupVideoPlayerState extends State<StartupVideoPlayer> {
 
   @override
   void dispose() {
+    // Libera os recursos do player de vídeo ao sair da tela.
     _controller?.dispose();
     super.dispose();
   }

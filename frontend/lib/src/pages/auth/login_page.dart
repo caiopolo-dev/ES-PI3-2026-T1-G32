@@ -23,6 +23,8 @@ class _LoginPageState extends State<LoginPage> {
   String errorText = '';
   bool isLoading = false;
 
+  // Validação local antes de chamar a Cloud Function, evitando
+  // uma requisição de rede desnecessária para erros evidentes.
   bool validateLogin() {
     setState(() => errorText = '');
 
@@ -49,6 +51,7 @@ class _LoginPageState extends State<LoginPage> {
           senha: passwordController.text,
         );
 
+        // Após qualquer await, o widget pode ter sido descartado — verificar antes de usar context.
         if (!mounted) return;
 
         if (result['success']) {
@@ -79,6 +82,8 @@ class _LoginPageState extends State<LoginPage> {
           );
         }
       } on FirebaseAuthMultiFactorException catch (e) {
+  // Usuário tem 2FA ativo: o Firebase não completa o login e lança esta exceção
+  // com o resolver necessário para validar o código TOTP.
   if (mounted) {
     Navigator.push(
       context,
@@ -105,6 +110,7 @@ class _LoginPageState extends State<LoginPage> {
           );
         }
       } finally {
+        // finally garante que isLoading é resetado mesmo em caso de exceção.
         if (mounted) {
           setState(() => isLoading = false);
         }

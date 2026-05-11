@@ -1,4 +1,5 @@
-// Caio Ferreira Polo - 25002823
+// Autor: Caio Ferreira Polo
+// Descrição: Handler para compra de oferta de tokens no balcão
 
 import {onCall, HttpsError} from "firebase-functions/v2/https";
 import {buyTokenOffer} from "../repositories/offersRepository";
@@ -20,6 +21,8 @@ export const buyOffer = onCall(async (request) => {
     );
   }
 
+  // Flutter envia quantity como num; Number() converte para JS number,
+  // e isInteger() garante que não chegue valor fracionário.
   const quantityNumber = Number(quantity);
 
   if (!Number.isInteger(quantityNumber) || quantityNumber <= 0) {
@@ -29,6 +32,7 @@ export const buyOffer = onCall(async (request) => {
     );
   }
 
+  // buyerId vem do token de auth para evitar que o cliente envie um ID falso.
   const result = await buyTokenOffer({
     offerId,
     buyerId: request.auth.uid,

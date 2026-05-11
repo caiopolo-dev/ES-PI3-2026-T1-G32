@@ -1,4 +1,5 @@
-// Caio Ferreira Polo 25002823
+// Autor: Caio Ferreira Polo
+// Descrição: Repository de usuários — cadastro, busca e verificação de dados no Firestore
 
 import {db} from "../../shared/firebase";
 
@@ -23,6 +24,8 @@ export async function registerUser(
   const banco = db.collection("users");
   const userRef = banco.doc(uid);
   const walletRef = userRef.collection("wallet").doc("saldo");
+  // Batch garante que o documento do usuário e a subcoleção wallet
+  // são criados juntos — sem wallet o getWalletInfo retorna zero sem erros.
   const batch = db.batch();
   batch.set(userRef, {
     name,

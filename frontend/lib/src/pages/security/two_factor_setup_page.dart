@@ -26,17 +26,27 @@ class _TwoFactorSetupPageState extends State<TwoFactorSetupPage> {
   @override
   void initState() {
     super.initState();
+    // Inicia a geração do segredo TOTP assim que a tela é montada.
     _initTotp();
   }
 
+  // Gera o segredo TOTP e a URL do QR Code para o usuário escanear no autenticador.
+  // Fluxo:
+  // 1. TwoFactorService.generateSetup() pede ao Firebase uma sessão multifator
+  // 2. O Firebase gera um segredo TOTP único para este usuário
+  // 3. O segredo é convertido em URL otpauth:// compatível com Google Authenticator
+  // 4. A URL é exibida como QR Code para o usuário escanear
   Future<void> _initTotp() async {
     final result = await TwoFactorService.generateSetup();
 
+    // Widget pode ter sido descartado durante o await (usuário voltou).
     if (!mounted) return;
 
     if (result['success'] == true) {
       setState(() {
+        // URL no formato otpauth://totp/... — usada para gerar o QR Code.
         _qrCodeUrl = result['qrCodeUrl'] as String;
+        // TotpSecret é o objeto do SDK do Firebase necessário para o enrollment.
         _totpSecret = result['secret'] as TotpSecret;
         _isLoading = false;
       });
@@ -48,7 +58,14 @@ class _TwoFactorSetupPageState extends State<TwoFactorSetupPage> {
     }
   }
 
+  // Verifica o código TOTP digitado e, se válido, vincula o autenticador à conta.
+  // Fluxo:
+  // 1. Valida que o código tem exatamente 6 dígitos
+  // 2. Chama enrollTotp com o segredo gerado em _initTotp e o código digitado
+  // 3. O Firebase valida o código contra o segredo — se correto, registra o fator
+  // 4. Retorna `true` via Navigator.pop para o ProfilePage atualizar o toggle do 2FA
   Future<void> _verifyAndEnable() async {
+    // Código TOTP tem sempre 6 dígitos — rejeita antes de chamar o Firebase.
     if (_codeController.text.length != 6) {
       setState(() => _errorText = 'Digite o código de 6 dígitos');
       return;
@@ -56,14 +73,18 @@ class _TwoFactorSetupPageState extends State<TwoFactorSetupPage> {
 
     setState(() {
       _isVerifying = true;
+      // Limpa erro anterior enquanto aguarda resposta do Firebase.
       _errorText = '';
     });
 
+    // _totpSecret! é seguro aqui: _verifyAndEnable só é chamado quando
+    // _isLoading == false, o que só ocorre após _initTotp preencher _totpSecret.
     final result = await TwoFactorService.enrollTotp(
       _totpSecret!,
       _codeController.text,
     );
 
+    // Verifica montagem após o await para evitar setState em widget destruído.
     if (!mounted) return;
 
     if (result['success'] == true) {
@@ -73,10 +94,13 @@ class _TwoFactorSetupPageState extends State<TwoFactorSetupPage> {
           backgroundColor: Colors.green,
         ),
       );
+      // Retorna `true` para que ProfilePage saiba que o 2FA foi ativado
+      // e possa atualizar o estado do toggle na tela de perfil.
       Navigator.pop(context, true);
     } else {
       setState(() {
         _errorText = result['message'] as String? ?? 'Código inválido.';
+        // Reabilita o botão para o usuário tentar novamente.
         _isVerifying = false;
       });
     }

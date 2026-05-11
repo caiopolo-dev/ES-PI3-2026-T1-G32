@@ -44,6 +44,7 @@ class _WalletPageState extends State<WalletPage>
       _errorText = '';
     });
 
+    // Dispara as três chamadas em paralelo para reduzir o tempo de carregamento.
     final results = await Future.wait([
       WalletService.getWalletData(),
       WalletService.getTransactionHistory(),
@@ -328,6 +329,7 @@ class _WalletPageState extends State<WalletPage>
                                           0.0;
                                   final quantidade =
                                       token['quantidade'] ?? 0;
+                                  // Variação percentual em relação ao preço médio de compra.
                                   final variacao =
                                       precoMedio > 0
                                           ? ((valorAtual - precoMedio) /
@@ -454,6 +456,7 @@ class _LoadingDotsState extends State<_LoadingDots> {
   @override
   void initState() {
     super.initState();
+    // Cicla de 1 a 3 pontos a cada 500ms: ".", "..", "..."
     _timer = Timer.periodic(const Duration(milliseconds: 500), (_) {
       if (mounted) setState(() => _dotCount = (_dotCount % 3) + 1);
     });
@@ -461,6 +464,7 @@ class _LoadingDotsState extends State<_LoadingDots> {
 
   @override
   void dispose() {
+    // Timer deve ser cancelado para evitar setState após o widget ser destruído.
     _timer.cancel();
     super.dispose();
   }

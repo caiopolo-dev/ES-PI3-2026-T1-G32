@@ -8,6 +8,9 @@ import 'package:mescla_invest/src/pages/home/catalog_page.dart';
 import 'package:mescla_invest/src/services/auth_service.dart';
 import 'package:mescla_invest/src/services/two_factor_service.dart';
 
+// resolver é obtido da FirebaseAuthMultiFactorException lançada durante o login
+// quando o usuário tem 2FA ativo. Ele contém o estado necessário para completar
+// a autenticação após a validação do código TOTP.
 class TwoFactorVerifyPage extends StatefulWidget {
   final MultiFactorResolver resolver;
   final Map<String, dynamic>? usuario;
@@ -46,6 +49,8 @@ class _TwoFactorVerifyPageState extends State<TwoFactorVerifyPage> {
     if (!mounted) return;
 
     if (result['success'] == true) {
+      // Após completar o 2FA, o token de auth existe mas os dados do Firestore
+      // ainda não foram carregados — busca os dados do usuário antes de navegar.
       final data = await AuthService.fetchUserData();
       final usuario = data['success'] == true
           ? data['usuario'] as Map<String, dynamic>?

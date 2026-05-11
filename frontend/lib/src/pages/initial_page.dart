@@ -1,4 +1,5 @@
-// código de Caio Ferreira Polo - RA 25002823
+// Autor: Caio Ferreira Polo
+// Descrição: Tela inicial do aplicativo com opções de cadastro e login
 import 'package:flutter/material.dart';
 import 'package:mescla_invest/src/pages/auth/login_page.dart';
 import 'package:mescla_invest/src/pages/auth/registration_steps_page.dart';
