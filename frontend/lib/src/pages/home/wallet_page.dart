@@ -154,7 +154,7 @@ class _WalletPageState extends State<WalletPage>
                               borderRadius: BorderRadius.circular(16),
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.blue.withOpacity(0.3),
+                                  color: Colors.blue.withValues(alpha:0.3),
                                   blurRadius: 16,
                                   offset: const Offset(0, 6),
                                 ),
@@ -247,11 +247,10 @@ class _WalletPageState extends State<WalletPage>
                                 itemBuilder: (context, index) {
                                   final tx = _transactions[index];
                                   final isCompra =
-                                      tx['tipo'] == 'compra';
+                                      tx['type'] == 'buy';
                                   final valor =
-                                      (tx['valorTotal'] as num?)
-                                              ?.toDouble() ??
-                                          0.0;
+                                      ((tx['totalCents'] as num?) ?? 0)
+                                          .toDouble() / 100;
                                   final data = tx['createdAt'] != null
                                       ? DateFormat('dd/MM/yyyy HH:mm')
                                           .format(DateTime.parse(
@@ -262,8 +261,8 @@ class _WalletPageState extends State<WalletPage>
                                     contentPadding: EdgeInsets.zero,
                                     leading: CircleAvatar(
                                       backgroundColor: isCompra
-                                          ? Colors.green.withOpacity(0.1)
-                                          : Colors.red.withOpacity(0.1),
+                                          ? Colors.green.withValues(alpha:0.1)
+                                          : Colors.red.withValues(alpha:0.1),
                                       child: Icon(
                                         isCompra
                                             ? Icons.arrow_downward
@@ -275,7 +274,7 @@ class _WalletPageState extends State<WalletPage>
                                       ),
                                     ),
                                     title: Text(
-                                      tx['startupNome'] ?? '—',
+                                      tx['startupId'] ?? '—',
                                       style: const TextStyle(
                                         fontFamily: 'JosefinSans',
                                         fontSize: 15,
@@ -357,7 +356,7 @@ class _WalletPageState extends State<WalletPage>
                                         CircleAvatar(
                                           radius: 22,
                                           backgroundColor: Colors.blue
-                                              .withOpacity(0.1),
+                                              .withValues(alpha:0.1),
                                           backgroundImage:
                                               token['startupLogo'] != null
                                                   ? NetworkImage(

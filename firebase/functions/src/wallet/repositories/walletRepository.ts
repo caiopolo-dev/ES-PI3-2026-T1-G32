@@ -18,7 +18,7 @@ export async function getWalletDataByUserId(uid: string) {
 
   const tokensSnap = await db
     .collection("userTokens")
-    .where("userId", "==", uid)
+    .where("buyerId", "==", uid)
     .limit(50)
     .get();
 
@@ -27,37 +27,36 @@ export async function getWalletDataByUserId(uid: string) {
 
   tokensSnap.docs.forEach((doc) => {
     const data = doc.data();
-
     const precoMedio = Number(data.precoMedio ?? 0);
     const quantidade = Number(data.quantidade ?? 0);
-
     totalInvestido += precoMedio * quantidade;
     totalTokens += quantidade;
   });
 
-  return {
-    saldo,
-    totalInvestido,
-    totalTokens,
-  };
+  return {saldo, totalInvestido, totalTokens};
 }
 
 export async function getTransactionHistoryByUserId(uid: string) {
   const db = getFirestore();
 
   const snapshot = await db
-    .collection("transactions")
-    .where("userId", "==", uid)
+    .collection("token_transactions")
+    .where("buyerId", "==", uid)
     .orderBy("createdAt", "desc")
     .limit(50)
     .get();
 
-  const transactions = snapshot.docs.map((doc) => ({
-    id: doc.id,
-    ...doc.data(),
-    createdAt:
-      doc.data().createdAt?.toDate?.()?.toISOString() ?? null,
-  }));
+  const transactions = snapshot.docs.map((doc) => {
+    const data = doc.data();
+    return {
+      id: doc.id,
+      type: data.type,
+      startupId: data.startupId,
+      quantity: Number(data.quantity ?? 0),
+      totalCents: Number(data.totalCents ?? 0),
+      createdAt: data.createdAt?.toDate?.()?.toISOString() ?? null,
+    };
+  });
 
   return {transactions};
 }
@@ -67,32 +66,36 @@ export async function getUserTokensByUserId(uid: string) {
 
   const snapshot = await db
     .collection("userTokens")
-    .where("userId", "==", uid)
+    .where("buyerId", "==", uid)
     .limit(50)
     .get();
 
-  const tokens = await Promise.all(
-    snapshot.docs.map(async (doc) => {
-      const data = doc.data();
+  const startupIds = [
+    ...new Set(snapshot.docs.map((doc) => doc.data().startupId as string)),
+  ];
 
-      const startupDoc = await db
-        .collection("startups")
-        .doc(data.startupId as string)
-        .get();
-
-      const startup = startupDoc.exists ? startupDoc.data() : {};
-
-      return {
-        id: doc.id,
-        startupId: data.startupId,
-        startupNome: startup?.nome ?? "—",
-        startupLogo: startup?.logoUrl ?? null,
-        quantidade: Number(data.quantidade ?? 0),
-        precoMedio: Number(data.precoMedio ?? 0),
-        valorAtual: Number(data.valorAtual ?? 0),
-      };
-    })
+  const startupDocs = await Promise.all(
+    startupIds.map((id) => db.collection("startups").doc(id).get())
   );
+
+  const startupMap: Record<string, FirebaseFirestore.DocumentData> = {};
+  startupDocs.forEach((doc) => {
+    if (doc.exists) startupMap[doc.id] = doc.data()!;
+  });
+
+  const tokens = snapshot.docs.map((doc) => {
+    const data = doc.data();
+    const startup = startupMap[data.startupId] ?? {};
+    return {
+      id: doc.id,
+      startupId: data.startupId,
+      startupNome: startup.nome ?? "—",
+      startupLogo: startup.logoUrl ?? null,
+      quantidade: Number(data.quantidade ?? 0),
+      precoMedio: Number(data.precoMedio ?? 0),
+      valorAtual: Number(data.valorAtual ?? 0),
+    };
+  });
 
   return {tokens};
 }
