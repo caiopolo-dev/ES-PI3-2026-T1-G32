@@ -12,3 +12,6 @@ export {listOffers} from "./tokenOffers/handlers/listTokenOffers";
 export {checkUserExists} from "./users/handlers/checkUserExists";
 export {getWalletBalance} from "./users/handlers/getWalletBalance";
 export {buyOffer} from "./tokenOffers/handlers/buyOffer";
+export {getWalletData} from "./users/handlers/getWalletData";
+export {getTransactionHistory} from "./users/handlers/getTransactionHistory";
+export {getUserTokens} from "./users/handlers/getUserTokens";
