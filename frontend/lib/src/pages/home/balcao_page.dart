@@ -135,17 +135,8 @@ class _BalcaoNegociacaoPageState extends State<BalcaoNegociacaoPage>{
 
               // Linha 1: flecha (esquerda) e avatar do perfil (direita)
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  IconButton(
-                    icon: const Icon(Icons.arrow_back, color: Colors.black),
-                    onPressed: () => Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => InitialCatalogPage(usuario: widget.usuario),
-                      ),
-                    ),
-                  ),
                   Padding(
                     padding: const EdgeInsets.only(right: 4),
                     child: PopupMenuButton<String>(

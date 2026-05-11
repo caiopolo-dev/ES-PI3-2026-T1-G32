@@ -1,9 +1,5 @@
 // Caio Ferreira Polo 25002823
 
-// Autor: Gustavo Alves de Siqueira Costa
-// Data: 05/05/2026
-// Descrição: Tela de recuperação de senha
-
 import 'package:flutter/material.dart';
 import 'package:mescla_invest/src/services/auth_service.dart';
 
