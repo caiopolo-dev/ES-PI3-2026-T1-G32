@@ -8,6 +8,7 @@ import 'catalog_page.dart';
 import 'profile_page.dart';
 import '../initial_page.dart';
 import 'buy_steps_page.dart';
+import 'wallet_page.dart';
 
 class BalcaoNegociacaoPage extends StatefulWidget {
   final Map<String, dynamic>? usuario;
@@ -103,6 +104,15 @@ class _BalcaoNegociacaoPageState extends State<BalcaoNegociacaoPage>{
               );
               return;
             }
+            if (index == 2) {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => WalletPage(usuario: widget.usuario),
+                ),
+              );
+              return;
+            }
             if (index == 3) {
               Navigator.push(
                 context,
@@ -112,9 +122,6 @@ class _BalcaoNegociacaoPageState extends State<BalcaoNegociacaoPage>{
               );
               return;
             }
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Em breve')),
-            );
           },
           items: const [
             BottomNavigationBarItem(icon: Icon(Icons.store), label: "Mercado"),

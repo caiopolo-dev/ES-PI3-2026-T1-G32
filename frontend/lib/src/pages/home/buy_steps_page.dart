@@ -131,6 +131,10 @@ class _BuyStepsPageState extends State<BuyStepsPage> {
           setState(() => errorText = 'Quantidade maior que a disponível.');
           return false;
         }
+        if (totalCents > walletBalance) {
+          setState(() => errorText = 'Saldo insuficiente para esta compra.');
+          return false;
+        }
         return true;
 
       case 1:
@@ -225,6 +229,13 @@ class _BuyStepsPageState extends State<BuyStepsPage> {
                           final parsed = int.tryParse(value);
                           if (parsed == null || parsed < 1) {
                             setState(() => tokenAmount = 1);
+                            WidgetsBinding.instance.addPostFrameCallback((_) {
+                              if (mounted) {
+                                _quantityController.text = '1';
+                                _quantityController.selection =
+                                    const TextSelection.collapsed(offset: 1);
+                              }
+                            });
                           } else if (parsed > widget.availableQuantity) {
                             setState(() {
                               tokenAmount = widget.availableQuantity;

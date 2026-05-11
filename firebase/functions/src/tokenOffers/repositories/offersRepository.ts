@@ -127,8 +127,13 @@ export async function buyTokenOffer(
       .collection("wallet")
       .doc("saldo");
 
+    const userTokenRef = db
+      .collection("userTokens")
+      .doc(`${buyerId}_${startupId}`);
+
     const buyerWalletSnap = await transaction.get(buyerWalletRef);
     const sellerWalletSnap = await transaction.get(sellerWalletRef);
+    const userTokenSnap = await transaction.get(userTokenRef);
 
     const buyerBalance = Number(buyerWalletSnap.data()?.saldo ?? 0);
     const sellerBalance = Number(sellerWalletSnap.data()?.saldo ?? 0);
@@ -168,6 +173,28 @@ export async function buyTokenOffer(
         updatedAt: FieldValue.serverTimestamp(),
       });
     }
+
+    const existingQty = Number(userTokenSnap.data()?.quantidade ?? 0);
+    const existingPreco = Number(userTokenSnap.data()?.precoMedio ?? 0);
+    const newQty = existingQty + quantity;
+    const newPrecoMedio = existingQty === 0 ?
+      pricePerTokenCents :
+      Math.round(
+        (existingQty * existingPreco + quantity * pricePerTokenCents) / newQty
+      );
+
+    transaction.set(
+      userTokenRef,
+      {
+        buyerId,
+        startupId,
+        quantidade: newQty,
+        precoMedio: newPrecoMedio,
+        valorAtual: pricePerTokenCents,
+        updatedAt: FieldValue.serverTimestamp(),
+      },
+      {merge: true}
+    );
 
     const transactionRef = db.collection("token_transactions").doc();
 

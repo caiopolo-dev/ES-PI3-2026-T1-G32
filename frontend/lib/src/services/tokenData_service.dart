@@ -6,7 +6,7 @@ class TokenDataService {
   static Future<int> getWalletBalance() async {
     try {
       final result = await FirebaseFunctions.instance
-          .httpsCallable('getWalletBalance')
+          .httpsCallable('getWalletInfo')
           .call();
       return (result.data['saldo'] as num).toInt();
     } catch (_) {
