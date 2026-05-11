@@ -4,38 +4,41 @@
 
 import {getFirestore} from "firebase-admin/firestore";
 
+/**
+ * Returns wallet balance and portfolio summary for a user.
+ * @param {string} uid User ID.
+ * @return {Promise<object>} Wallet data.
+ */
 export async function getWalletDataByUserId(uid: string) {
   const db = getFirestore();
 
-  const walletDoc = await db
-    .collection("users")
-    .doc(uid)
-    .collection("wallet")
-    .doc("saldo")
-    .get();
+  const [walletDoc, txSnap] = await Promise.all([
+    db.collection("users").doc(uid).collection("wallet").doc("saldo").get(),
+    db.collection("token_transactions")
+      .where("buyerId", "==", uid)
+      .where("type", "==", "buy")
+      .get(),
+  ]);
 
   const saldo = Number(walletDoc.data()?.saldo ?? 0);
-
-  const tokensSnap = await db
-    .collection("userTokens")
-    .where("buyerId", "==", uid)
-    .limit(50)
-    .get();
 
   let totalInvestido = 0;
   let totalTokens = 0;
 
-  tokensSnap.docs.forEach((doc) => {
+  txSnap.docs.forEach((doc) => {
     const data = doc.data();
-    const precoMedio = Number(data.precoMedio ?? 0);
-    const quantidade = Number(data.quantidade ?? 0);
-    totalInvestido += precoMedio * quantidade;
-    totalTokens += quantidade;
+    totalInvestido += Number(data.totalCents ?? 0);
+    totalTokens += Number(data.quantity ?? 0);
   });
 
   return {saldo, totalInvestido, totalTokens};
 }
 
+/**
+ * Returns transaction history for a user.
+ * @param {string} uid User ID.
+ * @return {Promise<object>} Transaction list.
+ */
 export async function getTransactionHistoryByUserId(uid: string) {
   const db = getFirestore();
 
@@ -61,18 +64,36 @@ export async function getTransactionHistoryByUserId(uid: string) {
   return {transactions};
 }
 
+/**
+ * Returns tokens held by a user aggregated from transaction history.
+ * @param {string} uid User ID.
+ * @return {Promise<object>} Token list.
+ */
 export async function getUserTokensByUserId(uid: string) {
   const db = getFirestore();
 
-  const snapshot = await db
-    .collection("userTokens")
+  const txSnap = await db
+    .collection("token_transactions")
     .where("buyerId", "==", uid)
-    .limit(50)
+    .where("type", "==", "buy")
     .get();
 
-  const startupIds = [
-    ...new Set(snapshot.docs.map((doc) => doc.data().startupId as string)),
-  ];
+  if (txSnap.empty) return {tokens: []};
+
+  const portfolioMap: Record<string, {quantidade: number; totalCost: number}> =
+    {};
+
+  txSnap.docs.forEach((doc) => {
+    const d = doc.data();
+    const sid = d.startupId as string;
+    const qty = Number(d.quantity ?? 0);
+    const price = Number(d.pricePerTokenCents ?? 0);
+    if (!portfolioMap[sid]) portfolioMap[sid] = {quantidade: 0, totalCost: 0};
+    portfolioMap[sid].quantidade += qty;
+    portfolioMap[sid].totalCost += qty * price;
+  });
+
+  const startupIds = Object.keys(portfolioMap);
 
   const startupDocs = await Promise.all(
     startupIds.map((id) => db.collection("startups").doc(id).get())
@@ -80,20 +101,25 @@ export async function getUserTokensByUserId(uid: string) {
 
   const startupMap: Record<string, FirebaseFirestore.DocumentData> = {};
   startupDocs.forEach((doc) => {
-    if (doc.exists) startupMap[doc.id] = doc.data()!;
+    if (doc.exists) {
+      const d = doc.data();
+      if (d) startupMap[doc.id] = d;
+    }
   });
 
-  const tokens = snapshot.docs.map((doc) => {
-    const data = doc.data();
-    const startup = startupMap[data.startupId] ?? {};
+  const tokens = startupIds.map((startupId) => {
+    const {quantidade, totalCost} = portfolioMap[startupId];
+    const startup = startupMap[startupId] ?? {};
+    const precoMedio = quantidade > 0 ?
+      Math.round(totalCost / quantidade) :
+      0;
     return {
-      id: doc.id,
-      startupId: data.startupId,
+      startupId,
       startupNome: startup.nome ?? "—",
       startupLogo: startup.logoUrl ?? null,
-      quantidade: Number(data.quantidade ?? 0),
-      precoMedio: Number(data.precoMedio ?? 0),
-      valorAtual: Number(data.valorAtual ?? 0),
+      quantidade,
+      precoMedio,
+      valorAtual: precoMedio,
     };
   });
 

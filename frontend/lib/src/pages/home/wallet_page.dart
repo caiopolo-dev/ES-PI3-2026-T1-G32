@@ -2,6 +2,7 @@
 // Data: 10/05/2026
 // Descrição: Tela de carteira do usuário
 
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:mescla_invest/src/services/wallet_service.dart';
 import 'package:intl/intl.dart';
@@ -102,36 +103,7 @@ class _WalletPageState extends State<WalletPage>
           ),
         ),
       ),
-      body: _isLoading
-    ? const Center(child: CircularProgressIndicator())
-    : _errorText.isNotEmpty
-        ? Center(
-            child: Padding(
-              padding: const EdgeInsets.all(32),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.error_outline, color: Colors.red, size: 48),
-                  const SizedBox(height: 16),
-                  Text(
-                    _errorText,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      fontFamily: 'JosefinSans',
-                      color: Colors.red,
-                      fontSize: 16,
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  ElevatedButton(
-                    onPressed: _loadAll,
-                    child: const Text('Tentar novamente'),
-                  ),
-                ],
-              ),
-            ),
-          )
-        : RefreshIndicator(
+      body: RefreshIndicator(
               onRefresh: _loadAll,
               child: CustomScrollView(
                 slivers: [
@@ -201,6 +173,27 @@ class _WalletPageState extends State<WalletPage>
                             ),
                           ),
 
+                          if (_errorText.isNotEmpty) ...[
+                            const SizedBox(height: 8),
+                            Row(
+                              children: [
+                                const Icon(Icons.warning_amber_rounded,
+                                    size: 14, color: Colors.orange),
+                                const SizedBox(width: 6),
+                                Expanded(
+                                  child: Text(
+                                    _errorText,
+                                    style: const TextStyle(
+                                      fontFamily: 'JosefinSans',
+                                      fontSize: 12,
+                                      color: Colors.orange,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+
                           const SizedBox(height: 24),
 
                           TabBar(
@@ -228,7 +221,9 @@ class _WalletPageState extends State<WalletPage>
                     child: TabBarView(
                       controller: _tabController,
                       children: [
-                        _transactions.isEmpty
+                        _isLoading
+                            ? const _LoadingDots('Carregando histórico')
+                            : _transactions.isEmpty
                             ? const Center(
                                 child: Text(
                                   'Nenhuma transação ainda',
@@ -242,7 +237,7 @@ class _WalletPageState extends State<WalletPage>
                                 padding: const EdgeInsets.symmetric(
                                     horizontal: 24),
                                 itemCount: _transactions.length,
-                                separatorBuilder: (_, __) =>
+                                separatorBuilder: (_, _) =>
                                     const Divider(height: 1),
                                 itemBuilder: (context, index) {
                                   final tx = _transactions[index];
@@ -303,7 +298,9 @@ class _WalletPageState extends State<WalletPage>
                                 },
                               ),
 
-                        _tokens.isEmpty
+                        _isLoading
+                            ? const _LoadingDots('Carregando seus tokens')
+                            : _tokens.isEmpty
                             ? const Center(
                                 child: Text(
                                   'Nenhum token adquirido ainda',
@@ -317,7 +314,7 @@ class _WalletPageState extends State<WalletPage>
                                 padding: const EdgeInsets.symmetric(
                                     horizontal: 24),
                                 itemCount: _tokens.length,
-                                separatorBuilder: (_, __) =>
+                                separatorBuilder: (_, _) =>
                                     const Divider(height: 1),
                                 itemBuilder: (context, index) {
                                   final token = _tokens[index];
@@ -341,6 +338,7 @@ class _WalletPageState extends State<WalletPage>
                                   final positivo =
                                       valorAtual >= precoMedio;
 
+                                  // AQUI DEVE SER FEITA A LOGICA DE VENDA
                                   return Container(
                                     margin: const EdgeInsets.symmetric(
                                         vertical: 6),
@@ -437,6 +435,47 @@ class _WalletPageState extends State<WalletPage>
                 ],
               ),
             ),
+    );
+  }
+}
+
+class _LoadingDots extends StatefulWidget {
+  final String label;
+  const _LoadingDots(this.label);
+
+  @override
+  State<_LoadingDots> createState() => _LoadingDotsState();
+}
+
+class _LoadingDotsState extends State<_LoadingDots> {
+  int _dotCount = 1;
+  late Timer _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _timer = Timer.periodic(const Duration(milliseconds: 500), (_) {
+      if (mounted) setState(() => _dotCount = (_dotCount % 3) + 1);
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Text(
+        '${widget.label}${'.' * _dotCount}',
+        style: const TextStyle(
+          fontFamily: 'JosefinSans',
+          color: Colors.black38,
+          fontSize: 16,
+        ),
+      ),
     );
   }
 }

@@ -9,6 +9,7 @@ import 'package:mescla_invest/src/services/startup_service.dart';
 import 'package:mescla_invest/src/pages/home/startup_detail/startup_detail_page.dart';
 import 'package:mescla_invest/src/pages/home/balcao_page.dart';
 import 'package:mescla_invest/src/pages/home/profile_page.dart';
+import 'package:mescla_invest/src/pages/home/wallet_page.dart';
 import 'package:mescla_invest/src/pages/initial_page.dart';
 
 const Map<String, String> _estagioLabels = {
@@ -192,6 +193,15 @@ class _InitialCatalogPageState extends State<InitialCatalogPage> {
               return;
             }
             if (index == 1) return;
+            if (index == 2) {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => WalletPage(usuario: widget.usuario),
+                ),
+              );
+              return;
+            }
             if (index == 3) {
               Navigator.push(
                 context,
@@ -201,9 +211,6 @@ class _InitialCatalogPageState extends State<InitialCatalogPage> {
               );
               return;
             }
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Em breve')),
-            );
           },
           items: const [
             BottomNavigationBarItem(icon: Icon(Icons.store), label: "Mercado"),

@@ -12,8 +12,8 @@ class WalletService {
           .call();
       return {
         'success': true,
-        'saldo': ((result.data['saldo'] ?? 0) as num).toDouble(),
-        'totalInvestido': ((result.data['totalInvestido'] ?? 0) as num).toDouble(),
+        'saldo': ((result.data['saldo'] ?? 0) as num).toDouble() / 100,
+        'totalInvestido': ((result.data['totalInvestido'] ?? 0) as num).toDouble() / 100,
         'totalTokens': ((result.data['totalTokens'] ?? 0) as num).toInt(),
       };
     } on FirebaseFunctionsException catch (e) {
@@ -45,7 +45,12 @@ class WalletService {
           .httpsCallable('getUserTokens')
           .call();
       final list = (result.data['tokens'] as List? ?? [])
-          .map((e) => Map<String, dynamic>.from(e as Map))
+          .map((e) {
+            final m = Map<String, dynamic>.from(e as Map);
+            m['precoMedio'] = ((m['precoMedio'] as num?) ?? 0) / 100.0;
+            m['valorAtual'] = ((m['valorAtual'] as num?) ?? 0) / 100.0;
+            return m;
+          })
           .toList();
       return {'success': true, 'tokens': list};
     } on FirebaseFunctionsException catch (e) {

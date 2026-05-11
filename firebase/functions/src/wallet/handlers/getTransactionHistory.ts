@@ -13,6 +13,7 @@ export const getTransactionHistory = onCall(async (request) => {
   try {
     return await getTransactionHistoryByUserId(request.auth.uid);
   } catch (e) {
+    console.error("getTransactionHistory error:", e);
     throw new HttpsError("internal", "Erro ao buscar histórico");
   }
 });
