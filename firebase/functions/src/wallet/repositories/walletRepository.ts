@@ -2,7 +2,7 @@
 // Data: 08/05/2026
 // Descrição: Repository da carteira do usuário
 
-import {getFirestore} from "firebase-admin/firestore";
+import {db} from "../../shared/firebase";
 
 /**
  * Returns wallet balance and portfolio summary for a user.
@@ -10,8 +10,6 @@ import {getFirestore} from "firebase-admin/firestore";
  * @return {Promise<object>} Wallet data.
  */
 export async function getWalletDataByUserId(uid: string) {
-  const db = getFirestore();
-
   const [walletDoc, txSnap] = await Promise.all([
     db.collection("users").doc(uid).collection("wallet").doc("saldo").get(),
     db.collection("token_transactions")
@@ -40,8 +38,6 @@ export async function getWalletDataByUserId(uid: string) {
  * @return {Promise<object>} Transaction list.
  */
 export async function getTransactionHistoryByUserId(uid: string) {
-  const db = getFirestore();
-
   const snapshot = await db
     .collection("token_transactions")
     .where("buyerId", "==", uid)
@@ -70,8 +66,6 @@ export async function getTransactionHistoryByUserId(uid: string) {
  * @return {Promise<object>} Token list.
  */
 export async function getUserTokensByUserId(uid: string) {
-  const db = getFirestore();
-
   const txSnap = await db
     .collection("token_transactions")
     .where("buyerId", "==", uid)

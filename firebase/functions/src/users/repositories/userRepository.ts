@@ -1,7 +1,6 @@
 // Caio Ferreira Polo 25002823
 
-import {getFirestore} from "firebase-admin/firestore";
-const db = getFirestore();
+import {db} from "../../shared/firebase";
 
 /**
  * Registers a new user in Firestore.
@@ -36,6 +35,16 @@ export async function registerUser(
   });
   await batch.commit();
   return uid;
+}
+
+
+/**
+ * Returns a user document by UID.
+ * @param {string} uid User ID.
+ * @return {Promise<FirebaseFirestore.DocumentSnapshot>} User document.
+ */
+export async function getUserById(uid: string) {
+  return db.collection("users").doc(uid).get();
 }
 
 

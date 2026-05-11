@@ -3,7 +3,7 @@
 // Retorna os dados do usuário autenticado a partir do Firestore
 
 import {onCall, HttpsError} from "firebase-functions/v2/https";
-import {getFirestore} from "firebase-admin/firestore";
+import {getUserById} from "../repositories/userRepository";
 
 export const getUserData = onCall(async (request) => {
   if (!request.auth) {
@@ -11,7 +11,7 @@ export const getUserData = onCall(async (request) => {
   }
 
   const uid = request.auth.uid;
-  const doc = await getFirestore().collection("users").doc(uid).get();
+  const doc = await getUserById(uid);
 
   if (!doc.exists) {
     throw new HttpsError("not-found", "Usuário não encontrado");

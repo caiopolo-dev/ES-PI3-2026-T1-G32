@@ -2,10 +2,9 @@
 // Data: 05/05/2026
 // Descrição: Acesso ao Firestore para FAQs de startups
 
-import {getFirestore, FieldValue} from "firebase-admin/firestore";
+import {FieldValue} from "firebase-admin/firestore";
 import {Faq} from "../types";
-
-const db = getFirestore();
+import {db} from "../../shared/firebase";
 const STARTUPS_COLLECTION = "startups";
 const FAQS_SUBCOLLECTION = "faqs";
 

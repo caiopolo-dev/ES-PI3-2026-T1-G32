@@ -2,10 +2,8 @@
 // Data: 24/04/2026
 // Descrição: Acesso ao Firestore para busca de startups
 
-import {getFirestore} from "firebase-admin/firestore";
 import {Startup, EstagioStartup} from "../types";
-
-const db = getFirestore();
+import {db} from "../../shared/firebase";
 const STARTUPS_COLLECTION = "startups";
 
 export const startupRepository = {

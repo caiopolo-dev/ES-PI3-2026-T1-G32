@@ -3,8 +3,8 @@
 // Descrição: Handler para criar uma FAQ em uma startup
 
 import {onCall, HttpsError} from "firebase-functions/v2/https";
-import {getFirestore} from "firebase-admin/firestore";
 import {faqsRepository} from "../repositories/faqsRepository";
+import {getUserById} from "../../users/repositories/userRepository";
 
 export const createFaq = onCall(async (request) => {
   if (!request.auth) {
@@ -23,8 +23,7 @@ export const createFaq = onCall(async (request) => {
   const uid = request.auth.uid;
   const email = request.auth.token.email ?? "";
 
-  const userDoc = await getFirestore()
-    .collection("users").doc(uid).get();
+  const userDoc = await getUserById(uid);
   const nomeUsuario = (userDoc.data()?.name as string) ?? "";
 
   await faqsRepository.create(
