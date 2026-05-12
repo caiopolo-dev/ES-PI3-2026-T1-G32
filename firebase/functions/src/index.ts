@@ -1,14 +1,14 @@
+// Autor: Gustavo Alves de Siqueira Costa
+// Data: 05/05/2026
+// Descrição: Ponto de entrada — inicializa o Firebase e exporta as funções
+
 import {initializeApp} from "firebase-admin/app";
 
 initializeApp();
 
-export {createUser} from "./users/handlers/registerUser";
-export {getUserData} from "./users/handlers/getUserData";
-export {getStartups} from "./startups/handlers/getStartups";
-export {getStartupById} from "./startups/handlers/getStartupById";
-export {createFaq} from "./startups/handlers/createFaq";
-export {getFaqs} from "./startups/handlers/getFaqs";
-export {listOffers} from "./tokenOffers/handlers/listTokenOffers";
-export {checkUserExists} from "./users/handlers/checkUserExists";
-export {getWalletBalance} from "./users/handlers/getWalletBalance";
-export {buyOffer} from "./tokenOffers/handlers/buyOffer";
+export {createUser, getUserData, checkUserExists} from "./modules/users";
+export {getStartups, getStartupById, createFaq, getFaqs}
+  from "./modules/startups";
+export {listOffers, buyOffer} from "./modules/tokenOffers";
+export {getWalletInfo, getTransactionHistory, getUserTokens}
+  from "./modules/wallet";

@@ -22,18 +22,25 @@ class _ProfilePageState extends State<ProfilePage> {
   @override
   void initState() {
     super.initState();
+    // Verifica se o usuário já tem TOTP registrado para exibir o toggle correto.
     _loadTwoFactorStatus();
   }
 
+  // Consulta diretamente o Firebase Auth (client-side) para verificar se há
+  // fatores registrados. Mais rápido do que chamar uma Cloud Function pois
+  // a lista de fatores já está no token local após o login.
   Future<void> _loadTwoFactorStatus() async {
     try {
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) return;
+      // getEnrolledFactors retorna a lista de fatores (TOTP, SMS etc.) da conta.
       final factors = await user.multiFactor.getEnrolledFactors();
+      // Qualquer fator registrado considera o 2FA como ativo.
       if (mounted) setState(() => _twoFactorEnabled = factors.isNotEmpty);
     } catch (_) {}
   }
 
+  // Faz logout e retorna para a tela inicial, limpando toda a pilha de navegação.
   Future<void> _logout() async {
     await FirebaseAuth.instance.signOut();
     if (!mounted) return;
@@ -149,6 +156,9 @@ class _ProfilePageState extends State<ProfilePage> {
                           inactiveThumbColor: Colors.grey,
                           onChanged: (value) async {
                             if (value) {
+                              // Abre a tela de configuração do 2FA.
+                              // TwoFactorSetupPage retorna `true` via Navigator.pop
+                              // se o usuário completou o enrollment com sucesso.
                               final result = await Navigator.push(
                                 context,
                                 MaterialPageRoute(
@@ -156,10 +166,13 @@ class _ProfilePageState extends State<ProfilePage> {
                                ),
                               );
 
+                              // Atualiza o toggle somente se o 2FA foi ativado com sucesso.
                               if (result == true) {
                                setState(() => _twoFactorEnabled = true);
                              }
                            } else {
+                             // Desativação de 2FA exige verificação de identidade adicional
+                             // — redireciona para o suporte para evitar desativação acidental.
                              ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
                                content: Text('Para desativar, contate o suporte'),

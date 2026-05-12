@@ -44,10 +44,12 @@ class _StartupDetailPageState extends State<StartupDetailPage> {
   @override
   void initState() {
     super.initState();
+    // Carrega dados da startup e FAQs em paralelo ao abrir a tela.
     _fetchDetail();
     _loadFaqs();
   }
 
+  // Faz logout e remove toda a pilha de navegação, retornando à tela inicial.
   Future<void> _logout() async {
     await FirebaseAuth.instance.signOut();
     if (!mounted) return;
@@ -58,9 +60,12 @@ class _StartupDetailPageState extends State<StartupDetailPage> {
     );
   }
 
+  // Busca as FAQs da startup via Cloud Function.
+  // O backend filtra FAQs privadas: o usuário só vê as próprias — as de outros são excluídas.
   Future<void> _loadFaqs() async {
     setState(() => _faqsLoading = true);
     final result = await FaqService.getFaqs(widget.startupId);
+    // Verifica montagem após o await — o usuário pode ter saído da tela.
     if (!mounted) return;
     setState(() {
       _faqsLoading = false;
@@ -75,11 +80,14 @@ class _StartupDetailPageState extends State<StartupDetailPage> {
       context: context,
       builder: (_) => FaqDialog(startupId: widget.startupId),
     );
+    // Recarrega as FAQs após o envio. addPostFrameCallback evita chamar setState
+    // durante a fase de build que ocorre imediatamente após o pop do dialog.
     if (result != null && mounted) {
       WidgetsBinding.instance.addPostFrameCallback((_) => _loadFaqs());
     }
   }
 
+  // Busca os dados detalhados da startup (sócios, conselho, vídeo, etc.).
   Future<void> _fetchDetail() async {
     final result = await StartupService.getStartupById(widget.startupId);
     if (!mounted) return;
@@ -386,6 +394,8 @@ class _StartupDetailPageState extends State<StartupDetailPage> {
           else if (_faqs.isEmpty)
             Center(child: Text('Nenhuma pergunta ainda', style: TextStyle(color: Colors.grey[400])))
           else
+            // Filtra a lista no lado cliente após carregar — sem nova chamada ao backend.
+            // _faqFilter: 0=Todas, 1=Públicas, 2=Privadas (apenas as do próprio usuário).
             ..._faqs.where((faq) {
               if (_faqFilter == 1) return faq['privada'] == false;
               if (_faqFilter == 2) return faq['privada'] == true;

@@ -9,6 +9,7 @@ import 'package:mescla_invest/src/services/startup_service.dart';
 import 'package:mescla_invest/src/pages/home/startup_detail/startup_detail_page.dart';
 import 'package:mescla_invest/src/pages/home/balcao_page.dart';
 import 'package:mescla_invest/src/pages/home/profile_page.dart';
+import 'package:mescla_invest/src/pages/home/wallet_page.dart';
 import 'package:mescla_invest/src/pages/initial_page.dart';
 
 const Map<String, String> _estagioLabels = {
@@ -42,7 +43,9 @@ class _InitialCatalogPageState extends State<InitialCatalogPage> {
   @override
   void initState() {
     super.initState();
+    // Carrega o catálogo completo na abertura da tela.
     fetchStartups();
+    // Atualiza _searchQuery a cada keystroke para filtrar a lista em tempo real.
     _searchController.addListener(() {
       setState(() {
         _searchQuery = _searchController.text.toLowerCase();
@@ -52,13 +55,17 @@ class _InitialCatalogPageState extends State<InitialCatalogPage> {
 
   @override
   void dispose() {
+    // Libera o controller para evitar memory leak.
     _searchController.dispose();
     super.dispose();
   }
 
+  // Faz logout do Firebase e retorna para a tela inicial, removendo todo o histórico
+  // de navegação para que o botão "voltar" não traga o usuário de volta ao app.
   Future<void> _logout() async {
     await FirebaseAuth.instance.signOut();
     if (!mounted) return;
+    // pushAndRemoveUntil remove todas as rotas anteriores da pilha de navegação.
     Navigator.pushAndRemoveUntil(
       context,
       MaterialPageRoute(builder: (_) => const InitialPage()),
@@ -67,6 +74,10 @@ class _InitialCatalogPageState extends State<InitialCatalogPage> {
   }
 
   Future<void> fetchStartups() async {
+    // Guard contra race condition: se o usuário troca o filtro rapidamente,
+    // descartamos respostas de requisições antigas que chegarem depois.
+    // Cada chamada recebe um ID único; se outro fetchStartups iniciou depois,
+    // o ID atual já não será o mais recente e a resposta é descartada.
     final requestId = ++_requestId;
 
     setState(() {
@@ -78,6 +89,7 @@ class _InitialCatalogPageState extends State<InitialCatalogPage> {
       estagio: filterValues[selectedFilter],
     );
 
+    // Se outro filtro foi selecionado enquanto aguardávamos a resposta, aborta.
     if (requestId != _requestId) return;
 
     setState(() {
@@ -90,11 +102,14 @@ class _InitialCatalogPageState extends State<InitialCatalogPage> {
     });
   }
 
+  // Filtra a lista de startups pelo texto digitado na barra de busca.
+  // A busca é feita localmente sobre os dados já carregados — sem nova chamada à API.
   List<Map<String, dynamic>> get _filteredStartups {
     if (_searchQuery.isEmpty) return startups;
     return startups.where((s) {
       final nome = (s['nome'] as String? ?? '').toLowerCase();
       final setor = (s['setor'] as String? ?? '').toLowerCase();
+      // Retorna a startup se o nome ou o setor contiver o texto buscado.
       return nome.contains(_searchQuery) || setor.contains(_searchQuery);
     }).toList();
   }
@@ -192,6 +207,15 @@ class _InitialCatalogPageState extends State<InitialCatalogPage> {
               return;
             }
             if (index == 1) return;
+            if (index == 2) {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => WalletPage(usuario: widget.usuario),
+                ),
+              );
+              return;
+            }
             if (index == 3) {
               Navigator.push(
                 context,
@@ -201,9 +225,6 @@ class _InitialCatalogPageState extends State<InitialCatalogPage> {
               );
               return;
             }
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Em breve')),
-            );
           },
           items: const [
             BottomNavigationBarItem(icon: Icon(Icons.store), label: "Mercado"),

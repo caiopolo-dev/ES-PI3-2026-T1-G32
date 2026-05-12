@@ -1,4 +1,5 @@
-// Caio Ferreira Polo 25002823
+// Autor: Caio Ferreira Polo
+// Descrição: Tela de recuperação de senha por e-mail
 
 import 'package:flutter/material.dart';
 import 'package:mescla_invest/src/services/auth_service.dart';
@@ -16,7 +17,10 @@ class _PasswordRecoveryPageState extends State<PasswordRecoveryPage> {
   String errorText = '';
   bool isLoading = false;
 
+  // Validação local com regex completa antes de qualquer chamada de rede.
+  // Regex mais rigorosa que a do auth_service para evitar requisição com e-mail claramente inválido.
   bool validateEmail() {
+    // Limpa erro anterior antes de revalidar.
     setState(() => errorText = '');
 
     if (!RegExp(r'^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$').hasMatch(emailController.text)) {
@@ -27,13 +31,21 @@ class _PasswordRecoveryPageState extends State<PasswordRecoveryPage> {
     return true;
   }
 
+  // Fluxo de recuperação:
+  // 1. Valida o e-mail localmente
+  // 2. Chama AuthService que: verifica existência no Firestore, depois aciona Firebase
+  // 3. Se bem-sucedido, exibe snackbar e retorna à tela anterior
+  // 4. Se falhar (e-mail não cadastrado, etc.), exibe a mensagem de erro na tela
   Future<void> sendRecoveryEmail() async {
+    // Aborta se a validação local falhar — evita requisição desnecessária.
     if (!validateEmail()) return;
 
+    // Ativa o indicador de carregamento e limpa qualquer erro residual.
     setState(() { isLoading = true; errorText = ''; });
 
     final result = await AuthService.sendPasswordReset(email: emailController.text);
 
+    // Após await, o widget pode ter sido destruído — não usar context sem verificar.
     if (!mounted) return;
     setState(() => isLoading = false);
 
@@ -45,8 +57,10 @@ class _PasswordRecoveryPageState extends State<PasswordRecoveryPage> {
           duration: Duration(seconds: 3),
         ),
       );
+      // Retorna à tela de login após o envio bem-sucedido.
       Navigator.pop(context);
     } else {
+      // Exibe a mensagem de erro retornada pelo AuthService (ex: "Nenhuma conta encontrada").
       setState(() => errorText = result['message'] as String? ?? 'Erro ao enviar e-mail');
     }
   }

@@ -32,6 +32,7 @@ class _FaqDialogState extends State<FaqDialog> {
 
   Future<void> _submit() async {
     final pergunta = _controller.text.trim();
+    // Não envia pergunta vazia.
     if (pergunta.isEmpty) return;
     setState(() => _sending = true);
     final result = await FaqService.createFaq(
@@ -39,8 +40,10 @@ class _FaqDialogState extends State<FaqDialog> {
       pergunta: pergunta,
       privada: _privada,
     );
+    // Verifica montagem após o await antes de interagir com context.
     if (!mounted) return;
     if (result['success'] as bool) {
+      // Retorna FaqResult para que a tela pai saiba recarregar a lista de FAQs.
       Navigator.pop(context, FaqResult(pergunta, _privada));
     } else {
       setState(() => _sending = false);
