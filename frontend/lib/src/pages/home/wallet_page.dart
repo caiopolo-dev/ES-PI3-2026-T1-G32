@@ -2,15 +2,19 @@
 // Data: 10/05/2026
 // Descrição: Tela de carteira do usuário
 
-import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:mescla_invest/src/theme/app_colors.dart';
 import 'package:mescla_invest/src/services/wallet_service.dart';
+import 'package:mescla_invest/src/widgets/user_avatar_menu.dart';
+import 'package:mescla_invest/src/widgets/app_loading_indicator.dart';
 import 'package:intl/intl.dart';
 
 class WalletPage extends StatefulWidget {
   final Map<String, dynamic>? usuario;
+  final void Function(int)? onTabSwitch;
+  final bool isActive;
 
-  const WalletPage({super.key, this.usuario});
+  const WalletPage({super.key, this.usuario, this.onTabSwitch, this.isActive = false});
 
   @override
   State<WalletPage> createState() => _WalletPageState();
@@ -30,6 +34,14 @@ class _WalletPageState extends State<WalletPage>
 
   final currencyFormat =
       NumberFormat.currency(locale: 'pt_BR', symbol: 'R\$');
+
+  @override
+  void didUpdateWidget(WalletPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Recarrega saldo, tokens e histórico ao abrir a aba,
+    // garantindo que compras recentes já estejam refletidas.
+    if (widget.isActive && !oldWidget.isActive) _loadAll();
+  }
 
   @override
   void initState() {
@@ -78,6 +90,12 @@ class _WalletPageState extends State<WalletPage>
   setState(() => _isLoading = false);
   }
 
+  double get _valorAtualPortfolio => _tokens.fold(0.0, (sum, t) {
+    final valorAtual = (t['valorAtual'] as num?)?.toDouble() ?? 0.0;
+    final quantidade = (t['quantidade'] as num?)?.toInt() ?? 0;
+    return sum + valorAtual * quantidade;
+  });
+
   @override
   void dispose() {
     _tabController.dispose();
@@ -87,24 +105,29 @@ class _WalletPageState extends State<WalletPage>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.branco,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: AppColors.branco,
         elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () => Navigator.pop(context),
-        ),
+        automaticallyImplyLeading: false,
         title: const Text(
           'Minha Carteira',
           style: TextStyle(
-            color: Colors.black,
+            color: AppColors.preto,
             fontFamily: 'JosefinSans',
             fontSize: 20,
           ),
         ),
+        actions: [
+          UserAvatarMenu(
+            usuario: widget.usuario,
+            onPerfilTap: () => widget.onTabSwitch?.call(4),
+          ),
+        ],
       ),
-      body: RefreshIndicator(
+      body: _isLoading
+          ? const AppLoadingIndicator()
+          : RefreshIndicator(
               onRefresh: _loadAll,
               child: CustomScrollView(
                 slivers: [
@@ -117,56 +140,68 @@ class _WalletPageState extends State<WalletPage>
 
                           Container(
                             width: double.infinity,
-                            padding: const EdgeInsets.all(24),
+                            padding: const EdgeInsets.all(20),
                             decoration: BoxDecoration(
-                              gradient: const LinearGradient(
-                                colors: [Color(0xFF013593), Color(0xFF080B11)],
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                              ),
+                              color: AppColors.branco,
                               borderRadius: BorderRadius.circular(16),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.blue.withValues(alpha:0.3),
-                                  blurRadius: 16,
-                                  offset: const Offset(0, 6),
-                                ),
-                              ],
+                              border: Border.all(color: AppColors.cinza300),
                             ),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 const Text(
-                                  'Saldo disponível',
+                                  'Saldo em conta',
                                   style: TextStyle(
-                                    color: Colors.white70,
                                     fontFamily: 'JosefinSans',
-                                    fontSize: 13,
+                                    fontSize: 12,
+                                    color: AppColors.cinza500,
                                   ),
                                 ),
-                                const SizedBox(height: 8),
+                                const SizedBox(height: 6),
                                 Text(
                                   currencyFormat.format(_saldo),
                                   style: const TextStyle(
-                                    color: Colors.white,
                                     fontFamily: 'JosefinSans',
-                                    fontSize: 32,
+                                    fontSize: 28,
                                     fontWeight: FontWeight.bold,
+                                    color: AppColors.azul,
                                   ),
                                 ),
-                                const SizedBox(height: 20),
+                                const SizedBox(height: 16),
+                                Container(height: 1, color: AppColors.cinza200),
+                                const SizedBox(height: 16),
                                 Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
                                   children: [
-                                    _CardStat(
-                                      label: 'Total investido',
-                                      value: currencyFormat
-                                          .format(_totalInvestido),
+                                    Expanded(
+                                      child: _CardStat(
+                                        label: 'Valor investido',
+                                        value: currencyFormat.format(_totalInvestido),
+                                        valueColor: AppColors.preto,
+                                      ),
                                     ),
-                                    _CardStat(
-                                      label: 'Tokens',
-                                      value: '$_totalTokens',
+                                    Container(width: 1, height: 36, color: AppColors.cinza200),
+                                    Expanded(
+                                      child: Padding(
+                                        padding: const EdgeInsets.only(left: 16),
+                                        child: _CardStat(
+                                          label: 'Valor atual',
+                                          value: currencyFormat.format(_valorAtualPortfolio),
+                                          valueColor: _valorAtualPortfolio >= _totalInvestido
+                                              ? AppColors.verde
+                                              : AppColors.vermelho,
+                                        ),
+                                      ),
+                                    ),
+                                    Container(width: 1, height: 36, color: AppColors.cinza200),
+                                    Expanded(
+                                      child: Padding(
+                                        padding: const EdgeInsets.only(left: 16),
+                                        child: _CardStat(
+                                          label: 'Tokens',
+                                          value: '$_totalTokens',
+                                          valueColor: AppColors.preto,
+                                        ),
+                                      ),
                                     ),
                                   ],
                                 ),
@@ -179,7 +214,7 @@ class _WalletPageState extends State<WalletPage>
                             Row(
                               children: [
                                 const Icon(Icons.warning_amber_rounded,
-                                    size: 14, color: Colors.orange),
+                                    size: 14, color: AppColors.laranja),
                                 const SizedBox(width: 6),
                                 Expanded(
                                   child: Text(
@@ -187,7 +222,7 @@ class _WalletPageState extends State<WalletPage>
                                     style: const TextStyle(
                                       fontFamily: 'JosefinSans',
                                       fontSize: 12,
-                                      color: Colors.orange,
+                                      color: AppColors.laranja,
                                     ),
                                   ),
                                 ),
@@ -199,16 +234,16 @@ class _WalletPageState extends State<WalletPage>
 
                           TabBar(
                             controller: _tabController,
-                            labelColor: const Color(0xFF013593),
-                            unselectedLabelColor: Colors.black38,
-                            indicatorColor: const Color(0xFF013593),
+                            labelColor: AppColors.azul,
+                            unselectedLabelColor: AppColors.cinza500,
+                            indicatorColor: AppColors.azul,
                             labelStyle: const TextStyle(
                               fontFamily: 'JosefinSans',
                               fontSize: 14,
                             ),
                             tabs: const [
-                              Tab(text: 'Histórico'),
                               Tab(text: 'Meus Tokens'),
+                              Tab(text: 'Histórico'),
                             ],
                           ),
 
@@ -222,92 +257,13 @@ class _WalletPageState extends State<WalletPage>
                     child: TabBarView(
                       controller: _tabController,
                       children: [
-                        _isLoading
-                            ? const _LoadingDots('Carregando histórico')
-                            : _transactions.isEmpty
-                            ? const Center(
-                                child: Text(
-                                  'Nenhuma transação ainda',
-                                  style: TextStyle(
-                                    fontFamily: 'JosefinSans',
-                                    color: Colors.black38,
-                                  ),
-                                ),
-                              )
-                            : ListView.separated(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 24),
-                                itemCount: _transactions.length,
-                                separatorBuilder: (_, _) =>
-                                    const Divider(height: 1),
-                                itemBuilder: (context, index) {
-                                  final tx = _transactions[index];
-                                  final isCompra =
-                                      tx['type'] == 'buy';
-                                  final valor =
-                                      ((tx['totalCents'] as num?) ?? 0)
-                                          .toDouble() / 100;
-                                  final data = tx['createdAt'] != null
-                                      ? DateFormat('dd/MM/yyyy HH:mm')
-                                          .format(DateTime.parse(
-                                              tx['createdAt']))
-                                      : '—';
-
-                                  return ListTile(
-                                    contentPadding: EdgeInsets.zero,
-                                    leading: CircleAvatar(
-                                      backgroundColor: isCompra
-                                          ? Colors.green.withValues(alpha:0.1)
-                                          : Colors.red.withValues(alpha:0.1),
-                                      child: Icon(
-                                        isCompra
-                                            ? Icons.arrow_downward
-                                            : Icons.arrow_upward,
-                                        color: isCompra
-                                            ? Colors.green
-                                            : Colors.red,
-                                        size: 20,
-                                      ),
-                                    ),
-                                    title: Text(
-                                      tx['startupId'] ?? '—',
-                                      style: const TextStyle(
-                                        fontFamily: 'JosefinSans',
-                                        fontSize: 15,
-                                      ),
-                                    ),
-                                    subtitle: Text(
-                                      data,
-                                      style: const TextStyle(
-                                        fontFamily: 'JosefinSans',
-                                        fontSize: 12,
-                                        color: Colors.black38,
-                                      ),
-                                    ),
-                                    trailing: Text(
-                                      '${isCompra ? '-' : '+'} ${currencyFormat.format(valor)}',
-                                      style: TextStyle(
-                                        fontFamily: 'JosefinSans',
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.bold,
-                                        color: isCompra
-                                            ? Colors.red
-                                            : Colors.green,
-                                      ),
-                                    ),
-                                  );
-                                },
-                              ),
-
-                        _isLoading
-                            ? const _LoadingDots('Carregando seus tokens')
-                            : _tokens.isEmpty
+                        _tokens.isEmpty
                             ? const Center(
                                 child: Text(
                                   'Nenhum token adquirido ainda',
                                   style: TextStyle(
                                     fontFamily: 'JosefinSans',
-                                    color: Colors.black38,
+                                    color: AppColors.cinza500,
                                   ),
                                 ),
                               )
@@ -319,111 +275,220 @@ class _WalletPageState extends State<WalletPage>
                                     const Divider(height: 1),
                                 itemBuilder: (context, index) {
                                   final token = _tokens[index];
-                                  final precoMedio =
-                                      (token['precoMedio'] as num?)
-                                              ?.toDouble() ??
-                                          0.0;
-                                  final valorAtual =
-                                      (token['valorAtual'] as num?)
-                                              ?.toDouble() ??
-                                          0.0;
-                                  final quantidade =
-                                      token['quantidade'] ?? 0;
-                                  // Variação percentual em relação ao preço médio de compra.
-                                  final variacao =
-                                      precoMedio > 0
-                                          ? ((valorAtual - precoMedio) /
-                                                  precoMedio *
-                                                  100)
-                                              .toStringAsFixed(2)
-                                          : '0.00';
-                                  final positivo =
-                                      valorAtual >= precoMedio;
+                                  final precoMedio = (token['precoMedio'] as num?)?.toDouble() ?? 0.0;
+                                  final valorAtual = (token['valorAtual'] as num?)?.toDouble() ?? 0.0;
+                                  final quantidade = (token['quantidade'] as num?)?.toInt() ?? 0;
+                                  final totalAtual = valorAtual * quantidade;
+                                  final totalInvestido = precoMedio * quantidade;
+                                  final variacao = precoMedio > 0
+                                      ? ((valorAtual - precoMedio) / precoMedio * 100).toStringAsFixed(2)
+                                      : '0.00';
+                                  final positivo = valorAtual >= precoMedio;
+                                  final logoUrl = token['startupLogo'] as String?;
 
                                   // AQUI DEVE SER FEITA A LOGICA DE VENDA
                                   return Container(
-                                    margin: const EdgeInsets.symmetric(
-                                        vertical: 6),
+                                    margin: const EdgeInsets.symmetric(vertical: 6),
                                     padding: const EdgeInsets.all(16),
                                     decoration: BoxDecoration(
-                                      color: const Color(0xFFF5F5F5),
-                                      borderRadius:
-                                          BorderRadius.circular(12),
+                                      color: AppColors.cinza100,
+                                      borderRadius: BorderRadius.circular(12),
                                     ),
-                                    child: Row(
+                                    child: Column(
                                       children: [
-                                        
-                                        CircleAvatar(
-                                          radius: 22,
-                                          backgroundColor: Colors.blue
-                                              .withValues(alpha:0.1),
-                                          backgroundImage:
-                                              token['startupLogo'] != null
-                                                  ? NetworkImage(
-                                                      token['startupLogo'])
-                                                  : null,
-                                          child:
-                                              token['startupLogo'] == null
-                                                  ? const Icon(
-                                                      Icons.business,
-                                                      color: Colors.blue,
-                                                      size: 20,
-                                                    )
-                                                  : null,
-                                        ),
-
-                                        const SizedBox(width: 12),
-
-                                        Expanded(
-                                          child: Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            children: [
-                                              Text(
-                                                token['startupNome'] ??
-                                                    '—',
-                                                style: const TextStyle(
-                                                  fontFamily: 'JosefinSans',
-                                                  fontSize: 15,
-                                                  fontWeight:
-                                                      FontWeight.bold,
-                                                ),
-                                              ),
-                                              Text(
-                                                '$quantidade tokens',
-                                                style: const TextStyle(
-                                                  fontFamily: 'JosefinSans',
-                                                  fontSize: 12,
-                                                  color: Colors.black45,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-
-                                        Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.end,
+                                        Row(
                                           children: [
+                                            CircleAvatar(
+                                              radius: 24,
+                                              backgroundColor: AppColors.azul.withValues(alpha: 0.1),
+                                              backgroundImage: logoUrl != null ? NetworkImage(logoUrl) : null,
+                                              child: logoUrl == null
+                                                  ? const Icon(Icons.business, color: AppColors.azul, size: 22)
+                                                  : null,
+                                            ),
+                                            const SizedBox(width: 12),
+                                            Expanded(
+                                              child: Column(
+                                                crossAxisAlignment: CrossAxisAlignment.start,
+                                                children: [
+                                                  Text(
+                                                    token['startupNome'] ?? '—',
+                                                    style: const TextStyle(
+                                                      fontFamily: 'JosefinSans',
+                                                      fontSize: 15,
+                                                      fontWeight: FontWeight.bold,
+                                                    ),
+                                                  ),
+                                                  Text(
+                                                    '$quantidade tokens',
+                                                    style: const TextStyle(
+                                                      fontFamily: 'JosefinSans',
+                                                      fontSize: 12,
+                                                      color: AppColors.cinza500,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                            Column(
+                                              crossAxisAlignment: CrossAxisAlignment.end,
+                                              children: [
+                                                Text(
+                                                  '${currencyFormat.format(valorAtual)}/un',
+                                                  style: const TextStyle(
+                                                    fontFamily: 'JosefinSans',
+                                                    fontSize: 15,
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                ),
+                                                Text(
+                                                  '${positivo ? '+' : ''}$variacao%',
+                                                  style: TextStyle(
+                                                    fontFamily: 'JosefinSans',
+                                                    fontSize: 12,
+                                                    color: positivo ? AppColors.verde : AppColors.vermelho,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 12),
+                                        Container(height: 1, color: AppColors.cinza300),
+                                        const SizedBox(height: 10),
+                                        Row(
+                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                          children: [
+                                            Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                const Text(
+                                                  'Investido',
+                                                  style: TextStyle(fontFamily: 'JosefinSans', fontSize: 11, color: AppColors.cinza500),
+                                                ),
+                                                Text(
+                                                  currencyFormat.format(totalInvestido),
+                                                  style: const TextStyle(fontFamily: 'JosefinSans', fontSize: 13, fontWeight: FontWeight.bold),
+                                                ),
+                                              ],
+                                            ),
+                                            Column(
+                                              crossAxisAlignment: CrossAxisAlignment.end,
+                                              children: [
+                                                const Text(
+                                                  'Valor atual',
+                                                  style: TextStyle(fontFamily: 'JosefinSans', fontSize: 11, color: AppColors.cinza500),
+                                                ),
+                                                Text(
+                                                  currencyFormat.format(totalAtual),
+                                                  style: TextStyle(
+                                                    fontFamily: 'JosefinSans',
+                                                    fontSize: 13,
+                                                    fontWeight: FontWeight.bold,
+                                                    color: positivo ? AppColors.verde : AppColors.vermelho,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                },
+                              ),
+
+                        _transactions.isEmpty
+                            ? const Center(
+                                child: Text(
+                                  'Nenhuma transação ainda',
+                                  style: TextStyle(
+                                    fontFamily: 'JosefinSans',
+                                    color: AppColors.cinza500,
+                                  ),
+                                ),
+                              )
+                            : ListView.separated(
+                                padding: const EdgeInsets.symmetric(horizontal: 24),
+                                itemCount: _transactions.length,
+                                separatorBuilder: (_, _) => const Divider(height: 1),
+                                itemBuilder: (context, index) {
+                                  final tx = _transactions[index];
+                                  final isCompra = tx['type'] == 'buy';
+                                  final valor = ((tx['totalCents'] as num?) ?? 0).toDouble() / 100;
+                                  final data = tx['createdAt'] != null
+                                      ? DateFormat('dd/MM/yyyy HH:mm').format(DateTime.parse(tx['createdAt']))
+                                      : '—';
+
+                                  final quantidade = (tx['quantity'] as num?)?.toInt() ?? 0;
+                                  final precoPorToken = quantidade > 0 ? valor / quantidade : 0.0;
+                                  final corTipo = isCompra ? AppColors.vermelho : AppColors.verde;
+
+                                  return Container(
+                                    margin: const EdgeInsets.symmetric(vertical: 6),
+                                    padding: const EdgeInsets.all(16),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.cinza100,
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Column(
+                                      children: [
+                                        Row(
+                                          children: [
+                                            CircleAvatar(
+                                              radius: 20,
+                                              backgroundColor: isCompra
+                                                  ? AppColors.verde.withValues(alpha: 0.1)
+                                                  : AppColors.vermelho.withValues(alpha: 0.1),
+                                              child: Icon(
+                                                isCompra ? Icons.arrow_downward : Icons.arrow_upward,
+                                                color: isCompra ? AppColors.verde : AppColors.vermelho,
+                                                size: 18,
+                                              ),
+                                            ),
+                                            const SizedBox(width: 12),
+                                            Expanded(
+                                              child: Column(
+                                                crossAxisAlignment: CrossAxisAlignment.start,
+                                                children: [
+                                                  Text(
+                                                    tx['startupId'] ?? '—',
+                                                    style: const TextStyle(
+                                                      fontFamily: 'JosefinSans',
+                                                      fontSize: 15,
+                                                      fontWeight: FontWeight.bold,
+                                                    ),
+                                                  ),
+                                                  Text(
+                                                    data,
+                                                    style: const TextStyle(
+                                                      fontFamily: 'JosefinSans',
+                                                      fontSize: 11,
+                                                      color: AppColors.cinza500,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
                                             Text(
-                                              currencyFormat
-                                                  .format(valorAtual),
-                                              style: const TextStyle(
+                                              '${isCompra ? '-' : '+'} ${currencyFormat.format(valor)}',
+                                              style: TextStyle(
                                                 fontFamily: 'JosefinSans',
                                                 fontSize: 15,
                                                 fontWeight: FontWeight.bold,
+                                                color: corTipo,
                                               ),
                                             ),
-                                            Text(
-                                              '${positivo ? '+' : ''}$variacao%',
-                                              style: TextStyle(
-                                                fontFamily: 'JosefinSans',
-                                                fontSize: 12,
-                                                color: positivo
-                                                    ? Colors.green
-                                                    : Colors.red,
-                                              ),
-                                            ),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 10),
+                                        Container(height: 1, color: AppColors.cinza300),
+                                        const SizedBox(height: 10),
+                                        Row(
+                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                          children: [
+                                            _TxStat(label: 'Quantidade', value: '$quantidade tokens'),
+                                            _TxStat(label: 'Preço/token', value: currencyFormat.format(precoPorToken), alignEnd: true),
                                           ],
                                         ),
                                       ],
@@ -441,54 +506,13 @@ class _WalletPageState extends State<WalletPage>
   }
 }
 
-class _LoadingDots extends StatefulWidget {
-  final String label;
-  const _LoadingDots(this.label);
-
-  @override
-  State<_LoadingDots> createState() => _LoadingDotsState();
-}
-
-class _LoadingDotsState extends State<_LoadingDots> {
-  int _dotCount = 1;
-  late Timer _timer;
-
-  @override
-  void initState() {
-    super.initState();
-    // Cicla de 1 a 3 pontos a cada 500ms: ".", "..", "..."
-    _timer = Timer.periodic(const Duration(milliseconds: 500), (_) {
-      if (mounted) setState(() => _dotCount = (_dotCount % 3) + 1);
-    });
-  }
-
-  @override
-  void dispose() {
-    // Timer deve ser cancelado para evitar setState após o widget ser destruído.
-    _timer.cancel();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Text(
-        '${widget.label}${'.' * _dotCount}',
-        style: const TextStyle(
-          fontFamily: 'JosefinSans',
-          color: Colors.black38,
-          fontSize: 16,
-        ),
-      ),
-    );
-  }
-}
 
 class _CardStat extends StatelessWidget {
   final String label;
   final String value;
+  final Color valueColor;
 
-  const _CardStat({required this.label, required this.value});
+  const _CardStat({required this.label, required this.value, this.valueColor = AppColors.preto});
 
   @override
   Widget build(BuildContext context) {
@@ -498,17 +522,51 @@ class _CardStat extends StatelessWidget {
         Text(
           label,
           style: const TextStyle(
-            color: Colors.white60,
+            color: AppColors.cinza500,
             fontFamily: 'JosefinSans',
             fontSize: 11,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          value,
+          style: TextStyle(
+            color: valueColor,
+            fontFamily: 'JosefinSans',
+            fontSize: 15,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _TxStat extends StatelessWidget {
+  final String label;
+  final String value;
+  final bool alignEnd;
+
+  const _TxStat({required this.label, required this.value, this.alignEnd = false});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: alignEnd ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            fontFamily: 'JosefinSans',
+            fontSize: 11,
+            color: AppColors.cinza500,
           ),
         ),
         Text(
           value,
           style: const TextStyle(
-            color: Colors.white,
             fontFamily: 'JosefinSans',
-            fontSize: 16,
+            fontSize: 13,
             fontWeight: FontWeight.bold,
           ),
         ),

@@ -27,6 +27,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Mescla Invest',
+      theme: ThemeData(fontFamily: 'JosefinSans'),
       home: const InitialPage(),
     );
   }

@@ -2,6 +2,7 @@
 // Descrição: Tela de recuperação de senha por e-mail
 
 import 'package:flutter/material.dart';
+import 'package:mescla_invest/src/theme/app_colors.dart';
 import 'package:mescla_invest/src/services/auth_service.dart';
 
 class PasswordRecoveryPage extends StatefulWidget {
@@ -53,7 +54,7 @@ class _PasswordRecoveryPageState extends State<PasswordRecoveryPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('E-mail de recuperação enviado com sucesso'),
-          backgroundColor: Colors.green,
+          backgroundColor: AppColors.verde,
           duration: Duration(seconds: 3),
         ),
       );
@@ -68,12 +69,12 @@ class _PasswordRecoveryPageState extends State<PasswordRecoveryPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.branco,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: AppColors.branco,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          icon: const Icon(Icons.arrow_back, color: AppColors.preto),
           onPressed: () => Navigator.pop(context),
         ),
       ),
@@ -118,7 +119,7 @@ class _PasswordRecoveryPageState extends State<PasswordRecoveryPage> {
                         style: TextStyle(
                           fontSize: 15,
                           fontFamily: 'JosefinSans',
-                          color: Colors.black54,
+                          color: AppColors.preto54,
                         ),
                       ),
 
@@ -132,12 +133,12 @@ class _PasswordRecoveryPageState extends State<PasswordRecoveryPage> {
                         style: const TextStyle(fontFamily: 'JosefinSans', fontSize: 18),
                         decoration: const InputDecoration(
                           hintText: 'Digite seu email',
-                          hintStyle: TextStyle(color: Colors.black26),
+                          hintStyle: TextStyle(color: AppColors.cinza400),
                           enabledBorder: UnderlineInputBorder(
-                            borderSide: BorderSide(color: Colors.black26),
+                            borderSide: BorderSide(color: AppColors.cinza400),
                           ),
                           focusedBorder: UnderlineInputBorder(
-                            borderSide: BorderSide(color: Color(0xFF013593), width: 2),
+                            borderSide: BorderSide(color: AppColors.azul, width: 2),
                           ),
                         ),
                       ),
@@ -148,7 +149,7 @@ class _PasswordRecoveryPageState extends State<PasswordRecoveryPage> {
                       if (errorText.isNotEmpty)
                         Text(
                           errorText,
-                          style: const TextStyle(color: Colors.red),
+                          style: const TextStyle(color: AppColors.vermelho),
                         ),
                     ],
                   ),
@@ -161,15 +162,15 @@ class _PasswordRecoveryPageState extends State<PasswordRecoveryPage> {
                 child: ElevatedButton(
                   onPressed: isLoading ? null : sendRecoveryEmail,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue,
-                    foregroundColor: Colors.white,
+                    backgroundColor: AppColors.azul,
+                    foregroundColor: AppColors.branco,
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(24),
-                      side: const BorderSide(color: Color(0xFF1565C0), width: 0.25),
+                      side: const BorderSide(color: AppColors.azul800, width: 0.25),
                     ),
                     elevation: 6,
-                    shadowColor: Colors.blue.withOpacity(0.4),
+                    shadowColor: AppColors.azul.withValues(alpha: 0.4),
                   ),
                   child: isLoading
                       ? const SizedBox(
@@ -177,7 +178,7 @@ class _PasswordRecoveryPageState extends State<PasswordRecoveryPage> {
                           width: 20,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                            valueColor: AlwaysStoppedAnimation<Color>(AppColors.branco),
                           ),
                         )
                       : const Text(

@@ -3,6 +3,7 @@
 // Descrição: Tela de configuração do 2FA via TOTP
 
 import 'package:flutter/material.dart';
+import 'package:mescla_invest/src/theme/app_colors.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -17,6 +18,8 @@ class TwoFactorSetupPage extends StatefulWidget {
 
 class _TwoFactorSetupPageState extends State<TwoFactorSetupPage> {
   final TextEditingController _codeController = TextEditingController();
+  // Controller separado para o campo de senha no dialog de reautenticação.
+  final TextEditingController _passwordController = TextEditingController();
   String? _qrCodeUrl;
   TotpSecret? _totpSecret;
   bool _isLoading = true;
@@ -26,16 +29,12 @@ class _TwoFactorSetupPageState extends State<TwoFactorSetupPage> {
   @override
   void initState() {
     super.initState();
-    // Inicia a geração do segredo TOTP assim que a tela é montada.
     _initTotp();
   }
 
   // Gera o segredo TOTP e a URL do QR Code para o usuário escanear no autenticador.
-  // Fluxo:
-  // 1. TwoFactorService.generateSetup() pede ao Firebase uma sessão multifator
-  // 2. O Firebase gera um segredo TOTP único para este usuário
-  // 3. O segredo é convertido em URL otpauth:// compatível com Google Authenticator
-  // 4. A URL é exibida como QR Code para o usuário escanear
+  // Se o Firebase rejeitar por token antigo (requires-recent-login), abre o
+  // dialog de reautenticação antes de tentar de novo.
   Future<void> _initTotp() async {
     final result = await TwoFactorService.generateSetup();
 
@@ -50,11 +49,133 @@ class _TwoFactorSetupPageState extends State<TwoFactorSetupPage> {
         _totpSecret = result['secret'] as TotpSecret;
         _isLoading = false;
       });
+    } else if (result['requiresReauth'] == true) {
+      // Token do usuário está antigo — Firebase exige autenticação recente
+      // antes de operações sensíveis como enrollment de MFA.
+      await _showReauthDialog();
     } else {
       setState(() {
         _errorText = result['message'] as String? ?? 'Erro ao gerar QR Code';
         _isLoading = false;
       });
+    }
+  }
+
+  // Exibe um dialog pedindo a senha do usuário para reautenticar.
+  // Após reautenticação bem-sucedida, reinicia o fluxo de setup do TOTP.
+  Future<void> _showReauthDialog() async {
+    _passwordController.clear();
+    String dialogError = '';
+
+    // Retorna true se o usuário confirmou a senha com sucesso, false/null se voltou.
+    final confirmed = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          return AlertDialog(
+            backgroundColor: AppColors.branco,
+            surfaceTintColor: AppColors.transparente,
+            title: const Text(
+              'Confirme sua senha',
+              style: TextStyle(fontFamily: 'JosefinSans'),
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'Por segurança, confirme sua senha para continuar.',
+                  style: TextStyle(fontFamily: 'JosefinSans', fontSize: 13),
+                ),
+                const SizedBox(height: 16),
+                Container(
+                  decoration: BoxDecoration(
+                    color: AppColors.cinza200,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  child: TextField(
+                    controller: _passwordController,
+                    obscureText: true,
+                    cursorColor: AppColors.azul,
+                    decoration: const InputDecoration(
+                      labelText: 'Senha',
+                      labelStyle: TextStyle(fontFamily: 'JosefinSans'),
+                      floatingLabelStyle: TextStyle(
+                        color: AppColors.azul,
+                        fontFamily: 'JosefinSans',
+                      ),
+                      border: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                    ),
+                  ),
+                ),
+                if (dialogError.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    dialogError,
+                    style: const TextStyle(
+                      color: AppColors.vermelho,
+                      fontFamily: 'JosefinSans',
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+            actions: [
+              TextButton(
+                // Volta para a tela anterior sem tentar ativar o 2FA.
+                onPressed: () => Navigator.pop(context, false),
+                style: TextButton.styleFrom(
+                  foregroundColor: AppColors.cinza700,
+                ),
+                child: const Text(
+                  'Voltar',
+                  style: TextStyle(fontFamily: 'JosefinSans'),
+                ),
+              ),
+              TextButton(
+                onPressed: () async {
+                  final email =
+                      FirebaseAuth.instance.currentUser?.email ?? '';
+                  final reauth = await TwoFactorService.reauthenticate(
+                    email,
+                    _passwordController.text,
+                  );
+
+                  if (reauth['success'] == true) {
+                    // Fecha o dialog sinalizando sucesso para retomar o setup.
+                    if (context.mounted) Navigator.pop(context, true);
+                  } else {
+                    setDialogState(() {
+                      dialogError =
+                          reauth['message'] as String? ?? 'Erro ao autenticar';
+                    });
+                  }
+                },
+                child: const Text(
+                  'Confirmar',
+                  style: TextStyle(
+                    fontFamily: 'JosefinSans',
+                    color: AppColors.azul,
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+
+    if (!mounted) return;
+
+    if (confirmed == true) {
+      // Reautenticou com sucesso — tenta gerar o QR Code de novo.
+      await _initTotp();
+    } else {
+      // Usuário voltou — fecha a tela de setup e retorna à tela anterior.
+      Navigator.pop(context, false);
     }
   }
 
@@ -91,7 +212,7 @@ class _TwoFactorSetupPageState extends State<TwoFactorSetupPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('2FA ativado com sucesso!'),
-          backgroundColor: Colors.green,
+          backgroundColor: AppColors.verde,
         ),
       );
       // Retorna `true` para que ProfilePage saiba que o 2FA foi ativado
@@ -109,24 +230,25 @@ class _TwoFactorSetupPageState extends State<TwoFactorSetupPage> {
   @override
   void dispose() {
     _codeController.dispose();
+    _passwordController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.branco,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: AppColors.branco,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          icon: const Icon(Icons.arrow_back, color: AppColors.preto),
           onPressed: () => Navigator.pop(context, false),
         ),
         title: const Text(
           'Ativar 2FA',
           style: TextStyle(
-            color: Colors.black,
+            color: AppColors.preto,
             fontFamily: 'JosefinSans',
             fontSize: 20,
           ),
@@ -177,7 +299,7 @@ class _TwoFactorSetupPageState extends State<TwoFactorSetupPage> {
                             style: TextStyle(
                               fontFamily: 'JosefinSans',
                               fontSize: 13,
-                              color: Colors.blue,
+                              color: AppColors.azul,
                             ),
                           ),
                         ),
@@ -205,13 +327,13 @@ class _TwoFactorSetupPageState extends State<TwoFactorSetupPage> {
                       ),
                       decoration: const InputDecoration(
                         hintText: '000000',
-                        hintStyle: TextStyle(color: Colors.black26),
+                        hintStyle: TextStyle(color: AppColors.cinza400),
                         counterText: '',
                         enabledBorder: UnderlineInputBorder(
-                          borderSide: BorderSide(color: Colors.black26),
+                          borderSide: BorderSide(color: AppColors.cinza400),
                         ),
                         focusedBorder: UnderlineInputBorder(
-                          borderSide: BorderSide(color: Color(0xFF013593), width: 2),
+                          borderSide: BorderSide(color: AppColors.azul, width: 2),
                         ),
                       ),
                     ),
@@ -222,7 +344,7 @@ class _TwoFactorSetupPageState extends State<TwoFactorSetupPage> {
                       Text(
                         _errorText,
                         textAlign: TextAlign.center,
-                        style: const TextStyle(color: Colors.red, fontFamily: 'JosefinSans'),
+                        style: const TextStyle(color: AppColors.vermelho, fontFamily: 'JosefinSans'),
                       ),
 
                     const SizedBox(height: 24),
@@ -232,14 +354,14 @@ class _TwoFactorSetupPageState extends State<TwoFactorSetupPage> {
                       child: ElevatedButton(
                         onPressed: _isVerifying ? null : _verifyAndEnable,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.blue,
-                          foregroundColor: Colors.white,
+                          backgroundColor: AppColors.azul,
+                          foregroundColor: AppColors.branco,
                           padding: const EdgeInsets.symmetric(vertical: 14),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(24),
                           ),
                           elevation: 6,
-                          shadowColor: Colors.blue.withValues(alpha: 0.4),
+                          shadowColor: AppColors.azul.withValues(alpha: 0.4),
                         ),
                         child: _isVerifying
                             ? const SizedBox(
@@ -247,7 +369,7 @@ class _TwoFactorSetupPageState extends State<TwoFactorSetupPage> {
                                 width: 20,
                                 child: CircularProgressIndicator(
                                   strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                  valueColor: AlwaysStoppedAnimation<Color>(AppColors.branco),
                                 ),
                               )
                             : const Text(

@@ -3,14 +3,12 @@
 // Descrição: Tela do catálogo das startups, com filtros funcionais
 
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:mescla_invest/src/theme/app_colors.dart';
 import 'package:intl/intl.dart';
 import 'package:mescla_invest/src/services/startup_service.dart';
 import 'package:mescla_invest/src/pages/home/startup_detail/startup_detail_page.dart';
-import 'package:mescla_invest/src/pages/home/balcao_page.dart';
-import 'package:mescla_invest/src/pages/home/profile_page.dart';
-import 'package:mescla_invest/src/pages/home/wallet_page.dart';
-import 'package:mescla_invest/src/pages/initial_page.dart';
+import 'package:mescla_invest/src/widgets/user_avatar_menu.dart';
+import 'package:mescla_invest/src/widgets/app_loading_indicator.dart';
 
 const Map<String, String> _estagioLabels = {
   'nova': 'Nova',
@@ -20,8 +18,10 @@ const Map<String, String> _estagioLabels = {
 
 class InitialCatalogPage extends StatefulWidget {
   final Map<String, dynamic>? usuario;
+  final void Function(int)? onTabSwitch;
+  final bool isActive;
 
-  const InitialCatalogPage({super.key, this.usuario});
+  const InitialCatalogPage({super.key, this.usuario, this.onTabSwitch, this.isActive = false});
 
   @override
   State<InitialCatalogPage> createState() => _InitialCatalogPageState();
@@ -41,12 +41,21 @@ class _InitialCatalogPageState extends State<InitialCatalogPage> {
   final List<String?> filterValues = [null, "nova", "em_operacao", "em_expansao"];
 
   @override
+  void didUpdateWidget(InitialCatalogPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Recarrega o catálogo ao voltar para esta aba,
+    // refletindo novas startups ou mudanças de estoque.
+    if (widget.isActive && !oldWidget.isActive) fetchStartups();
+  }
+
+  @override
   void initState() {
     super.initState();
     // Carrega o catálogo completo na abertura da tela.
     fetchStartups();
     // Atualiza _searchQuery a cada keystroke para filtrar a lista em tempo real.
     _searchController.addListener(() {
+      if (!mounted) return;
       setState(() {
         _searchQuery = _searchController.text.toLowerCase();
       });
@@ -58,19 +67,6 @@ class _InitialCatalogPageState extends State<InitialCatalogPage> {
     // Libera o controller para evitar memory leak.
     _searchController.dispose();
     super.dispose();
-  }
-
-  // Faz logout do Firebase e retorna para a tela inicial, removendo todo o histórico
-  // de navegação para que o botão "voltar" não traga o usuário de volta ao app.
-  Future<void> _logout() async {
-    await FirebaseAuth.instance.signOut();
-    if (!mounted) return;
-    // pushAndRemoveUntil remove todas as rotas anteriores da pilha de navegação.
-    Navigator.pushAndRemoveUntil(
-      context,
-      MaterialPageRoute(builder: (_) => const InitialPage()),
-      (_) => false,
-    );
   }
 
   Future<void> fetchStartups() async {
@@ -91,6 +87,7 @@ class _InitialCatalogPageState extends State<InitialCatalogPage> {
 
     // Se outro filtro foi selecionado enquanto aguardávamos a resposta, aborta.
     if (requestId != _requestId) return;
+    if (!mounted) return;
 
     setState(() {
       isLoading = false;
@@ -116,125 +113,20 @@ class _InitialCatalogPageState extends State<InitialCatalogPage> {
 
   @override
   Widget build(BuildContext context) {
-    final usuario = widget.usuario ?? {};
-    final nome = (usuario['nome'] ?? usuario['name']) as String? ?? '';
-    final inicial = nome.isNotEmpty ? nome[0].toUpperCase() : '?';
-
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F5),
+      backgroundColor: AppColors.cinza100,
 
       appBar: AppBar(
-        backgroundColor: const Color(0xFFF5F5F5),
+        backgroundColor: AppColors.cinza100,
         elevation: 0,
         automaticallyImplyLeading: false,
         actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 16),
-            child: PopupMenuButton<String>(
-              onSelected: (value) {
-                if (value == 'perfil') {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => ProfilePage(usuario: widget.usuario),
-                    ),
-                  );
-                } else if (value == 'sair') {
-                  _logout();
-                }
-              },
-              color: Colors.white,
-              elevation: 3,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-                side: BorderSide(color: Colors.grey.shade200),
-              ),
-              itemBuilder: (_) => [
-                const PopupMenuItem(
-                  value: 'perfil',
-                  child: Row(children: [
-                    Icon(Icons.person_outline, size: 20, color: Colors.black87),
-                    SizedBox(width: 12),
-                    Text('Meu Perfil'),
-                  ]),
-                ),
-                PopupMenuItem<String>(
-                  enabled: false,
-                  height: 8,
-                  padding: EdgeInsets.zero,
-                  child: Divider(indent: 16, endIndent: 16, thickness: 1, height: 1, color: Colors.grey.shade200),
-                ),
-                const PopupMenuItem(
-                  value: 'sair',
-                  child: Row(children: [
-                    Icon(Icons.logout, size: 20, color: Colors.red),
-                    SizedBox(width: 12),
-                    Text('Sair', style: TextStyle(color: Colors.red)),
-                  ]),
-                ),
-              ],
-              child: CircleAvatar(
-                radius: 18,
-                backgroundColor: Colors.blue,
-                child: Text(
-                  inicial,
-                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                ),
-              ),
-            ),
+          UserAvatarMenu(
+            usuario: widget.usuario,
+            onPerfilTap: () => widget.onTabSwitch?.call(4),
           ),
         ],
       ),
-
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          border: Border(top: BorderSide(color: Colors.grey.shade300)),
-        ),
-        child: BottomNavigationBar(
-          type: BottomNavigationBarType.fixed,
-          backgroundColor: Colors.white,
-          elevation: 0,
-          currentIndex: 1,
-          selectedItemColor: Colors.blue,
-          unselectedItemColor: Colors.grey,
-          onTap: (index) {
-            if (index == 0) {
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (_) => BalcaoNegociacaoPage(usuario: widget.usuario)),
-              );
-              return;
-            }
-            if (index == 1) return;
-            if (index == 2) {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => WalletPage(usuario: widget.usuario),
-                ),
-              );
-              return;
-            }
-            if (index == 3) {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => ProfilePage(usuario: widget.usuario),
-                ),
-              );
-              return;
-            }
-          },
-          items: const [
-            BottomNavigationBarItem(icon: Icon(Icons.store), label: "Mercado"),
-            BottomNavigationBarItem(icon: Icon(Icons.list), label: "Catálogo"),
-            BottomNavigationBarItem(icon: Icon(Icons.account_balance_wallet), label: "Carteira"),
-            BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: "Perfil"),
-          ],
-        ),
-      ),
-
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -247,9 +139,9 @@ class _InitialCatalogPageState extends State<InitialCatalogPage> {
                 controller: _searchController,
                 decoration: InputDecoration(
                   hintText: "Buscar startup",
-                  prefixIcon: const Icon(Icons.search, color: Colors.blue),
+                  prefixIcon: const Icon(Icons.search, color: AppColors.azul),
                   filled: true,
-                  fillColor: Colors.grey[200],
+                  fillColor: AppColors.cinza200,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(20),
                     borderSide: BorderSide.none,
@@ -276,13 +168,13 @@ class _InitialCatalogPageState extends State<InitialCatalogPage> {
                         child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                           decoration: BoxDecoration(
-                            color: isSelected ? Colors.blue : Colors.grey[300],
+                            color: isSelected ? AppColors.azul : AppColors.cinza300,
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: Text(
                             filters[index],
                             style: TextStyle(
-                              color: isSelected ? Colors.white : Colors.black,
+                              color: isSelected ? AppColors.branco : AppColors.preto,
                             ),
                           ),
                         ),
@@ -297,7 +189,7 @@ class _InitialCatalogPageState extends State<InitialCatalogPage> {
               // Lista de startups
               Expanded(
                 child: isLoading
-                    ? const Center(child: CircularProgressIndicator(color: Colors.blue))
+                    ? const AppLoadingIndicator()
                     : error != null
                         ? Center(child: Text("Erro: $error"))
                         : _filteredStartups.isEmpty
@@ -318,6 +210,7 @@ class _InitialCatalogPageState extends State<InitialCatalogPage> {
                                           startupId: data['id'] as String? ?? '',
                                           startupNome: data['nome'] as String? ?? '',
                                           usuario: widget.usuario,
+                                          onTabSwitch: widget.onTabSwitch,
                                         ),
                                       ),
                                     ),
@@ -365,15 +258,15 @@ class StartupCard extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.branco,
         borderRadius: BorderRadius.circular(15),
-        border: Border.all(color: Colors.black12),
+        border: Border.all(color: AppColors.cinza300),
         image: logoUrl != null
             ? DecorationImage(
                 image: NetworkImage(logoUrl!),
                 fit: BoxFit.cover,
                 colorFilter: ColorFilter.mode(
-                  Colors.white.withValues(alpha: 0.85),
+                  AppColors.branco.withValues(alpha: 0.85),
                   BlendMode.srcOver,
                 ),
               )
@@ -396,7 +289,7 @@ class StartupCard extends StatelessWidget {
 
             Text(
               setor,
-              style: TextStyle(color: Colors.grey[600]),
+              style: TextStyle(color: AppColors.cinza700),
             ),
 
             const SizedBox(height: 10),
@@ -424,7 +317,7 @@ class StartupCard extends StatelessWidget {
             Text(
               _estagioLabels[estagio] ?? estagio.replaceAll('_', ' '),
               style: TextStyle(
-                color: Colors.grey[500],
+                color: AppColors.cinza500,
                 fontSize: 12,
               ),
             ),

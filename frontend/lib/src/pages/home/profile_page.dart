@@ -3,14 +3,17 @@
 // Descrição: Tela de perfil do usuário, com informações da conta e opção de logout
 
 import 'package:flutter/material.dart';
+import 'package:mescla_invest/src/theme/app_colors.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:mescla_invest/src/pages/initial_page.dart';
 import 'package:mescla_invest/src/pages/security/two_factor_setup_page.dart';
 
 class ProfilePage extends StatefulWidget {
   final Map<String, dynamic>? usuario;
+  final void Function(int)? onTabSwitch;
+  final bool isActive;
 
-  const ProfilePage({super.key, this.usuario});
+  const ProfilePage({super.key, this.usuario, this.onTabSwitch, this.isActive = false});
 
   @override
   State<ProfilePage> createState() => _ProfilePageState();
@@ -18,6 +21,14 @@ class ProfilePage extends StatefulWidget {
 
 class _ProfilePageState extends State<ProfilePage> {
   bool _twoFactorEnabled = false;
+
+  @override
+  void didUpdateWidget(ProfilePage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Reavalia o status do 2FA ao abrir o perfil,
+    // caso tenha sido ativado em outra sessão entre abas.
+    if (widget.isActive && !oldWidget.isActive) _loadTwoFactorStatus();
+  }
 
   @override
   void initState() {
@@ -59,14 +70,11 @@ class _ProfilePageState extends State<ProfilePage> {
     final telefone = usuario['telefone'] as String? ?? '—';
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.branco,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: AppColors.branco,
         elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () => Navigator.pop(context),
-        ),
+        automaticallyImplyLeading: false,
       ),
       body: SafeArea(
         child: Padding(
@@ -82,8 +90,8 @@ class _ProfilePageState extends State<ProfilePage> {
                     Center(
                       child: CircleAvatar(
                         radius: 48,
-                        backgroundColor: Colors.blue.withOpacity(0.1),
-                        child: const Icon(Icons.person, size: 52, color: Colors.blue),
+                        backgroundColor: AppColors.azul.withValues(alpha: 0.1),
+                        child: const Icon(Icons.person, size: 52, color: AppColors.azul),
                       ),
                     ),
 
@@ -106,7 +114,7 @@ class _ProfilePageState extends State<ProfilePage> {
                       'Informações da conta',
                       style: TextStyle(
                         fontSize: 13,
-                        color: Colors.black45,
+                        color: AppColors.cinza500,
                         fontFamily: 'JosefinSans',
                       ),
                     ),
@@ -122,7 +130,7 @@ class _ProfilePageState extends State<ProfilePage> {
                       'Segurança',
                       style: TextStyle(
                         fontSize: 13,
-                        color: Colors.black45,
+                        color: AppColors.cinza500,
                         fontFamily: 'JosefinSans',
                       ),
                     ),
@@ -131,11 +139,11 @@ class _ProfilePageState extends State<ProfilePage> {
 
                     Container(
                       decoration: BoxDecoration(
-                        color: const Color(0xFFF5F5F5),
+                        color: AppColors.cinza100,
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: ListTile(
-                        leading: const Icon(Icons.lock_outline, color: Colors.blue),
+                        leading: const Icon(Icons.lock_outline, color: AppColors.azul),
                         title: const Text(
                           'Autenticação de dois fatores',
                           style: TextStyle(fontFamily: 'JosefinSans', fontSize: 15),
@@ -145,15 +153,15 @@ class _ProfilePageState extends State<ProfilePage> {
                           style: const TextStyle(
                             fontFamily: 'JosefinSans',
                             fontSize: 12,
-                            color: Colors.black38,
+                            color: AppColors.cinza500,
                           ),
                         ),
                         trailing: Switch(
                           value: _twoFactorEnabled,
-                          activeThumbColor: Colors.blue,
-                          activeTrackColor: Colors.blue.shade200,
-                          inactiveTrackColor: Colors.grey.shade200,
-                          inactiveThumbColor: Colors.grey,
+                          activeThumbColor: AppColors.azul,
+                          activeTrackColor: AppColors.azul200,
+                          inactiveTrackColor: AppColors.cinza200,
+                          inactiveThumbColor: AppColors.cinza500,
                           onChanged: (value) async {
                             if (value) {
                               // Abre a tela de configuração do 2FA.
@@ -190,18 +198,18 @@ class _ProfilePageState extends State<ProfilePage> {
                       width: double.infinity,
                       child: OutlinedButton.icon(
                         onPressed: _logout,
-                        icon: const Icon(Icons.logout, color: Colors.red),
+                        icon: const Icon(Icons.logout, color: AppColors.vermelho),
                         label: const Text(
                           'Sair da conta',
                           style: TextStyle(
-                            color: Colors.red,
+                            color: AppColors.vermelho,
                             fontFamily: 'JosefinSans',
                             fontSize: 16,
                           ),
                         ),
                         style: OutlinedButton.styleFrom(
                           padding: const EdgeInsets.symmetric(vertical: 14),
-                          side: const BorderSide(color: Colors.red),
+                          side: const BorderSide(color: AppColors.vermelho),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
@@ -234,12 +242,12 @@ class _InfoTile extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
-        color: const Color(0xFFF5F5F5),
+        color: AppColors.cinza100,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
         children: [
-          Icon(icon, color: Colors.blue, size: 20),
+          Icon(icon, color: AppColors.azul, size: 20),
           const SizedBox(width: 12),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -248,7 +256,7 @@ class _InfoTile extends StatelessWidget {
                 label,
                 style: const TextStyle(
                   fontSize: 11,
-                  color: Colors.black45,
+                  color: AppColors.cinza500,
                   fontFamily: 'JosefinSans',
                 ),
               ),

@@ -3,8 +3,9 @@
 // Descrição: Tela de verificação do código 2FA no login
 
 import 'package:flutter/material.dart';
+import 'package:mescla_invest/src/theme/app_colors.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:mescla_invest/src/pages/home/catalog_page.dart';
+import 'package:mescla_invest/src/widgets/main_scaffold.dart';
 import 'package:mescla_invest/src/services/auth_service.dart';
 import 'package:mescla_invest/src/services/two_factor_service.dart';
 
@@ -58,11 +59,10 @@ class _TwoFactorVerifyPageState extends State<TwoFactorVerifyPage> {
 
       if (!mounted) return;
 
-      Navigator.pushReplacement(
+      Navigator.pushAndRemoveUntil(
         context,
-        MaterialPageRoute(
-          builder: (_) => InitialCatalogPage(usuario: usuario),
-        ),
+        MaterialPageRoute(builder: (_) => MainScaffold(usuario: usuario)),
+        (_) => false,
       );
     } else {
       setState(() {
@@ -82,12 +82,12 @@ class _TwoFactorVerifyPageState extends State<TwoFactorVerifyPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.branco,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: AppColors.branco,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          icon: const Icon(Icons.arrow_back, color: AppColors.preto),
           onPressed: () => Navigator.pop(context),
         ),
       ),
@@ -128,7 +128,7 @@ class _TwoFactorVerifyPageState extends State<TwoFactorVerifyPage> {
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           fontSize: 14,
-                          color: Colors.black54,
+                          color: AppColors.preto54,
                           fontFamily: 'JosefinSans',
                         ),
                       ),
@@ -147,13 +147,13 @@ class _TwoFactorVerifyPageState extends State<TwoFactorVerifyPage> {
                         ),
                         decoration: const InputDecoration(
                           hintText: '000000',
-                          hintStyle: TextStyle(color: Colors.black26),
+                          hintStyle: TextStyle(color: AppColors.cinza400),
                           counterText: '',
                           enabledBorder: UnderlineInputBorder(
-                            borderSide: BorderSide(color: Colors.black26),
+                            borderSide: BorderSide(color: AppColors.cinza400),
                           ),
                           focusedBorder: UnderlineInputBorder(
-                            borderSide: BorderSide(color: Color(0xFF013593), width: 2),
+                            borderSide: BorderSide(color: AppColors.azul, width: 2),
                           ),
                         ),
                       ),
@@ -164,7 +164,7 @@ class _TwoFactorVerifyPageState extends State<TwoFactorVerifyPage> {
                         Text(
                           _errorText,
                           style: const TextStyle(
-                            color: Colors.red,
+                            color: AppColors.vermelho,
                             fontFamily: 'JosefinSans',
                           ),
                         ),
@@ -178,15 +178,15 @@ class _TwoFactorVerifyPageState extends State<TwoFactorVerifyPage> {
                 child: ElevatedButton(
                   onPressed: _isVerifying ? null : _verify,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue,
-                    foregroundColor: Colors.white,
+                    backgroundColor: AppColors.azul,
+                    foregroundColor: AppColors.branco,
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(24),
-                      side: const BorderSide(color: Color(0xFF1565C0), width: 0.25),
+                      side: const BorderSide(color: AppColors.azul800, width: 0.25),
                     ),
                     elevation: 6,
-                    shadowColor: Colors.blue.withValues(alpha: 0.4),
+                    shadowColor: AppColors.azul.withValues(alpha: 0.4),
                   ),
                   child: _isVerifying
                       ? const SizedBox(
@@ -194,7 +194,7 @@ class _TwoFactorVerifyPageState extends State<TwoFactorVerifyPage> {
                           width: 20,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                            valueColor: AlwaysStoppedAnimation<Color>(AppColors.branco),
                           ),
                         )
                       : const Text(
