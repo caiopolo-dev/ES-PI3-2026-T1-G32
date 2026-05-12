@@ -2,7 +2,10 @@
 // Data: 08/05/2026
 // Descrição: Repository da carteira do usuário
 
-import {db} from "../../shared/firebase";
+import {db} from "../../../shared/firebase";
+import {
+  USERS, TOKEN_TRANSACTIONS, STARTUPS, WALLET, WALLET_SALDO,
+} from "../../../shared/collections";
 
 /**
  * Returns wallet balance and portfolio summary for a user.
@@ -11,8 +14,8 @@ import {db} from "../../shared/firebase";
  */
 export async function getWalletDataByUserId(uid: string) {
   const [walletDoc, txSnap] = await Promise.all([
-    db.collection("users").doc(uid).collection("wallet").doc("saldo").get(),
-    db.collection("token_transactions")
+    db.collection(USERS).doc(uid).collection(WALLET).doc(WALLET_SALDO).get(),
+    db.collection(TOKEN_TRANSACTIONS)
       .where("buyerId", "==", uid)
       .where("type", "==", "buy")
       .get(),
@@ -39,7 +42,7 @@ export async function getWalletDataByUserId(uid: string) {
  */
 export async function getTransactionHistoryByUserId(uid: string) {
   const snapshot = await db
-    .collection("token_transactions")
+    .collection(TOKEN_TRANSACTIONS)
     .where("buyerId", "==", uid)
     .orderBy("createdAt", "desc")
     .limit(50)
@@ -69,14 +72,14 @@ export async function getUserTokensByUserId(uid: string) {
   // Agrega direto de token_transactions para cobrir compras feitas antes
   // da coleção userTokens existir (retrocompatível com histórico antigo).
   const txSnap = await db
-    .collection("token_transactions")
+    .collection(TOKEN_TRANSACTIONS)
     .where("buyerId", "==", uid)
     .where("type", "==", "buy")
     .get();
 
   if (txSnap.empty) return {tokens: []};
 
-  // Acumula quantidade total e custo total por startup para calcular preço médio.
+  // Acumula quantidade e custo por startup para calcular preço médio.
   const portfolioMap: Record<string, {quantidade: number; totalCost: number}> =
     {};
 
@@ -93,7 +96,7 @@ export async function getUserTokensByUserId(uid: string) {
   const startupIds = Object.keys(portfolioMap);
 
   const startupDocs = await Promise.all(
-    startupIds.map((id) => db.collection("startups").doc(id).get())
+    startupIds.map((id) => db.collection(STARTUPS).doc(id).get())
   );
 
   const startupMap: Record<string, FirebaseFirestore.DocumentData> = {};

@@ -4,14 +4,13 @@
 
 import {FieldValue} from "firebase-admin/firestore";
 import {Faq} from "../types";
-import {db} from "../../shared/firebase";
-const STARTUPS_COLLECTION = "startups";
-const FAQS_SUBCOLLECTION = "faqs";
+import {db} from "../../../shared/firebase";
+import {STARTUPS, FAQS} from "../../../shared/collections";
 
 const faqsRef = (startupId: string) =>
-  db.collection(STARTUPS_COLLECTION)
+  db.collection(STARTUPS)
     .doc(startupId)
-    .collection(FAQS_SUBCOLLECTION);
+    .collection(FAQS);
 
 const docToFaq = (doc: FirebaseFirestore.QueryDocumentSnapshot): Faq => ({
   id: doc.id,
@@ -26,7 +25,7 @@ export const faqsRepository = {
   async findByStartup(startupId: string, userEmail: string): Promise<Faq[]> {
     const snapshot = await faqsRef(startupId).get();
 
-    // FAQs privadas só são visíveis para o próprio autor (comparado pelo email do token JWT).
+    // FAQs privadas só são visíveis para o próprio autor (via email do token).
     return snapshot.docs
       .map(docToFaq)
       .filter((faq) => !faq.privada || faq.email === userEmail)

@@ -4,11 +4,10 @@
 
 import {onCall, HttpsError} from "firebase-functions/v2/https";
 import {faqsRepository} from "../repositories/faqsRepository";
+import {requireAuth} from "../../../shared/validation";
 
 export const getFaqs = onCall(async (request) => {
-  if (!request.auth) {
-    throw new HttpsError("unauthenticated", "Usuário não autenticado");
-  }
+  requireAuth(request.auth);
 
   const {startupId} = request.data;
 

@@ -1,9 +1,12 @@
 // Autor: Caio Ferreira Polo
-// Descrição: Repository para operações com ofertas de tokens e execução de compras no balcão
+// Descrição: Repository para ofertas de tokens e execução de compras no balcão
 
 import {FieldValue} from "firebase-admin/firestore";
-import {db} from "../../shared/firebase";
+import {db} from "../../../shared/firebase";
 import {HttpsError} from "firebase-functions/v2/https";
+import {
+  USERS, TOKEN_OFFERS, TOKEN_TRANSACTIONS, USER_TOKENS, WALLET, WALLET_SALDO,
+} from "../../../shared/collections";
 
 import {
   BuyTokenOfferParams,
@@ -16,7 +19,7 @@ import {
  * @return {Promise<Array<object>>} List of token offers.
  */
 export async function listAllOffers(excludeSellerId?: string) {
-  const snapshot = await db.collection("token_offers").get();
+  const snapshot = await db.collection(TOKEN_OFFERS).get();
   const offers = snapshot.docs
     .map((doc) => {
       const data = doc.data();
@@ -45,9 +48,9 @@ export async function buyTokenOffer(
   const {offerId, buyerId, quantity} = params;
 
   // Toda a operação é atômica: débito do comprador, crédito do vendedor,
-  // atualização da oferta e registro da transação acontecem juntos ou falham juntos.
+  // atualização da oferta e registro da transação acontecem juntos ou falham.
   return db.runTransaction(async (transaction) => {
-    const offerRef = db.collection("token_offers").doc(offerId);
+    const offerRef = db.collection(TOKEN_OFFERS).doc(offerId);
     const offerSnap = await transaction.get(offerRef);
 
     if (!offerSnap.exists) {
@@ -118,19 +121,19 @@ export async function buyTokenOffer(
     const totalCents = quantity * pricePerTokenCents;
 
     const buyerWalletRef = db
-      .collection("users")
+      .collection(USERS)
       .doc(buyerId)
-      .collection("wallet")
-      .doc("saldo");
+      .collection(WALLET)
+      .doc(WALLET_SALDO);
 
     const sellerWalletRef = db
-      .collection("users")
+      .collection(USERS)
       .doc(sellerId)
-      .collection("wallet")
-      .doc("saldo");
+      .collection(WALLET)
+      .doc(WALLET_SALDO);
 
     const userTokenRef = db
-      .collection("userTokens")
+      .collection(USER_TOKENS)
       .doc(`${buyerId}_${startupId}`);
 
     const buyerWalletSnap = await transaction.get(buyerWalletRef);
@@ -179,7 +182,7 @@ export async function buyTokenOffer(
     const existingQty = Number(userTokenSnap.data()?.quantidade ?? 0);
     const existingPreco = Number(userTokenSnap.data()?.precoMedio ?? 0);
     const newQty = existingQty + quantity;
-    // Preço médio ponderado: (qtd_anterior * preco_anterior + qtd_nova * preco_novo) / qtd_total
+    // Preço médio ponderado entre posição anterior e nova compra.
     const newPrecoMedio = existingQty === 0 ?
       pricePerTokenCents :
       Math.round(
@@ -199,8 +202,8 @@ export async function buyTokenOffer(
       {merge: true}
     );
 
-    // token_transactions é a fonte de verdade para histórico e cálculo de portfólio.
-    const transactionRef = db.collection("token_transactions").doc();
+    // token_transactions é a fonte de verdade para histórico e portfólio.
+    const transactionRef = db.collection(TOKEN_TRANSACTIONS).doc();
 
     transaction.set(transactionRef, {
       offerId,

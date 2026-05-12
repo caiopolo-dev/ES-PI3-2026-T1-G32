@@ -1,7 +1,8 @@
 // Autor: Caio Ferreira Polo
-// Descrição: Repository de usuários — cadastro, busca e verificação de dados no Firestore
+// Descrição: Repository de usuários — cadastro, busca e verificação
 
-import {db} from "../../shared/firebase";
+import {db} from "../../../shared/firebase";
+import {USERS, WALLET, WALLET_SALDO} from "../../../shared/collections";
 
 /**
  * Registers a new user in Firestore.
@@ -21,9 +22,9 @@ export async function registerUser(
   email: string,
   saldo: number
 ): Promise<string> {
-  const banco = db.collection("users");
+  const banco = db.collection(USERS);
   const userRef = banco.doc(uid);
-  const walletRef = userRef.collection("wallet").doc("saldo");
+  const walletRef = userRef.collection(WALLET).doc(WALLET_SALDO);
   // Batch garante que o documento do usuário e a subcoleção wallet
   // são criados juntos — sem wallet o getWalletInfo retorna zero sem erros.
   const batch = db.batch();
@@ -47,7 +48,7 @@ export async function registerUser(
  * @return {Promise<FirebaseFirestore.DocumentSnapshot>} User document.
  */
 export async function getUserById(uid: string) {
-  return db.collection("users").doc(uid).get();
+  return db.collection(USERS).doc(uid).get();
 }
 
 
@@ -58,7 +59,7 @@ export async function getUserById(uid: string) {
  */
 export async function verificarRgExiste(rg: string): Promise<boolean> {
   const snapshot = await db
-    .collection("users")
+    .collection(USERS)
     .where("rg", "==", rg)
     .limit(1)
     .get();
@@ -74,7 +75,7 @@ export async function verificarRgExiste(rg: string): Promise<boolean> {
  */
 export async function verificarEmailExiste(email: string): Promise<boolean> {
   const snapshot = await db
-    .collection("users")
+    .collection(USERS)
     .where("email", "==", email)
     .limit(1)
     .get();
