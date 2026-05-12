@@ -14,8 +14,9 @@ import 'package:mescla_invest/src/widgets/app_loading_indicator.dart';
 class HomePage extends StatefulWidget {
   final Map<String, dynamic>? usuario;
   final void Function(int)? onTabSwitch;
+  final bool isActive;
 
-  const HomePage({super.key, this.usuario, this.onTabSwitch});
+  const HomePage({super.key, this.usuario, this.onTabSwitch, this.isActive = false});
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -34,6 +35,14 @@ class _HomePageState extends State<HomePage> {
   void initState() {
     super.initState();
     _loadData();
+  }
+
+  @override
+  void didUpdateWidget(HomePage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Recarrega quando a aba passa de inativa para ativa,
+    // refletindo compras ou mudanças feitas em outras abas.
+    if (widget.isActive && !oldWidget.isActive) _loadData();
   }
 
   Future<void> _loadData() async {

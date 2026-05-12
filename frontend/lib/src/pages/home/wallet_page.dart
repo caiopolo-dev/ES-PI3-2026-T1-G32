@@ -12,8 +12,9 @@ import 'package:intl/intl.dart';
 class WalletPage extends StatefulWidget {
   final Map<String, dynamic>? usuario;
   final void Function(int)? onTabSwitch;
+  final bool isActive;
 
-  const WalletPage({super.key, this.usuario, this.onTabSwitch});
+  const WalletPage({super.key, this.usuario, this.onTabSwitch, this.isActive = false});
 
   @override
   State<WalletPage> createState() => _WalletPageState();
@@ -33,6 +34,14 @@ class _WalletPageState extends State<WalletPage>
 
   final currencyFormat =
       NumberFormat.currency(locale: 'pt_BR', symbol: 'R\$');
+
+  @override
+  void didUpdateWidget(WalletPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Recarrega saldo, tokens e histórico ao abrir a aba,
+    // garantindo que compras recentes já estejam refletidas.
+    if (widget.isActive && !oldWidget.isActive) _loadAll();
+  }
 
   @override
   void initState() {
@@ -311,7 +320,7 @@ class _WalletPageState extends State<WalletPage>
                                                     ),
                                                   ),
                                                   Text(
-                                                    '$quantidade tokens · ${currencyFormat.format(valorAtual)}/un',
+                                                    '$quantidade tokens',
                                                     style: const TextStyle(
                                                       fontFamily: 'JosefinSans',
                                                       fontSize: 12,
@@ -325,7 +334,7 @@ class _WalletPageState extends State<WalletPage>
                                               crossAxisAlignment: CrossAxisAlignment.end,
                                               children: [
                                                 Text(
-                                                  currencyFormat.format(totalAtual),
+                                                  '${currencyFormat.format(valorAtual)}/un',
                                                   style: const TextStyle(
                                                     fontFamily: 'JosefinSans',
                                                     fontSize: 15,
@@ -411,34 +420,78 @@ class _WalletPageState extends State<WalletPage>
                                       ? DateFormat('dd/MM/yyyy HH:mm').format(DateTime.parse(tx['createdAt']))
                                       : '—';
 
-                                  return ListTile(
-                                    contentPadding: EdgeInsets.zero,
-                                    leading: CircleAvatar(
-                                      backgroundColor: isCompra
-                                          ? AppColors.verde.withValues(alpha: 0.1)
-                                          : AppColors.vermelho.withValues(alpha: 0.1),
-                                      child: Icon(
-                                        isCompra ? Icons.arrow_downward : Icons.arrow_upward,
-                                        color: isCompra ? AppColors.verde : AppColors.vermelho,
-                                        size: 20,
-                                      ),
+                                  final quantidade = (tx['quantity'] as num?)?.toInt() ?? 0;
+                                  final precoPorToken = quantidade > 0 ? valor / quantidade : 0.0;
+                                  final corTipo = isCompra ? AppColors.vermelho : AppColors.verde;
+
+                                  return Container(
+                                    margin: const EdgeInsets.symmetric(vertical: 6),
+                                    padding: const EdgeInsets.all(16),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.cinza100,
+                                      borderRadius: BorderRadius.circular(12),
                                     ),
-                                    title: Text(
-                                      tx['startupId'] ?? '—',
-                                      style: const TextStyle(fontFamily: 'JosefinSans', fontSize: 15),
-                                    ),
-                                    subtitle: Text(
-                                      data,
-                                      style: const TextStyle(fontFamily: 'JosefinSans', fontSize: 12, color: AppColors.cinza500),
-                                    ),
-                                    trailing: Text(
-                                      '${isCompra ? '-' : '+'} ${currencyFormat.format(valor)}',
-                                      style: TextStyle(
-                                        fontFamily: 'JosefinSans',
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.bold,
-                                        color: isCompra ? AppColors.vermelho : AppColors.verde,
-                                      ),
+                                    child: Column(
+                                      children: [
+                                        Row(
+                                          children: [
+                                            CircleAvatar(
+                                              radius: 20,
+                                              backgroundColor: isCompra
+                                                  ? AppColors.verde.withValues(alpha: 0.1)
+                                                  : AppColors.vermelho.withValues(alpha: 0.1),
+                                              child: Icon(
+                                                isCompra ? Icons.arrow_downward : Icons.arrow_upward,
+                                                color: isCompra ? AppColors.verde : AppColors.vermelho,
+                                                size: 18,
+                                              ),
+                                            ),
+                                            const SizedBox(width: 12),
+                                            Expanded(
+                                              child: Column(
+                                                crossAxisAlignment: CrossAxisAlignment.start,
+                                                children: [
+                                                  Text(
+                                                    tx['startupId'] ?? '—',
+                                                    style: const TextStyle(
+                                                      fontFamily: 'JosefinSans',
+                                                      fontSize: 15,
+                                                      fontWeight: FontWeight.bold,
+                                                    ),
+                                                  ),
+                                                  Text(
+                                                    data,
+                                                    style: const TextStyle(
+                                                      fontFamily: 'JosefinSans',
+                                                      fontSize: 11,
+                                                      color: AppColors.cinza500,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                            Text(
+                                              '${isCompra ? '-' : '+'} ${currencyFormat.format(valor)}',
+                                              style: TextStyle(
+                                                fontFamily: 'JosefinSans',
+                                                fontSize: 15,
+                                                fontWeight: FontWeight.bold,
+                                                color: corTipo,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 10),
+                                        Container(height: 1, color: AppColors.cinza300),
+                                        const SizedBox(height: 10),
+                                        Row(
+                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                          children: [
+                                            _TxStat(label: 'Quantidade', value: '$quantidade tokens'),
+                                            _TxStat(label: 'Preço/token', value: currencyFormat.format(precoPorToken), alignEnd: true),
+                                          ],
+                                        ),
+                                      ],
                                     ),
                                   );
                                 },
@@ -481,6 +534,39 @@ class _CardStat extends StatelessWidget {
             color: valueColor,
             fontFamily: 'JosefinSans',
             fontSize: 15,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _TxStat extends StatelessWidget {
+  final String label;
+  final String value;
+  final bool alignEnd;
+
+  const _TxStat({required this.label, required this.value, this.alignEnd = false});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: alignEnd ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            fontFamily: 'JosefinSans',
+            fontSize: 11,
+            color: AppColors.cinza500,
+          ),
+        ),
+        Text(
+          value,
+          style: const TextStyle(
+            fontFamily: 'JosefinSans',
+            fontSize: 13,
             fontWeight: FontWeight.bold,
           ),
         ),

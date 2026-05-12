@@ -11,8 +11,9 @@ import 'package:mescla_invest/src/pages/security/two_factor_setup_page.dart';
 class ProfilePage extends StatefulWidget {
   final Map<String, dynamic>? usuario;
   final void Function(int)? onTabSwitch;
+  final bool isActive;
 
-  const ProfilePage({super.key, this.usuario, this.onTabSwitch});
+  const ProfilePage({super.key, this.usuario, this.onTabSwitch, this.isActive = false});
 
   @override
   State<ProfilePage> createState() => _ProfilePageState();
@@ -20,6 +21,14 @@ class ProfilePage extends StatefulWidget {
 
 class _ProfilePageState extends State<ProfilePage> {
   bool _twoFactorEnabled = false;
+
+  @override
+  void didUpdateWidget(ProfilePage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Reavalia o status do 2FA ao abrir o perfil,
+    // caso tenha sido ativado em outra sessão entre abas.
+    if (widget.isActive && !oldWidget.isActive) _loadTwoFactorStatus();
+  }
 
   @override
   void initState() {

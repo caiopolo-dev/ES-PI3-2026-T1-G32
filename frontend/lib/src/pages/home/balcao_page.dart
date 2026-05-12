@@ -11,8 +11,9 @@ import 'buy_steps_page.dart';
 class BalcaoNegociacaoPage extends StatefulWidget {
   final Map<String, dynamic>? usuario;
   final void Function(int)? onTabSwitch;
+  final bool isActive;
 
-  const BalcaoNegociacaoPage({super.key, this.usuario, this.onTabSwitch});
+  const BalcaoNegociacaoPage({super.key, this.usuario, this.onTabSwitch, this.isActive = false});
 
   @override
   State<BalcaoNegociacaoPage> createState() => _BalcaoNegociacaoPageState();
@@ -24,6 +25,14 @@ class _BalcaoNegociacaoPageState extends State<BalcaoNegociacaoPage>{
   List<dynamic> offers = [];
   bool isLoading = true;
   String? errorMessage;
+  @override
+  void didUpdateWidget(BalcaoNegociacaoPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Recarrega as ofertas ao retornar para esta aba,
+    // garantindo que ofertas já compradas não apareçam mais.
+    if (widget.isActive && !oldWidget.isActive) loadOffers();
+  }
+
   @override
   void initState(){
     super.initState();
@@ -153,8 +162,10 @@ class _BalcaoNegociacaoPageState extends State<BalcaoNegociacaoPage>{
                                     ),
                                     child: InkWell(
                                       borderRadius: BorderRadius.circular(15),
-                                      onTap: () {
-                                        Navigator.push(context,
+                                      onTap: () async {
+                                        // Aguarda o resultado: BuyStepsPage retorna true
+                                        // se a compra foi concluída, null/false se cancelada.
+                                        final comprou = await Navigator.push<bool>(context,
                                           MaterialPageRoute(builder: (_) => BuyStepsPage(
                                             startupName: startupId.toString(),
                                             availableQuantity: int.tryParse(amount.toString()) ?? 0,
@@ -162,6 +173,9 @@ class _BalcaoNegociacaoPageState extends State<BalcaoNegociacaoPage>{
                                             offerId: offerId.toString(),
                                           )),
                                         );
+                                        // Recarrega as ofertas para refletir a oferta recém-comprada
+                                        // (pode ter sido parcialmente consumida ou removida).
+                                        if (comprou == true) loadOffers();
                                       },
                                       child: Padding(
                                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),

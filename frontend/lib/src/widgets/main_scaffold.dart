@@ -40,11 +40,14 @@ class _MainScaffoldState extends State<MainScaffold> {
       body: IndexedStack(
         index: _currentIndex,
         children: [
-          HomePage(usuario: widget.usuario, onTabSwitch: _switchTab),
-          BalcaoNegociacaoPage(usuario: widget.usuario, onTabSwitch: _switchTab),
-          InitialCatalogPage(usuario: widget.usuario, onTabSwitch: _switchTab),
-          WalletPage(usuario: widget.usuario, onTabSwitch: _switchTab),
-          ProfilePage(usuario: widget.usuario, onTabSwitch: _switchTab),
+          // isActive sinaliza para cada página quando ela está visível.
+          // Como o IndexedStack mantém todas montadas, sem isso as páginas
+          // nunca recarregariam ao trocar de aba.
+          HomePage(usuario: widget.usuario, onTabSwitch: _switchTab, isActive: _currentIndex == 0),
+          BalcaoNegociacaoPage(usuario: widget.usuario, onTabSwitch: _switchTab, isActive: _currentIndex == 1),
+          InitialCatalogPage(usuario: widget.usuario, onTabSwitch: _switchTab, isActive: _currentIndex == 2),
+          WalletPage(usuario: widget.usuario, onTabSwitch: _switchTab, isActive: _currentIndex == 3),
+          ProfilePage(usuario: widget.usuario, onTabSwitch: _switchTab, isActive: _currentIndex == 4),
         ],
       ),
       bottomNavigationBar: Container(
