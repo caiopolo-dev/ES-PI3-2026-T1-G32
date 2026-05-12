@@ -48,11 +48,17 @@ ES-PI3-2026-T1-G32/
 │
 └── firebase/
     ├── functions/src/      # Cloud Functions (TypeScript)
-    │   ├── shared/         # Instâncias compartilhadas
-    │   ├── users/          # Funções de usuário
-    │   ├── startups/       # Funções de startups e FAQs
-    │   ├── tokenOffers/    # Funções de ofertas e compra de tokens
-    │   └── wallet/         # Funções de carteira e portfólio
+    │   ├── shared/         # Infraestrutura compartilhada
+    │   │   ├── collections.ts  # Nomes de coleções do Firestore
+    │   │   ├── firebase.ts     # Instância do db
+    │   │   └── validation.ts   # requireAuth e outras validações
+    │   ├── modules/        # Módulos de domínio
+    │   │   ├── users/          # Funções de usuário
+    │   │   ├── startups/       # Funções de startups e FAQs
+    │   │   ├── tokenOffers/    # Funções de ofertas e compra de tokens
+    │   │   ├── wallet/         # Funções de carteira e portfólio
+    │   │   └── exchange/       # Funções de câmbio (em desenvolvimento)
+    │   └── index.ts        # Ponto de entrada — exporta todas as funções
     ├── firestore.rules     # Regras de segurança do Firestore
     └── firestore.indexes.json
 ```
@@ -97,15 +103,21 @@ firebase deploy --only functions
 
 ## Arquitetura das Cloud Functions
 
-As funções seguem uma arquitetura em camadas por módulo:
+As funções seguem uma arquitetura em camadas por módulo, organizadas em `shared/` e `modules/`:
 
 ```
-handlers/     → recebem a requisição, validam auth e delegam
-repositories/ → única camada que acessa o Firestore
-shared/       → instância compartilhada do db
+shared/
+  collections.ts  → fonte única de verdade para nomes de coleções
+  firebase.ts     → instância compartilhada do Firestore (db)
+  validation.ts   → requireAuth e funções de validação reutilizáveis
+
+modules/<dominio>/
+  handlers/       → recebem a requisição, validam auth e delegam
+  repositories/   → única camada que acessa o Firestore
+  types/          → tipos e interfaces do módulo
 ```
 
-Nenhum handler acessa o Firestore diretamente — toda leitura e escrita passa pelos repositories.
+Nenhum handler acessa o Firestore diretamente — toda leitura e escrita passa pelos repositories. Nenhum repository usa strings literais para nomes de coleções — todas as referências passam por `shared/collections.ts`.
 
 ---
 
