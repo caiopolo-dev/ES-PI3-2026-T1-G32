@@ -1,6 +1,7 @@
 // Autor: Caio Ferreira Polo
 // Descrição: Tela de compra de tokens em etapas (seleção de quantidade, revisão e confirmação)
 import 'package:flutter/material.dart';
+import 'package:mescla_invest/src/theme/app_colors.dart';
 import 'package:flutter/services.dart';
 import '../../services/tokenData_service.dart';
 
@@ -186,7 +187,7 @@ class _BuyStepsPageState extends State<BuyStepsPage> {
             const Divider(
               height: 18,
               thickness: 1,
-              color: Colors.black38,
+              color: AppColors.cinza500,
             ),
 
             const SizedBox(height: 4),
@@ -265,8 +266,8 @@ class _BuyStepsPageState extends State<BuyStepsPage> {
                           style: OutlinedButton.styleFrom(
                             fixedSize: const Size(42, 42),
                             padding: EdgeInsets.zero,
-                            foregroundColor: Colors.black,
-                            side: const BorderSide(color: Colors.black38),
+                            foregroundColor: AppColors.preto,
+                            side: BorderSide(color: AppColors.cinza500),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
                             ),
@@ -287,8 +288,8 @@ class _BuyStepsPageState extends State<BuyStepsPage> {
                           style: OutlinedButton.styleFrom(
                             fixedSize: const Size(42, 42),
                             padding: EdgeInsets.zero,
-                            foregroundColor: Colors.black,
-                            side: const BorderSide(color: Colors.black38),
+                            foregroundColor: AppColors.preto,
+                            side: BorderSide(color: AppColors.cinza500),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
                             ),
@@ -311,7 +312,7 @@ class _BuyStepsPageState extends State<BuyStepsPage> {
                 const Divider(
                   height: 18,
                   thickness: 1,
-                  color: Colors.black38,
+                  color: AppColors.cinza500,
                 ),
 
                 const SizedBox(height: 10),
@@ -338,14 +339,14 @@ class _BuyStepsPageState extends State<BuyStepsPage> {
                 ElevatedButton(
                   onPressed: nextStep,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue,
-                    foregroundColor: Colors.white,
+                    backgroundColor: AppColors.azul,
+                    foregroundColor: AppColors.branco,
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     elevation: 6,
-                    shadowColor: Colors.blue.withValues(alpha: 0.4),
+                    shadowColor: AppColors.azul.withValues(alpha: 0.4),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(24),
-                      side: const BorderSide(color: Color(0xFF1565C0), width: 0.25),
+                      side: const BorderSide(color: AppColors.azul800, width: 0.25),
                     ),
                   ),
                   child: const Text(
@@ -387,7 +388,7 @@ class _BuyStepsPageState extends State<BuyStepsPage> {
             const Divider(
               height: 18,
               thickness: 1,
-              color: Colors.black38,
+              color: AppColors.cinza500,
             ),
 
             const SizedBox(height: 4),
@@ -410,7 +411,7 @@ class _BuyStepsPageState extends State<BuyStepsPage> {
             const Divider(
               height: 18,
               thickness: 1,
-              color: Colors.black38,
+              color: AppColors.cinza500,
             ),
             const SizedBox(height: 4),
 
@@ -439,7 +440,7 @@ class _BuyStepsPageState extends State<BuyStepsPage> {
             const Divider(
               height: 18,
               thickness: 1,
-              color: Colors.black38,
+              color: AppColors.cinza500,
             ),
 
             const SizedBox(height: 24),
@@ -447,14 +448,14 @@ class _BuyStepsPageState extends State<BuyStepsPage> {
             ElevatedButton(
               onPressed: isLoading ? null : confirmPurchase,
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blue,
-                foregroundColor: Colors.white,
+                backgroundColor: AppColors.azul,
+                foregroundColor: AppColors.branco,
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 elevation: 6,
-                shadowColor: Colors.blue.withValues(alpha: 0.4),
+                shadowColor: AppColors.azul.withValues(alpha: 0.4),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(24),
-                  side: const BorderSide(color: Color(0xFF1565C0), width: 0.25),
+                  side: const BorderSide(color: AppColors.azul800, width: 0.25),
                 ),
               ),
               child: isLoading
@@ -463,7 +464,7 @@ class _BuyStepsPageState extends State<BuyStepsPage> {
                     height: 20,
                     child: CircularProgressIndicator(
                       strokeWidth: 2,
-                      color: Colors.white,
+                      color: AppColors.branco,
                     ),
                   )
                 : const Text(
@@ -495,14 +496,14 @@ class _BuyStepsPageState extends State<BuyStepsPage> {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 border: Border.all(
-                  color: const Color(0xFF30476B),
+                  color: AppColors.azulNoite,
                   width: 3,
                 ),
               ),
               child: const Icon(
                 Icons.currency_exchange,
                 size: 70,
-                color: Colors.black,
+                color: AppColors.preto,
               ),
             ),
 
@@ -555,13 +556,13 @@ class _BuyStepsPageState extends State<BuyStepsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.branco,
 
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: AppColors.branco,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          icon: const Icon(Icons.arrow_back, color: AppColors.preto),
           onPressed: () {
             if (currentStep == 0 || currentStep == 2) {
               Navigator.pop(context);
@@ -606,7 +607,7 @@ class _BuyStepsPageState extends State<BuyStepsPage> {
                   child: Text(
                     errorText,
                     textAlign: TextAlign.center,
-                    style: const TextStyle(color: Colors.red),
+                    style: const TextStyle(color: AppColors.vermelho),
                   ),
                 ),
 

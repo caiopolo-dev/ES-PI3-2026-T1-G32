@@ -4,7 +4,13 @@
 
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:mescla_invest/src/theme/app_colors.dart';
 import 'package:mescla_invest/src/services/wallet_service.dart';
+import 'package:mescla_invest/src/pages/initial_page.dart';
+import 'package:mescla_invest/src/pages/home/balcao_page.dart';
+import 'package:mescla_invest/src/pages/home/catalog_page.dart';
+import 'package:mescla_invest/src/pages/home/profile_page.dart';
 import 'package:intl/intl.dart';
 
 class WalletPage extends StatefulWidget {
@@ -36,6 +42,16 @@ class _WalletPageState extends State<WalletPage>
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
     _loadAll();
+  }
+
+  Future<void> _logout() async {
+    await FirebaseAuth.instance.signOut();
+    if (!mounted) return;
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (_) => const InitialPage()),
+      (_) => false,
+    );
   }
 
   Future<void> _loadAll() async {
@@ -86,22 +102,127 @@ class _WalletPageState extends State<WalletPage>
 
   @override
   Widget build(BuildContext context) {
+    final usuario = widget.usuario ?? {};
+    final nome = (usuario['nome'] ?? usuario['name']) as String? ?? '';
+    final inicial = nome.isNotEmpty ? nome[0].toUpperCase() : '?';
+
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.branco,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: AppColors.branco,
         elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () => Navigator.pop(context),
-        ),
+        automaticallyImplyLeading: false,
         title: const Text(
           'Minha Carteira',
           style: TextStyle(
-            color: Colors.black,
+            color: AppColors.preto,
             fontFamily: 'JosefinSans',
             fontSize: 20,
           ),
+        ),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 16),
+            child: PopupMenuButton<String>(
+              onSelected: (value) {
+                if (value == 'perfil') {
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(builder: (_) => ProfilePage(usuario: widget.usuario)),
+                  );
+                } else if (value == 'sair') {
+                  _logout();
+                }
+              },
+              color: AppColors.branco,
+              elevation: 3,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+                side: BorderSide(color: AppColors.cinza200),
+              ),
+              itemBuilder: (_) => [
+                const PopupMenuItem(
+                  value: 'perfil',
+                  child: Row(children: [
+                    Icon(Icons.person_outline, size: 20, color: AppColors.preto87),
+                    SizedBox(width: 12),
+                    Text('Meu Perfil'),
+                  ]),
+                ),
+                PopupMenuItem<String>(
+                  enabled: false,
+                  height: 8,
+                  padding: EdgeInsets.zero,
+                  child: Divider(indent: 16, endIndent: 16, thickness: 1, height: 1, color: AppColors.cinza200),
+                ),
+                const PopupMenuItem(
+                  value: 'sair',
+                  child: Row(children: [
+                    Icon(Icons.logout, size: 20, color: AppColors.vermelho),
+                    SizedBox(width: 12),
+                    Text('Sair', style: TextStyle(color: AppColors.vermelho)),
+                  ]),
+                ),
+              ],
+              child: CircleAvatar(
+                radius: 18,
+                backgroundColor: AppColors.azul,
+                child: Text(
+                  inicial,
+                  style: const TextStyle(
+                    inherit: false,
+                    color: AppColors.branco,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          color: AppColors.branco,
+          border: Border(top: BorderSide(color: AppColors.cinza300)),
+        ),
+        child: BottomNavigationBar(
+          type: BottomNavigationBarType.fixed,
+          backgroundColor: AppColors.branco,
+          elevation: 0,
+          currentIndex: 2,
+          selectedItemColor: AppColors.azul,
+          unselectedItemColor: AppColors.cinza500,
+          onTap: (index) {
+            if (index == 0) {
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (_) => BalcaoNegociacaoPage(usuario: widget.usuario)),
+              );
+              return;
+            }
+            if (index == 1) {
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (_) => InitialCatalogPage(usuario: widget.usuario)),
+              );
+              return;
+            }
+            if (index == 2) return;
+            if (index == 3) {
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (_) => ProfilePage(usuario: widget.usuario)),
+              );
+              return;
+            }
+          },
+          items: const [
+            BottomNavigationBarItem(icon: Icon(Icons.store), label: "Mercado"),
+            BottomNavigationBarItem(icon: Icon(Icons.list), label: "Catálogo"),
+            BottomNavigationBarItem(icon: Icon(Icons.account_balance_wallet), label: "Carteira"),
+            BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: "Perfil"),
+          ],
         ),
       ),
       body: RefreshIndicator(
@@ -120,14 +241,14 @@ class _WalletPageState extends State<WalletPage>
                             padding: const EdgeInsets.all(24),
                             decoration: BoxDecoration(
                               gradient: const LinearGradient(
-                                colors: [Color(0xFF013593), Color(0xFF080B11)],
+                                colors: [AppColors.azul, AppColors.preto],
                                 begin: Alignment.topLeft,
                                 end: Alignment.bottomRight,
                               ),
                               borderRadius: BorderRadius.circular(16),
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.blue.withValues(alpha:0.3),
+                                  color: AppColors.azul.withValues(alpha: 0.3),
                                   blurRadius: 16,
                                   offset: const Offset(0, 6),
                                 ),
@@ -136,10 +257,10 @@ class _WalletPageState extends State<WalletPage>
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Text(
+                                Text(
                                   'Saldo disponível',
                                   style: TextStyle(
-                                    color: Colors.white70,
+                                    color: AppColors.branco,
                                     fontFamily: 'JosefinSans',
                                     fontSize: 13,
                                   ),
@@ -148,7 +269,7 @@ class _WalletPageState extends State<WalletPage>
                                 Text(
                                   currencyFormat.format(_saldo),
                                   style: const TextStyle(
-                                    color: Colors.white,
+                                    color: AppColors.branco,
                                     fontFamily: 'JosefinSans',
                                     fontSize: 32,
                                     fontWeight: FontWeight.bold,
@@ -179,7 +300,7 @@ class _WalletPageState extends State<WalletPage>
                             Row(
                               children: [
                                 const Icon(Icons.warning_amber_rounded,
-                                    size: 14, color: Colors.orange),
+                                    size: 14, color: AppColors.laranja),
                                 const SizedBox(width: 6),
                                 Expanded(
                                   child: Text(
@@ -187,7 +308,7 @@ class _WalletPageState extends State<WalletPage>
                                     style: const TextStyle(
                                       fontFamily: 'JosefinSans',
                                       fontSize: 12,
-                                      color: Colors.orange,
+                                      color: AppColors.laranja,
                                     ),
                                   ),
                                 ),
@@ -199,9 +320,9 @@ class _WalletPageState extends State<WalletPage>
 
                           TabBar(
                             controller: _tabController,
-                            labelColor: const Color(0xFF013593),
-                            unselectedLabelColor: Colors.black38,
-                            indicatorColor: const Color(0xFF013593),
+                            labelColor: AppColors.azul,
+                            unselectedLabelColor: AppColors.cinza500,
+                            indicatorColor: AppColors.azul,
                             labelStyle: const TextStyle(
                               fontFamily: 'JosefinSans',
                               fontSize: 14,
@@ -230,7 +351,7 @@ class _WalletPageState extends State<WalletPage>
                                   'Nenhuma transação ainda',
                                   style: TextStyle(
                                     fontFamily: 'JosefinSans',
-                                    color: Colors.black38,
+                                    color: AppColors.cinza500,
                                   ),
                                 ),
                               )
@@ -257,15 +378,15 @@ class _WalletPageState extends State<WalletPage>
                                     contentPadding: EdgeInsets.zero,
                                     leading: CircleAvatar(
                                       backgroundColor: isCompra
-                                          ? Colors.green.withValues(alpha:0.1)
-                                          : Colors.red.withValues(alpha:0.1),
+                                          ? AppColors.verde.withValues(alpha: 0.1)
+                                          : AppColors.vermelho.withValues(alpha: 0.1),
                                       child: Icon(
                                         isCompra
                                             ? Icons.arrow_downward
                                             : Icons.arrow_upward,
                                         color: isCompra
-                                            ? Colors.green
-                                            : Colors.red,
+                                            ? AppColors.verde
+                                            : AppColors.vermelho,
                                         size: 20,
                                       ),
                                     ),
@@ -281,7 +402,7 @@ class _WalletPageState extends State<WalletPage>
                                       style: const TextStyle(
                                         fontFamily: 'JosefinSans',
                                         fontSize: 12,
-                                        color: Colors.black38,
+                                        color: AppColors.cinza500,
                                       ),
                                     ),
                                     trailing: Text(
@@ -291,8 +412,8 @@ class _WalletPageState extends State<WalletPage>
                                         fontSize: 14,
                                         fontWeight: FontWeight.bold,
                                         color: isCompra
-                                            ? Colors.red
-                                            : Colors.green,
+                                            ? AppColors.vermelho
+                                            : AppColors.verde,
                                       ),
                                     ),
                                   );
@@ -307,7 +428,7 @@ class _WalletPageState extends State<WalletPage>
                                   'Nenhum token adquirido ainda',
                                   style: TextStyle(
                                     fontFamily: 'JosefinSans',
-                                    color: Colors.black38,
+                                    color: AppColors.cinza500,
                                   ),
                                 ),
                               )
@@ -346,7 +467,7 @@ class _WalletPageState extends State<WalletPage>
                                         vertical: 6),
                                     padding: const EdgeInsets.all(16),
                                     decoration: BoxDecoration(
-                                      color: const Color(0xFFF5F5F5),
+                                      color: AppColors.cinza100,
                                       borderRadius:
                                           BorderRadius.circular(12),
                                     ),
@@ -355,7 +476,7 @@ class _WalletPageState extends State<WalletPage>
                                         
                                         CircleAvatar(
                                           radius: 22,
-                                          backgroundColor: Colors.blue
+                                          backgroundColor: AppColors.azul
                                               .withValues(alpha:0.1),
                                           backgroundImage:
                                               token['startupLogo'] != null
@@ -366,7 +487,7 @@ class _WalletPageState extends State<WalletPage>
                                               token['startupLogo'] == null
                                                   ? const Icon(
                                                       Icons.business,
-                                                      color: Colors.blue,
+                                                      color: AppColors.azul,
                                                       size: 20,
                                                     )
                                                   : null,
@@ -394,7 +515,7 @@ class _WalletPageState extends State<WalletPage>
                                                 style: const TextStyle(
                                                   fontFamily: 'JosefinSans',
                                                   fontSize: 12,
-                                                  color: Colors.black45,
+                                                  color: AppColors.cinza500,
                                                 ),
                                               ),
                                             ],
@@ -420,8 +541,8 @@ class _WalletPageState extends State<WalletPage>
                                                 fontFamily: 'JosefinSans',
                                                 fontSize: 12,
                                                 color: positivo
-                                                    ? Colors.green
-                                                    : Colors.red,
+                                                    ? AppColors.verde
+                                                    : AppColors.vermelho,
                                               ),
                                             ),
                                           ],
@@ -476,7 +597,7 @@ class _LoadingDotsState extends State<_LoadingDots> {
         '${widget.label}${'.' * _dotCount}',
         style: const TextStyle(
           fontFamily: 'JosefinSans',
-          color: Colors.black38,
+          color: AppColors.cinza500,
           fontSize: 16,
         ),
       ),
@@ -497,8 +618,8 @@ class _CardStat extends StatelessWidget {
       children: [
         Text(
           label,
-          style: const TextStyle(
-            color: Colors.white60,
+          style: TextStyle(
+            color: AppColors.branco,
             fontFamily: 'JosefinSans',
             fontSize: 11,
           ),
@@ -506,7 +627,7 @@ class _CardStat extends StatelessWidget {
         Text(
           value,
           style: const TextStyle(
-            color: Colors.white,
+            color: AppColors.branco,
             fontFamily: 'JosefinSans',
             fontSize: 16,
             fontWeight: FontWeight.bold,
