@@ -9,17 +9,19 @@ class BuyStepsPage extends StatefulWidget {
   @override
   State<BuyStepsPage> createState() => _BuyStepsPageState();
 
-  final String startupName;
-  final int availableQuantity;
-  final int pricePerTokenCents;
-  final String offerId;
+  final String? startupName;
+  final int? availableQuantity;
+  final int? pricePerTokenCents;
+  final String? offerId;
+  final bool isStartupFlow;
 
   const BuyStepsPage({
     super.key,
-    required this.startupName,
-    required this.availableQuantity,
-    required this.pricePerTokenCents,
-    required this.offerId,
+    this.startupName,
+    this.availableQuantity,
+    this.pricePerTokenCents,
+    this.offerId,
+    this.isStartupFlow = false,
   });
 }
 
