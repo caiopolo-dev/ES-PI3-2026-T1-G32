@@ -548,8 +548,9 @@ class _BuyStepsPageState extends State<BuyStepsPage> {
     if (currentStep < 2) {
       setState(() => currentStep++);
     } else {
-      // No step 2 (agradecimento) o botão "voltar" fecha a tela por completo.
-      Navigator.pop(context);
+      // Retorna true para o chamador saber que uma compra foi concluída
+      // e que ele deve recarregar os dados (ofertas, carteira etc.).
+      Navigator.pop(context, true);
     }
   }
 
@@ -564,8 +565,12 @@ class _BuyStepsPageState extends State<BuyStepsPage> {
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: AppColors.preto),
           onPressed: () {
-            if (currentStep == 0 || currentStep == 2) {
+            if (currentStep == 0) {
+              // Sem compra: descarta sem sinalizar mudança.
               Navigator.pop(context);
+            } else if (currentStep == 2) {
+              // Compra já confirmada: sinaliza true para o chamador recarregar.
+              Navigator.pop(context, true);
             } else {
               setState(() {
                 currentStep--;

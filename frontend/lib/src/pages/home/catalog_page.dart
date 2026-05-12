@@ -19,8 +19,9 @@ const Map<String, String> _estagioLabels = {
 class InitialCatalogPage extends StatefulWidget {
   final Map<String, dynamic>? usuario;
   final void Function(int)? onTabSwitch;
+  final bool isActive;
 
-  const InitialCatalogPage({super.key, this.usuario, this.onTabSwitch});
+  const InitialCatalogPage({super.key, this.usuario, this.onTabSwitch, this.isActive = false});
 
   @override
   State<InitialCatalogPage> createState() => _InitialCatalogPageState();
@@ -38,6 +39,14 @@ class _InitialCatalogPageState extends State<InitialCatalogPage> {
 
   final List<String> filters = ["Todas", "Novas", "Em operação", "Em expansão"];
   final List<String?> filterValues = [null, "nova", "em_operacao", "em_expansao"];
+
+  @override
+  void didUpdateWidget(InitialCatalogPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Recarrega o catálogo ao voltar para esta aba,
+    // refletindo novas startups ou mudanças de estoque.
+    if (widget.isActive && !oldWidget.isActive) fetchStartups();
+  }
 
   @override
   void initState() {
