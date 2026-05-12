@@ -48,6 +48,7 @@ class _InitialCatalogPageState extends State<InitialCatalogPage> {
     fetchStartups();
     // Atualiza _searchQuery a cada keystroke para filtrar a lista em tempo real.
     _searchController.addListener(() {
+      if (!mounted) return;
       setState(() {
         _searchQuery = _searchController.text.toLowerCase();
       });
@@ -92,6 +93,7 @@ class _InitialCatalogPageState extends State<InitialCatalogPage> {
 
     // Se outro filtro foi selecionado enquanto aguardávamos a resposta, aborta.
     if (requestId != _requestId) return;
+    if (!mounted) return;
 
     setState(() {
       isLoading = false;
