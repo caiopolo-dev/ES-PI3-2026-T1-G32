@@ -3,13 +3,13 @@
 // Descrição: Acesso ao Firestore para busca de startups
 
 import {Startup, EstagioStartup} from "../types";
-import {db} from "../../shared/firebase";
-const STARTUPS_COLLECTION = "startups";
+import {db} from "../../../shared/firebase";
+import {STARTUPS} from "../../../shared/collections";
 
 export const startupRepository = {
   // Busca todas as startups, filtrando por estágio se informado
   async findAll(estagio?: EstagioStartup): Promise<Startup[]> {
-    let query: FirebaseFirestore.Query = db.collection(STARTUPS_COLLECTION);
+    let query: FirebaseFirestore.Query = db.collection(STARTUPS);
 
     if (estagio) {
       query = query.where("estagio", "==", estagio);
@@ -25,7 +25,7 @@ export const startupRepository = {
 
   // Busca uma startup específica pelo ID do documento
   async findById(id: string): Promise<Startup | null> {
-    const doc = await db.collection(STARTUPS_COLLECTION).doc(id).get();
+    const doc = await db.collection(STARTUPS).doc(id).get();
 
     if (!doc.exists) return null;
 

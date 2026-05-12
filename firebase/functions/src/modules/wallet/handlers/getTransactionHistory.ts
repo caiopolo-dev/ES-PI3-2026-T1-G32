@@ -4,11 +4,10 @@
 
 import {onCall, HttpsError} from "firebase-functions/v2/https";
 import {getTransactionHistoryByUserId} from "../repositories/walletRepository";
+import {requireAuth} from "../../../shared/validation";
 
 export const getTransactionHistory = onCall(async (request) => {
-  if (!request.auth) {
-    throw new HttpsError("unauthenticated", "Usuário não autenticado");
-  }
+  requireAuth(request.auth);
 
   try {
     return await getTransactionHistoryByUserId(request.auth.uid);

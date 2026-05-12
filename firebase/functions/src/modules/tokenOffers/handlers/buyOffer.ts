@@ -3,14 +3,10 @@
 
 import {onCall, HttpsError} from "firebase-functions/v2/https";
 import {buyTokenOffer} from "../repositories/offersRepository";
+import {requireAuth} from "../../../shared/validation";
 
 export const buyOffer = onCall(async (request) => {
-  if (!request.auth) {
-    throw new HttpsError(
-      "unauthenticated",
-      "Usuário não autenticado"
-    );
-  }
+  requireAuth(request.auth);
 
   const {offerId, quantity} = request.data ?? {};
 

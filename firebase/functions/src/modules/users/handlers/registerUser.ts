@@ -4,14 +4,16 @@
 import {onCall, HttpsError} from "firebase-functions/v2/https";
 import {registerUser, verificarRgExiste,
   verificarEmailExiste} from "../repositories/userRepository";
+import {requireAuth} from "../../../shared/validation";
 
 
 export const createUser = onCall(async (request)=>{
+  requireAuth(request.auth);
+
   const {name, rg, telefone, email} = request.data;
   // Novos usuários começam sem saldo; depósitos são feitos fora do sistema.
   const saldoCentavos = 0;
 
-  // Validação dos dados antes de verificar autenticação para retornar erro mais descritivo.
   if (!name || !rg || !telefone || !email) {
     throw new HttpsError(
       "invalid-argument",
@@ -19,11 +21,7 @@ export const createUser = onCall(async (request)=>{
     );
   }
 
-  if (!request.auth) {
-    throw new HttpsError("unauthenticated", "Usuário não autenticado");
-  }
-
-  // Verifica duplicidade de RG e e-mail no Firestore antes de criar o documento.
+  // Verifica duplicidade de RG e e-mail antes de criar o documento.
   const verifyRg = await verificarRgExiste(rg);
 
   if (verifyRg) {

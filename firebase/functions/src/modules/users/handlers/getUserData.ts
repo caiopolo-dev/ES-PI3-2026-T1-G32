@@ -4,11 +4,10 @@
 
 import {onCall, HttpsError} from "firebase-functions/v2/https";
 import {getUserById} from "../repositories/userRepository";
+import {requireAuth} from "../../../shared/validation";
 
 export const getUserData = onCall(async (request) => {
-  if (!request.auth) {
-    throw new HttpsError("unauthenticated", "Usuário não autenticado");
-  }
+  requireAuth(request.auth);
 
   const uid = request.auth.uid;
   const doc = await getUserById(uid);

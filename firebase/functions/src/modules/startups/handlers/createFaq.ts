@@ -5,11 +5,10 @@
 import {onCall, HttpsError} from "firebase-functions/v2/https";
 import {faqsRepository} from "../repositories/faqsRepository";
 import {getUserById} from "../../users/repositories/userRepository";
+import {requireAuth} from "../../../shared/validation";
 
 export const createFaq = onCall(async (request) => {
-  if (!request.auth) {
-    throw new HttpsError("unauthenticated", "Usuário não autenticado");
-  }
+  requireAuth(request.auth);
 
   const {startupId, pergunta, privada} = request.data;
 
@@ -25,7 +24,7 @@ export const createFaq = onCall(async (request) => {
   // para evitar que o cliente envie valores falsos.
   const email = request.auth.token.email ?? "";
 
-  // Nome de exibição vem do Firestore (campo 'name') pois o token Auth não o contém.
+  // Nome vem do Firestore (campo 'name') pois o token Auth não o contém.
   const userDoc = await getUserById(uid);
   const nomeUsuario = (userDoc.data()?.name as string) ?? "";
 
