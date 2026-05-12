@@ -3,10 +3,10 @@
 // Descrição: Tela de carteira do usuário
 
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:mescla_invest/src/theme/app_colors.dart';
 import 'package:mescla_invest/src/services/wallet_service.dart';
-import 'package:mescla_invest/src/pages/initial_page.dart';
+import 'package:mescla_invest/src/widgets/user_avatar_menu.dart';
+import 'package:mescla_invest/src/widgets/app_loading_indicator.dart';
 import 'package:intl/intl.dart';
 
 class WalletPage extends StatefulWidget {
@@ -39,16 +39,6 @@ class _WalletPageState extends State<WalletPage>
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
     _loadAll();
-  }
-
-  Future<void> _logout() async {
-    await FirebaseAuth.instance.signOut();
-    if (!mounted) return;
-    Navigator.pushAndRemoveUntil(
-      context,
-      MaterialPageRoute(builder: (_) => const InitialPage()),
-      (_) => false,
-    );
   }
 
   Future<void> _loadAll() async {
@@ -105,10 +95,6 @@ class _WalletPageState extends State<WalletPage>
 
   @override
   Widget build(BuildContext context) {
-    final usuario = widget.usuario ?? {};
-    final nome = (usuario['nome'] ?? usuario['name']) as String? ?? '';
-    final inicial = nome.isNotEmpty ? nome[0].toUpperCase() : '?';
-
     return Scaffold(
       backgroundColor: AppColors.branco,
       appBar: AppBar(
@@ -124,65 +110,14 @@ class _WalletPageState extends State<WalletPage>
           ),
         ),
         actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 16),
-            child: PopupMenuButton<String>(
-              onSelected: (value) {
-                if (value == 'perfil') {
-                  widget.onTabSwitch?.call(4);
-                } else if (value == 'sair') {
-                  _logout();
-                }
-              },
-              color: AppColors.branco,
-              elevation: 3,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-                side: BorderSide(color: AppColors.cinza200),
-              ),
-              itemBuilder: (_) => [
-                const PopupMenuItem(
-                  value: 'perfil',
-                  child: Row(children: [
-                    Icon(Icons.person_outline, size: 20, color: AppColors.preto87),
-                    SizedBox(width: 12),
-                    Text('Meu Perfil'),
-                  ]),
-                ),
-                PopupMenuItem<String>(
-                  enabled: false,
-                  height: 8,
-                  padding: EdgeInsets.zero,
-                  child: Divider(indent: 16, endIndent: 16, thickness: 1, height: 1, color: AppColors.cinza200),
-                ),
-                const PopupMenuItem(
-                  value: 'sair',
-                  child: Row(children: [
-                    Icon(Icons.logout, size: 20, color: AppColors.vermelho),
-                    SizedBox(width: 12),
-                    Text('Sair', style: TextStyle(color: AppColors.vermelho)),
-                  ]),
-                ),
-              ],
-              child: CircleAvatar(
-                radius: 18,
-                backgroundColor: AppColors.azul,
-                child: Text(
-                  inicial,
-                  style: const TextStyle(
-                    inherit: false,
-                    color: AppColors.branco,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 18,
-                  ),
-                ),
-              ),
-            ),
+          UserAvatarMenu(
+            usuario: widget.usuario,
+            onPerfilTap: () => widget.onTabSwitch?.call(4),
           ),
         ],
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator(color: AppColors.azul))
+          ? const AppLoadingIndicator()
           : RefreshIndicator(
               onRefresh: _loadAll,
               child: CustomScrollView(

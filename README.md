@@ -45,7 +45,11 @@ ES-PI3-2026-T1-G32/
 │   └── lib/src/
 │       ├── pages/          # Telas da aplicação
 │       ├── services/       # Camada de comunicação com Cloud Functions
-│       └── theme/          # Constantes de cores e tema (AppColors)
+│       ├── theme/          # Constantes de cores e tema (AppColors)
+│       └── widgets/        # Widgets compartilhados entre telas
+│           ├── main_scaffold.dart       # Shell de navegação (IndexedStack + BottomNavigationBar)
+│           ├── user_avatar_menu.dart    # Avatar do usuário com popup de perfil/logout
+│           └── app_loading_indicator.dart  # Indicador de carregamento centralizado
 │
 └── firebase/
     ├── functions/src/      # Cloud Functions (TypeScript)

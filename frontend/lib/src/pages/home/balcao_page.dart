@@ -2,10 +2,10 @@
 // Descrição: Tela do balcão de negociação — listagem e compra de ofertas de tokens
 
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:mescla_invest/src/theme/app_colors.dart';
-import '../initial_page.dart';
+import 'package:mescla_invest/src/widgets/user_avatar_menu.dart';
+import 'package:mescla_invest/src/widgets/app_loading_indicator.dart';
 import 'buy_steps_page.dart';
 
 class BalcaoNegociacaoPage extends StatefulWidget {
@@ -31,15 +31,6 @@ class _BalcaoNegociacaoPageState extends State<BalcaoNegociacaoPage>{
   }
   
 
-  Future<void> _logout() async {
-    await FirebaseAuth.instance.signOut();
-    if (!mounted) return;
-    Navigator.pushAndRemoveUntil(
-      context,
-      MaterialPageRoute(builder: (_) => const InitialPage()),
-      (_) => false,
-    );
-  }
 
   Future<void> loadOffers() async{
     // Guard inicial: widget pode ser desmontado antes do primeiro frame (ex: navegação rápida).
@@ -76,10 +67,6 @@ class _BalcaoNegociacaoPageState extends State<BalcaoNegociacaoPage>{
 
   @override
   Widget build(BuildContext context) {
-    final usuario = widget.usuario ?? {};
-    final nome = (usuario['nome'] ?? usuario['name']) as String? ?? '';
-    final inicial = nome.isNotEmpty ? nome[0].toUpperCase() : '?';
-
     return Scaffold(
       backgroundColor: AppColors.branco,
       appBar: AppBar(
@@ -87,60 +74,9 @@ class _BalcaoNegociacaoPageState extends State<BalcaoNegociacaoPage>{
         elevation: 0,
         automaticallyImplyLeading: false,
         actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 16),
-            child: PopupMenuButton<String>(
-              onSelected: (value) {
-                if (value == 'perfil') {
-                  widget.onTabSwitch?.call(4);
-                } else if (value == 'sair') {
-                  _logout();
-                }
-              },
-              color: AppColors.branco,
-              elevation: 3,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-                side: BorderSide(color: AppColors.cinza200),
-              ),
-              itemBuilder: (_) => [
-                const PopupMenuItem(
-                  value: 'perfil',
-                  child: Row(children: [
-                    Icon(Icons.person_outline, size: 20, color: AppColors.preto87),
-                    SizedBox(width: 12),
-                    Text('Meu Perfil'),
-                  ]),
-                ),
-                PopupMenuItem<String>(
-                  enabled: false,
-                  height: 8,
-                  padding: EdgeInsets.zero,
-                  child: Divider(indent: 16, endIndent: 16, thickness: 1, height: 1, color: AppColors.cinza200),
-                ),
-                const PopupMenuItem(
-                  value: 'sair',
-                  child: Row(children: [
-                    Icon(Icons.logout, size: 20, color: AppColors.vermelho),
-                    SizedBox(width: 12),
-                    Text('Sair', style: TextStyle(color: AppColors.vermelho)),
-                  ]),
-                ),
-              ],
-              child: CircleAvatar(
-                radius: 18,
-                backgroundColor: AppColors.azul,
-                child: Text(
-                  inicial,
-                  style: const TextStyle(
-                    inherit: false,
-                    color: AppColors.branco,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 18,
-                  ),
-                ),
-              ),
-            ),
+          UserAvatarMenu(
+            usuario: widget.usuario,
+            onPerfilTap: () => widget.onTabSwitch?.call(4),
           ),
         ],
       ),
@@ -192,7 +128,7 @@ class _BalcaoNegociacaoPageState extends State<BalcaoNegociacaoPage>{
               
               Expanded(
                 child: isLoading
-                    ? const Center(child: CircularProgressIndicator(color: AppColors.azul))
+                    ? const AppLoadingIndicator()
                     : errorMessage != null
                     ? Center(child: Text("Erro: $errorMessage", style: _textStyle))
                         : offers.isEmpty
