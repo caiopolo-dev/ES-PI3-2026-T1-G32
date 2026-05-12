@@ -4,11 +4,11 @@
 
 import 'package:flutter/material.dart';
 import 'package:mescla_invest/src/theme/app_colors.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
 import 'package:mescla_invest/src/services/startup_service.dart';
 import 'package:mescla_invest/src/pages/home/startup_detail/startup_detail_page.dart';
-import 'package:mescla_invest/src/pages/initial_page.dart';
+import 'package:mescla_invest/src/widgets/user_avatar_menu.dart';
+import 'package:mescla_invest/src/widgets/app_loading_indicator.dart';
 
 const Map<String, String> _estagioLabels = {
   'nova': 'Nova',
@@ -60,19 +60,6 @@ class _InitialCatalogPageState extends State<InitialCatalogPage> {
     super.dispose();
   }
 
-  // Faz logout do Firebase e retorna para a tela inicial, removendo todo o histórico
-  // de navegação para que o botão "voltar" não traga o usuário de volta ao app.
-  Future<void> _logout() async {
-    await FirebaseAuth.instance.signOut();
-    if (!mounted) return;
-    // pushAndRemoveUntil remove todas as rotas anteriores da pilha de navegação.
-    Navigator.pushAndRemoveUntil(
-      context,
-      MaterialPageRoute(builder: (_) => const InitialPage()),
-      (_) => false,
-    );
-  }
-
   Future<void> fetchStartups() async {
     // Guard contra race condition: se o usuário troca o filtro rapidamente,
     // descartamos respostas de requisições antigas que chegarem depois.
@@ -117,10 +104,6 @@ class _InitialCatalogPageState extends State<InitialCatalogPage> {
 
   @override
   Widget build(BuildContext context) {
-    final usuario = widget.usuario ?? {};
-    final nome = (usuario['nome'] ?? usuario['name']) as String? ?? '';
-    final inicial = nome.isNotEmpty ? nome[0].toUpperCase() : '?';
-
     return Scaffold(
       backgroundColor: AppColors.cinza100,
 
@@ -129,64 +112,12 @@ class _InitialCatalogPageState extends State<InitialCatalogPage> {
         elevation: 0,
         automaticallyImplyLeading: false,
         actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 16),
-            child: PopupMenuButton<String>(
-              onSelected: (value) {
-                if (value == 'perfil') {
-                  widget.onTabSwitch?.call(4);
-                } else if (value == 'sair') {
-                  _logout();
-                }
-              },
-              color: AppColors.branco,
-              elevation: 3,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-                side: BorderSide(color: AppColors.cinza200),
-              ),
-              itemBuilder: (_) => [
-                const PopupMenuItem(
-                  value: 'perfil',
-                  child: Row(children: [
-                    Icon(Icons.person_outline, size: 20, color: AppColors.preto87),
-                    SizedBox(width: 12),
-                    Text('Meu Perfil'),
-                  ]),
-                ),
-                PopupMenuItem<String>(
-                  enabled: false,
-                  height: 8,
-                  padding: EdgeInsets.zero,
-                  child: Divider(indent: 16, endIndent: 16, thickness: 1, height: 1, color: AppColors.cinza200),
-                ),
-                const PopupMenuItem(
-                  value: 'sair',
-                  child: Row(children: [
-                    Icon(Icons.logout, size: 20, color: AppColors.vermelho),
-                    SizedBox(width: 12),
-                    Text('Sair', style: TextStyle(color: AppColors.vermelho)),
-                  ]),
-                ),
-              ],
-              child: CircleAvatar(
-                radius: 18,
-                backgroundColor: AppColors.azul,
-                child: Text(
-                  inicial,
-                  style: const TextStyle(
-                    inherit: false,
-                    color: AppColors.branco,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 18,
-                  ),
-                ),
-              ),
-            ),
+          UserAvatarMenu(
+            usuario: widget.usuario,
+            onPerfilTap: () => widget.onTabSwitch?.call(4),
           ),
         ],
       ),
-
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -249,7 +180,7 @@ class _InitialCatalogPageState extends State<InitialCatalogPage> {
               // Lista de startups
               Expanded(
                 child: isLoading
-                    ? const Center(child: CircularProgressIndicator(color: AppColors.azul))
+                    ? const AppLoadingIndicator()
                     : error != null
                         ? Center(child: Text("Erro: $error"))
                         : _filteredStartups.isEmpty

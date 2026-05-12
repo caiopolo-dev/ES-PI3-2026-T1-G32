@@ -3,13 +3,13 @@
 // Descrição: Tela inicial pós-login com resumo financeiro e startups em destaque
 
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
 import 'package:mescla_invest/src/theme/app_colors.dart';
 import 'package:mescla_invest/src/services/wallet_service.dart';
 import 'package:mescla_invest/src/services/startup_service.dart';
-import 'package:mescla_invest/src/pages/initial_page.dart';
 import 'package:mescla_invest/src/pages/home/startup_detail/startup_detail_page.dart';
+import 'package:mescla_invest/src/widgets/user_avatar_menu.dart';
+import 'package:mescla_invest/src/widgets/app_loading_indicator.dart';
 
 class HomePage extends StatefulWidget {
   final Map<String, dynamic>? usuario;
@@ -72,21 +72,10 @@ class _HomePageState extends State<HomePage> {
     setState(() => _isLoading = false);
   }
 
-  Future<void> _logout() async {
-    await FirebaseAuth.instance.signOut();
-    if (!mounted) return;
-    Navigator.pushAndRemoveUntil(
-      context,
-      MaterialPageRoute(builder: (_) => const InitialPage()),
-      (_) => false,
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final usuario = widget.usuario ?? {};
     final nome = (usuario['nome'] ?? usuario['name']) as String? ?? '';
-    final inicial = nome.isNotEmpty ? nome[0].toUpperCase() : '?';
     final primeiroNome = nome.split(' ').first;
 
     return Scaffold(
@@ -96,60 +85,9 @@ class _HomePageState extends State<HomePage> {
         elevation: 0,
         automaticallyImplyLeading: false,
         actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 16),
-            child: PopupMenuButton<String>(
-              onSelected: (value) {
-                if (value == 'perfil') {
-                  widget.onTabSwitch?.call(4);
-                } else if (value == 'sair') {
-                  _logout();
-                }
-              },
-              color: AppColors.branco,
-              elevation: 3,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-                side: BorderSide(color: AppColors.cinza200),
-              ),
-              itemBuilder: (_) => [
-                const PopupMenuItem(
-                  value: 'perfil',
-                  child: Row(children: [
-                    Icon(Icons.person_outline, size: 20, color: AppColors.preto87),
-                    SizedBox(width: 12),
-                    Text('Meu Perfil'),
-                  ]),
-                ),
-                PopupMenuItem<String>(
-                  enabled: false,
-                  height: 8,
-                  padding: EdgeInsets.zero,
-                  child: Divider(indent: 16, endIndent: 16, thickness: 1, height: 1, color: AppColors.cinza200),
-                ),
-                const PopupMenuItem(
-                  value: 'sair',
-                  child: Row(children: [
-                    Icon(Icons.logout, size: 20, color: AppColors.vermelho),
-                    SizedBox(width: 12),
-                    Text('Sair', style: TextStyle(color: AppColors.vermelho)),
-                  ]),
-                ),
-              ],
-              child: CircleAvatar(
-                radius: 18,
-                backgroundColor: AppColors.azul,
-                child: Text(
-                  inicial,
-                  style: const TextStyle(
-                    inherit: false,
-                    color: AppColors.branco,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 18,
-                  ),
-                ),
-              ),
-            ),
+          UserAvatarMenu(
+            usuario: widget.usuario,
+            onPerfilTap: () => widget.onTabSwitch?.call(4),
           ),
         ],
       ),
@@ -302,7 +240,7 @@ class _HomePageState extends State<HomePage> {
             const SizedBox(height: 12),
 
             if (_isLoading)
-              const Center(child: CircularProgressIndicator(color: AppColors.azul))
+              const AppLoadingIndicator()
             else if (_destaques.isEmpty)
               const Text(
                 'Nenhuma startup disponível',

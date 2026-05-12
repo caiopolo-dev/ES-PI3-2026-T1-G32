@@ -3,13 +3,13 @@
 // Descrição: Tela de detalhes de uma startup
 
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:mescla_invest/src/theme/app_colors.dart';
 import 'package:mescla_invest/src/services/startup_service.dart';
 import 'package:mescla_invest/src/services/faq_service.dart';
 import 'package:mescla_invest/src/pages/home/startup_detail/startup_detail_widgets.dart';
 import 'package:mescla_invest/src/pages/home/startup_detail/startup_detail_faq.dart';
-import 'package:mescla_invest/src/pages/initial_page.dart';
+import 'package:mescla_invest/src/widgets/user_avatar_menu.dart';
+import 'package:mescla_invest/src/widgets/app_loading_indicator.dart';
 
 class StartupDetailPage extends StatefulWidget {
   final String startupId;
@@ -48,17 +48,6 @@ class _StartupDetailPageState extends State<StartupDetailPage> {
     // Carrega dados da startup e FAQs em paralelo ao abrir a tela.
     _fetchDetail();
     _loadFaqs();
-  }
-
-  // Faz logout e remove toda a pilha de navegação, retornando à tela inicial.
-  Future<void> _logout() async {
-    await FirebaseAuth.instance.signOut();
-    if (!mounted) return;
-    Navigator.pushAndRemoveUntil(
-      context,
-      MaterialPageRoute(builder: (_) => const InitialPage()),
-      (_) => false,
-    );
   }
 
   // Busca as FAQs da startup via Cloud Function.
@@ -104,10 +93,6 @@ class _StartupDetailPageState extends State<StartupDetailPage> {
 
   @override
   Widget build(BuildContext context) {
-    final usuario = widget.usuario ?? {};
-    final nome = (usuario['nome'] ?? usuario['name']) as String? ?? '';
-    final inicial = nome.isNotEmpty ? nome[0].toUpperCase() : '?';
-
     return Scaffold(
       backgroundColor: AppColors.branco,
       appBar: AppBar(
@@ -123,66 +108,17 @@ class _StartupDetailPageState extends State<StartupDetailPage> {
         ),
         centerTitle: true,
         actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 16),
-            child: PopupMenuButton<String>(
-              onSelected: (value) {
-                if (value == 'perfil') {
-                  Navigator.pop(context);
-                  widget.onTabSwitch?.call(4);
-                } else if (value == 'sair') {
-                  _logout();
-                }
-              },
-              color: AppColors.branco,
-              elevation: 3,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-                side: BorderSide(color: AppColors.cinza200),
-              ),
-              itemBuilder: (_) => [
-                const PopupMenuItem(
-                  value: 'perfil',
-                  child: Row(children: [
-                    Icon(Icons.person_outline, size: 20, color: AppColors.preto87),
-                    SizedBox(width: 12),
-                    Text('Meu Perfil'),
-                  ]),
-                ),
-                PopupMenuItem<String>(
-                  enabled: false,
-                  height: 8,
-                  padding: EdgeInsets.zero,
-                  child: Divider(indent: 16, endIndent: 16, thickness: 1, height: 1, color: AppColors.cinza200),
-                ),
-                const PopupMenuItem(
-                  value: 'sair',
-                  child: Row(children: [
-                    Icon(Icons.logout, size: 20, color: AppColors.vermelho),
-                    SizedBox(width: 12),
-                    Text('Sair', style: TextStyle(color: AppColors.vermelho)),
-                  ]),
-                ),
-              ],
-              child: CircleAvatar(
-                radius: 18,
-                backgroundColor: AppColors.azul,
-                child: Text(
-                  inicial,
-                  style: const TextStyle(
-                    inherit: false,
-                    color: AppColors.branco,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 18,
-                  ),
-                ),
-              ),
-            ),
+          UserAvatarMenu(
+            usuario: widget.usuario,
+            onPerfilTap: () {
+              Navigator.pop(context);
+              widget.onTabSwitch?.call(4);
+            },
           ),
         ],
       ),
       body: isLoading
-          ? const Center(child: CircularProgressIndicator(color: AppColors.azul))
+          ? const AppLoadingIndicator()
           : error != null
               ? Center(child: Text('Erro: $error'))
               : Column(
@@ -356,7 +292,7 @@ class _StartupDetailPageState extends State<StartupDetailPage> {
           const SizedBox(height: 16),
 
           if (_faqsLoading)
-            const Center(child: CircularProgressIndicator(color: AppColors.azul))
+            const AppLoadingIndicator()
           else if (_faqs.isEmpty)
             Center(child: Text('Nenhuma pergunta ainda', style: TextStyle(color: AppColors.cinza400)))
           else
