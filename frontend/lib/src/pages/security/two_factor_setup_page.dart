@@ -90,17 +90,23 @@ class _TwoFactorSetupPageState extends State<TwoFactorSetupPage> {
                 const SizedBox(height: 16),
                 Container(
                   decoration: BoxDecoration(
-                    color: AppColors.cinza300,
+                    color: AppColors.cinza200,
                     borderRadius: BorderRadius.circular(8),
                   ),
                   padding: const EdgeInsets.symmetric(horizontal: 12),
                   child: TextField(
                     controller: _passwordController,
                     obscureText: true,
+                    cursorColor: AppColors.azul,
                     decoration: const InputDecoration(
                       labelText: 'Senha',
                       labelStyle: TextStyle(fontFamily: 'JosefinSans'),
+                      floatingLabelStyle: TextStyle(
+                        color: AppColors.azul,
+                        fontFamily: 'JosefinSans',
+                      ),
                       border: InputBorder.none,
+                      focusedBorder: InputBorder.none,
                     ),
                   ),
                 ),

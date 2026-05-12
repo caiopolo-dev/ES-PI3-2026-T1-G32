@@ -3,6 +3,7 @@
 // Descrição: Service para autenticação de dois fatores via TOTP
 
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/services.dart';
 
 class TwoFactorService {
   // Gera o segredo TOTP e a URL do QR Code para vincular um autenticador.
@@ -46,6 +47,17 @@ class TwoFactorService {
       // o enrollment de MFA. Se o token estiver velho, retorna flag para a
       // tela pedir a senha ao usuário e reautenticar antes de tentar de novo.
       if (e.code == 'requires-recent-login') {
+        return {'success': false, 'requiresReauth': true};
+      }
+      return {
+        'success': false,
+        'message': 'Erro ao gerar QR Code: ${e.message}',
+      };
+    } on PlatformException catch (e) {
+      // Em iOS/Android o Firebase pode lançar PlatformException em vez de
+      // FirebaseAuthException quando o token está antigo.
+      final msg = e.message?.toLowerCase() ?? '';
+      if (msg.contains('requires recent authentication')) {
         return {'success': false, 'requiresReauth': true};
       }
       return {
