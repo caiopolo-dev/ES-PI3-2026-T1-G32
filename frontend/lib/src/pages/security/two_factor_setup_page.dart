@@ -17,6 +17,8 @@ class TwoFactorSetupPage extends StatefulWidget {
 
 class _TwoFactorSetupPageState extends State<TwoFactorSetupPage> {
   final TextEditingController _codeController = TextEditingController();
+  // Controller separado para o campo de senha no dialog de reautenticação.
+  final TextEditingController _passwordController = TextEditingController();
   String? _qrCodeUrl;
   TotpSecret? _totpSecret;
   bool _isLoading = true;
@@ -26,16 +28,12 @@ class _TwoFactorSetupPageState extends State<TwoFactorSetupPage> {
   @override
   void initState() {
     super.initState();
-    // Inicia a geração do segredo TOTP assim que a tela é montada.
     _initTotp();
   }
 
   // Gera o segredo TOTP e a URL do QR Code para o usuário escanear no autenticador.
-  // Fluxo:
-  // 1. TwoFactorService.generateSetup() pede ao Firebase uma sessão multifator
-  // 2. O Firebase gera um segredo TOTP único para este usuário
-  // 3. O segredo é convertido em URL otpauth:// compatível com Google Authenticator
-  // 4. A URL é exibida como QR Code para o usuário escanear
+  // Se o Firebase rejeitar por token antigo (requires-recent-login), abre o
+  // dialog de reautenticação antes de tentar de novo.
   Future<void> _initTotp() async {
     final result = await TwoFactorService.generateSetup();
 
@@ -50,11 +48,127 @@ class _TwoFactorSetupPageState extends State<TwoFactorSetupPage> {
         _totpSecret = result['secret'] as TotpSecret;
         _isLoading = false;
       });
+    } else if (result['requiresReauth'] == true) {
+      // Token do usuário está antigo — Firebase exige autenticação recente
+      // antes de operações sensíveis como enrollment de MFA.
+      await _showReauthDialog();
     } else {
       setState(() {
         _errorText = result['message'] as String? ?? 'Erro ao gerar QR Code';
         _isLoading = false;
       });
+    }
+  }
+
+  // Exibe um dialog pedindo a senha do usuário para reautenticar.
+  // Após reautenticação bem-sucedida, reinicia o fluxo de setup do TOTP.
+  Future<void> _showReauthDialog() async {
+    _passwordController.clear();
+    String dialogError = '';
+
+    // Retorna true se o usuário confirmou a senha com sucesso, false/null se voltou.
+    final confirmed = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          return AlertDialog(
+            backgroundColor: Colors.white,
+            surfaceTintColor: Colors.transparent,
+            title: const Text(
+              'Confirme sua senha',
+              style: TextStyle(fontFamily: 'JosefinSans'),
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'Por segurança, confirme sua senha para continuar.',
+                  style: TextStyle(fontFamily: 'JosefinSans', fontSize: 13),
+                ),
+                const SizedBox(height: 16),
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  child: TextField(
+                    controller: _passwordController,
+                    obscureText: true,
+                    decoration: const InputDecoration(
+                      labelText: 'Senha',
+                      labelStyle: TextStyle(fontFamily: 'JosefinSans'),
+                      border: InputBorder.none,
+                    ),
+                  ),
+                ),
+                if (dialogError.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    dialogError,
+                    style: const TextStyle(
+                      color: Colors.red,
+                      fontFamily: 'JosefinSans',
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+            actions: [
+              TextButton(
+                // Volta para a tela anterior sem tentar ativar o 2FA.
+                onPressed: () => Navigator.pop(context, false),
+                style: TextButton.styleFrom(
+                  foregroundColor: Colors.grey.shade600,
+                ),
+                child: const Text(
+                  'Voltar',
+                  style: TextStyle(fontFamily: 'JosefinSans'),
+                ),
+              ),
+              TextButton(
+                onPressed: () async {
+                  final email =
+                      FirebaseAuth.instance.currentUser?.email ?? '';
+                  final reauth = await TwoFactorService.reauthenticate(
+                    email,
+                    _passwordController.text,
+                  );
+
+                  if (reauth['success'] == true) {
+                    // Fecha o dialog sinalizando sucesso para retomar o setup.
+                    if (context.mounted) Navigator.pop(context, true);
+                  } else {
+                    setDialogState(() {
+                      dialogError =
+                          reauth['message'] as String? ?? 'Erro ao autenticar';
+                    });
+                  }
+                },
+                child: const Text(
+                  'Confirmar',
+                  style: TextStyle(
+                    fontFamily: 'JosefinSans',
+                    color: Colors.blue,
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+
+    if (!mounted) return;
+
+    if (confirmed == true) {
+      // Reautenticou com sucesso — tenta gerar o QR Code de novo.
+      await _initTotp();
+    } else {
+      // Usuário voltou — fecha a tela de setup e retorna à tela anterior.
+      Navigator.pop(context, false);
     }
   }
 
@@ -109,6 +223,7 @@ class _TwoFactorSetupPageState extends State<TwoFactorSetupPage> {
   @override
   void dispose() {
     _codeController.dispose();
+    _passwordController.dispose();
     super.dispose();
   }
 
