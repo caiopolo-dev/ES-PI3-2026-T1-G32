@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:mescla_invest/src/theme/app_colors.dart';
+import 'home_page.dart';
 import 'catalog_page.dart';
 import 'profile_page.dart';
 import '../initial_page.dart';
@@ -157,40 +158,42 @@ class _BalcaoNegociacaoPageState extends State<BalcaoNegociacaoPage>{
           type: BottomNavigationBarType.fixed,
           backgroundColor: AppColors.branco,
           elevation: 0,
-          currentIndex: 0,
+          currentIndex: 1,
           selectedItemColor: AppColors.azul,
           unselectedItemColor: AppColors.cinza500,
           onTap: (index) {
-            if (index == 0) return;
-            if (index == 1) {
+            if (index == 0) {
               Navigator.pushReplacement(
                 context,
-                MaterialPageRoute(
-                  builder: (_) => InitialCatalogPage(usuario: widget.usuario),
-                ),
+                MaterialPageRoute(builder: (_) => HomePage(usuario: widget.usuario)),
               );
               return;
             }
+            if (index == 1) return;
             if (index == 2) {
               Navigator.pushReplacement(
                 context,
-                MaterialPageRoute(
-                  builder: (_) => WalletPage(usuario: widget.usuario),
-                ),
+                MaterialPageRoute(builder: (_) => InitialCatalogPage(usuario: widget.usuario)),
               );
               return;
             }
             if (index == 3) {
               Navigator.pushReplacement(
                 context,
-                MaterialPageRoute(
-                  builder: (_) => ProfilePage(usuario: widget.usuario),
-                ),
+                MaterialPageRoute(builder: (_) => WalletPage(usuario: widget.usuario)),
+              );
+              return;
+            }
+            if (index == 4) {
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (_) => ProfilePage(usuario: widget.usuario)),
               );
               return;
             }
           },
           items: const [
+            BottomNavigationBarItem(icon: Icon(Icons.home_outlined), label: "Início"),
             BottomNavigationBarItem(icon: Icon(Icons.store), label: "Mercado"),
             BottomNavigationBarItem(icon: Icon(Icons.list), label: "Catálogo"),
             BottomNavigationBarItem(icon: Icon(Icons.account_balance_wallet), label: "Carteira"),

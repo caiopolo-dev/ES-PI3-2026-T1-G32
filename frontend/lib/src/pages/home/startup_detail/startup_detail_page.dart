@@ -9,6 +9,7 @@ import 'package:mescla_invest/src/services/startup_service.dart';
 import 'package:mescla_invest/src/services/faq_service.dart';
 import 'package:mescla_invest/src/pages/home/startup_detail/startup_detail_widgets.dart';
 import 'package:mescla_invest/src/pages/home/startup_detail/startup_detail_faq.dart';
+import 'package:mescla_invest/src/pages/home/home_page.dart';
 import 'package:mescla_invest/src/pages/home/profile_page.dart';
 import 'package:mescla_invest/src/pages/home/balcao_page.dart';
 import 'package:mescla_invest/src/pages/home/wallet_page.dart';
@@ -193,14 +194,14 @@ class _StartupDetailPageState extends State<StartupDetailPage> {
           type: BottomNavigationBarType.fixed,
           backgroundColor: AppColors.branco,
           elevation: 0,
-          currentIndex: 1,
+          currentIndex: 2,
           selectedItemColor: AppColors.azul,
           unselectedItemColor: AppColors.cinza500,
           onTap: (index) {
             if (index == 0) {
               Navigator.pushAndRemoveUntil(
                 context,
-                MaterialPageRoute(builder: (_) => BalcaoNegociacaoPage(usuario: widget.usuario)),
+                MaterialPageRoute(builder: (_) => HomePage(usuario: widget.usuario)),
                 (_) => false,
               );
               return;
@@ -208,7 +209,7 @@ class _StartupDetailPageState extends State<StartupDetailPage> {
             if (index == 1) {
               Navigator.pushAndRemoveUntil(
                 context,
-                MaterialPageRoute(builder: (_) => InitialCatalogPage(usuario: widget.usuario)),
+                MaterialPageRoute(builder: (_) => BalcaoNegociacaoPage(usuario: widget.usuario)),
                 (_) => false,
               );
               return;
@@ -216,12 +217,20 @@ class _StartupDetailPageState extends State<StartupDetailPage> {
             if (index == 2) {
               Navigator.pushAndRemoveUntil(
                 context,
-                MaterialPageRoute(builder: (_) => WalletPage(usuario: widget.usuario)),
+                MaterialPageRoute(builder: (_) => InitialCatalogPage(usuario: widget.usuario)),
                 (_) => false,
               );
               return;
             }
             if (index == 3) {
+              Navigator.pushAndRemoveUntil(
+                context,
+                MaterialPageRoute(builder: (_) => WalletPage(usuario: widget.usuario)),
+                (_) => false,
+              );
+              return;
+            }
+            if (index == 4) {
               Navigator.pushAndRemoveUntil(
                 context,
                 MaterialPageRoute(builder: (_) => ProfilePage(usuario: widget.usuario)),
@@ -231,6 +240,7 @@ class _StartupDetailPageState extends State<StartupDetailPage> {
             }
           },
           items: const [
+            BottomNavigationBarItem(icon: Icon(Icons.home_outlined), label: "Início"),
             BottomNavigationBarItem(icon: Icon(Icons.store), label: "Mercado"),
             BottomNavigationBarItem(icon: Icon(Icons.list), label: "Catálogo"),
             BottomNavigationBarItem(icon: Icon(Icons.account_balance_wallet), label: "Carteira"),

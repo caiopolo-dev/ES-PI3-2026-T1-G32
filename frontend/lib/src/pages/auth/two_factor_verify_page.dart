@@ -5,7 +5,7 @@
 import 'package:flutter/material.dart';
 import 'package:mescla_invest/src/theme/app_colors.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:mescla_invest/src/pages/home/catalog_page.dart';
+import 'package:mescla_invest/src/pages/home/home_page.dart';
 import 'package:mescla_invest/src/services/auth_service.dart';
 import 'package:mescla_invest/src/services/two_factor_service.dart';
 
@@ -61,7 +61,7 @@ class _TwoFactorVerifyPageState extends State<TwoFactorVerifyPage> {
 
       Navigator.pushAndRemoveUntil(
         context,
-        MaterialPageRoute(builder: (_) => InitialCatalogPage(usuario: usuario)),
+        MaterialPageRoute(builder: (_) => HomePage(usuario: usuario)),
         (_) => false,
       );
     } else {
