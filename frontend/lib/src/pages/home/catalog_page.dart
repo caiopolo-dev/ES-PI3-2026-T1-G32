@@ -8,10 +8,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
 import 'package:mescla_invest/src/services/startup_service.dart';
 import 'package:mescla_invest/src/pages/home/startup_detail/startup_detail_page.dart';
-import 'package:mescla_invest/src/pages/home/home_page.dart';
-import 'package:mescla_invest/src/pages/home/balcao_page.dart';
-import 'package:mescla_invest/src/pages/home/profile_page.dart';
-import 'package:mescla_invest/src/pages/home/wallet_page.dart';
 import 'package:mescla_invest/src/pages/initial_page.dart';
 
 const Map<String, String> _estagioLabels = {
@@ -22,8 +18,9 @@ const Map<String, String> _estagioLabels = {
 
 class InitialCatalogPage extends StatefulWidget {
   final Map<String, dynamic>? usuario;
+  final void Function(int)? onTabSwitch;
 
-  const InitialCatalogPage({super.key, this.usuario});
+  const InitialCatalogPage({super.key, this.usuario, this.onTabSwitch});
 
   @override
   State<InitialCatalogPage> createState() => _InitialCatalogPageState();
@@ -137,12 +134,7 @@ class _InitialCatalogPageState extends State<InitialCatalogPage> {
             child: PopupMenuButton<String>(
               onSelected: (value) {
                 if (value == 'perfil') {
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => ProfilePage(usuario: widget.usuario),
-                    ),
-                  );
+                  widget.onTabSwitch?.call(4);
                 } else if (value == 'sair') {
                   _logout();
                 }
@@ -193,59 +185,6 @@ class _InitialCatalogPageState extends State<InitialCatalogPage> {
             ),
           ),
         ],
-      ),
-
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          color: AppColors.branco,
-          border: Border(top: BorderSide(color: AppColors.cinza300)),
-        ),
-        child: BottomNavigationBar(
-          type: BottomNavigationBarType.fixed,
-          backgroundColor: AppColors.branco,
-          elevation: 0,
-          currentIndex: 2,
-          selectedItemColor: AppColors.azul,
-          unselectedItemColor: AppColors.cinza500,
-          onTap: (index) {
-            if (index == 0) {
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (_) => HomePage(usuario: widget.usuario)),
-              );
-              return;
-            }
-            if (index == 1) {
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (_) => BalcaoNegociacaoPage(usuario: widget.usuario)),
-              );
-              return;
-            }
-            if (index == 2) return;
-            if (index == 3) {
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (_) => WalletPage(usuario: widget.usuario)),
-              );
-              return;
-            }
-            if (index == 4) {
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (_) => ProfilePage(usuario: widget.usuario)),
-              );
-              return;
-            }
-          },
-          items: const [
-            BottomNavigationBarItem(icon: Icon(Icons.home_outlined), label: "Início"),
-            BottomNavigationBarItem(icon: Icon(Icons.store), label: "Mercado"),
-            BottomNavigationBarItem(icon: Icon(Icons.list), label: "Catálogo"),
-            BottomNavigationBarItem(icon: Icon(Icons.account_balance_wallet), label: "Carteira"),
-            BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: "Perfil"),
-          ],
-        ),
       ),
 
       body: SafeArea(
@@ -331,6 +270,7 @@ class _InitialCatalogPageState extends State<InitialCatalogPage> {
                                           startupId: data['id'] as String? ?? '',
                                           startupNome: data['nome'] as String? ?? '',
                                           usuario: widget.usuario,
+                                          onTabSwitch: widget.onTabSwitch,
                                         ),
                                       ),
                                     ),

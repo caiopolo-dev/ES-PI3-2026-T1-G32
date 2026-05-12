@@ -5,7 +5,7 @@
 import 'package:flutter/material.dart';
 import 'package:mescla_invest/src/theme/app_colors.dart';
 import 'package:mescla_invest/src/services/auth_service.dart';
-import 'package:mescla_invest/src/pages/home/home_page.dart';
+import 'package:mescla_invest/src/pages/home/main_scaffold.dart';
 import 'package:mescla_invest/src/pages/auth/password_recovery_page.dart';
 import 'package:mescla_invest/src/pages/auth/two_factor_verify_page.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -63,7 +63,7 @@ class _LoginPageState extends State<LoginPage> {
           Navigator.pushAndRemoveUntil(
             context,
             MaterialPageRoute(
-              builder: (_) => HomePage(
+              builder: (_) => MainScaffold(
                 usuario: usuario as Map<String, dynamic>?,
               ),
             ),
