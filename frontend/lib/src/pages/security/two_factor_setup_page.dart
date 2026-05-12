@@ -3,6 +3,7 @@
 // Descrição: Tela de configuração do 2FA via TOTP
 
 import 'package:flutter/material.dart';
+import 'package:mescla_invest/src/theme/app_colors.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -73,8 +74,8 @@ class _TwoFactorSetupPageState extends State<TwoFactorSetupPage> {
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) {
           return AlertDialog(
-            backgroundColor: Colors.white,
-            surfaceTintColor: Colors.transparent,
+            backgroundColor: AppColors.branco,
+            surfaceTintColor: AppColors.transparente,
             title: const Text(
               'Confirme sua senha',
               style: TextStyle(fontFamily: 'JosefinSans'),
@@ -89,7 +90,7 @@ class _TwoFactorSetupPageState extends State<TwoFactorSetupPage> {
                 const SizedBox(height: 16),
                 Container(
                   decoration: BoxDecoration(
-                    color: Colors.grey.shade300,
+                    color: AppColors.cinza300,
                     borderRadius: BorderRadius.circular(8),
                   ),
                   padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -108,7 +109,7 @@ class _TwoFactorSetupPageState extends State<TwoFactorSetupPage> {
                   Text(
                     dialogError,
                     style: const TextStyle(
-                      color: Colors.red,
+                      color: AppColors.vermelho,
                       fontFamily: 'JosefinSans',
                       fontSize: 12,
                     ),
@@ -121,7 +122,7 @@ class _TwoFactorSetupPageState extends State<TwoFactorSetupPage> {
                 // Volta para a tela anterior sem tentar ativar o 2FA.
                 onPressed: () => Navigator.pop(context, false),
                 style: TextButton.styleFrom(
-                  foregroundColor: Colors.grey.shade600,
+                  foregroundColor: AppColors.cinza700,
                 ),
                 child: const Text(
                   'Voltar',
@@ -151,7 +152,7 @@ class _TwoFactorSetupPageState extends State<TwoFactorSetupPage> {
                   'Confirmar',
                   style: TextStyle(
                     fontFamily: 'JosefinSans',
-                    color: Colors.blue,
+                    color: AppColors.azul,
                   ),
                 ),
               ),
@@ -205,7 +206,7 @@ class _TwoFactorSetupPageState extends State<TwoFactorSetupPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('2FA ativado com sucesso!'),
-          backgroundColor: Colors.green,
+          backgroundColor: AppColors.verde,
         ),
       );
       // Retorna `true` para que ProfilePage saiba que o 2FA foi ativado
@@ -230,18 +231,18 @@ class _TwoFactorSetupPageState extends State<TwoFactorSetupPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.branco,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: AppColors.branco,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          icon: const Icon(Icons.arrow_back, color: AppColors.preto),
           onPressed: () => Navigator.pop(context, false),
         ),
         title: const Text(
           'Ativar 2FA',
           style: TextStyle(
-            color: Colors.black,
+            color: AppColors.preto,
             fontFamily: 'JosefinSans',
             fontSize: 20,
           ),
@@ -292,7 +293,7 @@ class _TwoFactorSetupPageState extends State<TwoFactorSetupPage> {
                             style: TextStyle(
                               fontFamily: 'JosefinSans',
                               fontSize: 13,
-                              color: Colors.blue,
+                              color: AppColors.azul,
                             ),
                           ),
                         ),
@@ -320,13 +321,13 @@ class _TwoFactorSetupPageState extends State<TwoFactorSetupPage> {
                       ),
                       decoration: const InputDecoration(
                         hintText: '000000',
-                        hintStyle: TextStyle(color: Colors.black26),
+                        hintStyle: TextStyle(color: AppColors.cinza400),
                         counterText: '',
                         enabledBorder: UnderlineInputBorder(
-                          borderSide: BorderSide(color: Colors.black26),
+                          borderSide: BorderSide(color: AppColors.cinza400),
                         ),
                         focusedBorder: UnderlineInputBorder(
-                          borderSide: BorderSide(color: Color(0xFF013593), width: 2),
+                          borderSide: BorderSide(color: AppColors.azul, width: 2),
                         ),
                       ),
                     ),
@@ -337,7 +338,7 @@ class _TwoFactorSetupPageState extends State<TwoFactorSetupPage> {
                       Text(
                         _errorText,
                         textAlign: TextAlign.center,
-                        style: const TextStyle(color: Colors.red, fontFamily: 'JosefinSans'),
+                        style: const TextStyle(color: AppColors.vermelho, fontFamily: 'JosefinSans'),
                       ),
 
                     const SizedBox(height: 24),
@@ -347,14 +348,14 @@ class _TwoFactorSetupPageState extends State<TwoFactorSetupPage> {
                       child: ElevatedButton(
                         onPressed: _isVerifying ? null : _verifyAndEnable,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.blue,
-                          foregroundColor: Colors.white,
+                          backgroundColor: AppColors.azul,
+                          foregroundColor: AppColors.branco,
                           padding: const EdgeInsets.symmetric(vertical: 14),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(24),
                           ),
                           elevation: 6,
-                          shadowColor: Colors.blue.withValues(alpha: 0.4),
+                          shadowColor: AppColors.azul.withValues(alpha: 0.4),
                         ),
                         child: _isVerifying
                             ? const SizedBox(
@@ -362,7 +363,7 @@ class _TwoFactorSetupPageState extends State<TwoFactorSetupPage> {
                                 width: 20,
                                 child: CircularProgressIndicator(
                                   strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                  valueColor: AlwaysStoppedAnimation<Color>(AppColors.branco),
                                 ),
                               )
                             : const Text(

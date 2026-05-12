@@ -3,6 +3,7 @@
 // Descrição: Tela de cadastro multi-etapas com validação
 
 import 'package:flutter/material.dart';
+import 'package:mescla_invest/src/theme/app_colors.dart';
 import 'package:flutter/services.dart';
 import 'package:mescla_invest/src/services/auth_service.dart';
 
@@ -133,7 +134,7 @@ class _RegisterPageState extends State<RegisterPage> {
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 14,
-                    color: Colors.black38,
+                    color: AppColors.cinza500,
                     fontFamily: 'JosefinSans',
                   ),
                 );
@@ -166,13 +167,13 @@ class _RegisterPageState extends State<RegisterPage> {
       style: const TextStyle(fontFamily: 'JosefinSans', fontSize: 18),
       decoration: InputDecoration(
         hintText: hint,
-        hintStyle: const TextStyle(color: Colors.black26),
+        hintStyle: TextStyle(color: AppColors.cinza400),
         counterText: '',
         enabledBorder: const UnderlineInputBorder(
-          borderSide: BorderSide(color: Colors.black26, width: 1),
+          borderSide: BorderSide(color: AppColors.cinza400, width: 1),
         ),
         focusedBorder: const UnderlineInputBorder(
-          borderSide: BorderSide(color: Color(0xFF013593), width: 2),
+          borderSide: BorderSide(color: AppColors.azul, width: 2),
         ),
       ),
     );
@@ -210,7 +211,7 @@ class _RegisterPageState extends State<RegisterPage> {
           content: Text(
             'Cadastro realizado! Verifique seu e-mail para ativar a conta.',
           ),
-          backgroundColor: Colors.green,
+          backgroundColor: AppColors.verde,
           // 15 segundos para o usuário ter tempo de ler a instrução de verificar o e-mail.
           duration: Duration(seconds: 15),
         ),
@@ -226,12 +227,12 @@ class _RegisterPageState extends State<RegisterPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.branco,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: AppColors.branco,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          icon: const Icon(Icons.arrow_back, color: AppColors.preto),
           onPressed: () {
             if (currentStep == 0) {
               Navigator.pop(context);
@@ -269,7 +270,7 @@ class _RegisterPageState extends State<RegisterPage> {
 
               Text(
                 'Passo ${currentStep + 1} de 3',
-                style: TextStyle(fontSize: 20, color: Colors.grey[500], fontFamily: 'JosefinSans'),
+                style: TextStyle(fontSize: 20, color: AppColors.cinza500, fontFamily: 'JosefinSans'),
               ),
 
               const SizedBox(height: 30),
@@ -279,7 +280,7 @@ class _RegisterPageState extends State<RegisterPage> {
               const SizedBox(height: 20),
 
               if (errorText.isNotEmpty)
-                Text(errorText, style: const TextStyle(color: Colors.red)),
+                Text(errorText, style: const TextStyle(color: AppColors.vermelho)),
 
               const SizedBox(height: 40),
 
@@ -288,21 +289,21 @@ class _RegisterPageState extends State<RegisterPage> {
                 child: ElevatedButton(
                   onPressed: isLoading ? null : nextStep,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue,
-                    foregroundColor: Colors.white,
+                    backgroundColor: AppColors.azul,
+                    foregroundColor: AppColors.branco,
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(24),
-                      side: const BorderSide(color: Color(0xFF1565C0), width: 0.25),
+                      side: const BorderSide(color: AppColors.azul800, width: 0.25),
                     ),
                     elevation: 6,
-                    shadowColor: Colors.blue.withOpacity(0.4),
+                    shadowColor: AppColors.azul.withValues(alpha: 0.4),
                   ),
                   child: isLoading
                       ? const SizedBox(
                           height: 20,
                           width: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                          child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.branco),
                         )
                       : Text(
                           currentStep == 2 ? 'Finalizar' : 'Continuar',

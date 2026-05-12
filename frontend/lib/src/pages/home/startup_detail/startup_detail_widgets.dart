@@ -3,6 +3,7 @@
 // Descrição: Widgets reutilizáveis da tela de detalhes de startup
 
 import 'package:flutter/material.dart';
+import 'package:mescla_invest/src/theme/app_colors.dart';
 import 'package:intl/intl.dart';
 import 'package:video_player/video_player.dart';
 import 'package:mescla_invest/src/services/storage_service.dart';
@@ -36,7 +37,7 @@ class PriceRow extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Preço agora', style: TextStyle(fontSize: 14, color: Colors.grey[600])),
+                  Text('Preço agora', style: TextStyle(fontSize: 14, color: AppColors.cinza700)),
                   const SizedBox(height: 4),
                   Text(
                     'R\$ ${NumberFormat('#,##0.00', 'pt_BR').format(precoToken)}',
@@ -45,14 +46,14 @@ class PriceRow extends StatelessWidget {
                 ],
               ),
             ),
-            VerticalDivider(color: Colors.grey[300], thickness: 1, width: 32),
+            VerticalDivider(color: AppColors.cinza300, thickness: 1, width: 32),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  Text('Variação Hoje', style: TextStyle(fontSize: 14, color: Colors.grey[600])),
+                  Text('Variação Hoje', style: TextStyle(fontSize: 14, color: AppColors.cinza700)),
                   const SizedBox(height: 4),
-                  Text('—', style: TextStyle(fontSize: 22, color: Colors.grey[400])),
+                  Text('—', style: TextStyle(fontSize: 22, color: AppColors.cinza400)),
                 ],
               ),
             ),
@@ -68,7 +69,7 @@ class TokensInfo extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Column(
         children: [
-          Text('Tokens em circulação', style: TextStyle(fontSize: 14, color: Colors.grey[600])),
+          Text('Tokens em circulação', style: TextStyle(fontSize: 14, color: AppColors.cinza700)),
           const SizedBox(height: 4),
           Text(
             NumberFormat('#,##0', 'pt_BR').format(totalTokens),
@@ -85,8 +86,8 @@ class BottomActionBar extends StatelessWidget {
   Widget build(BuildContext context) => Container(
         padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
         decoration: BoxDecoration(
-          color: Colors.white,
-          border: Border(top: BorderSide(color: Colors.grey[200]!)),
+          color: AppColors.branco,
+          border: Border(top: BorderSide(color: AppColors.cinza200)),
         ),
         child: Row(
           children: [
@@ -95,10 +96,10 @@ class BottomActionBar extends StatelessWidget {
                 onPressed: () {},
                 style: OutlinedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 16),
-                  side: BorderSide(color: Colors.grey[400]!),
+                  side: BorderSide(color: AppColors.cinza400),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                 ),
-                child: const Text('Vender', style: TextStyle(color: Colors.black, fontSize: 16)),
+                child: const Text('Vender', style: TextStyle(color: AppColors.preto, fontSize: 16)),
               ),
             ),
             const SizedBox(width: 12),
@@ -106,12 +107,12 @@ class BottomActionBar extends StatelessWidget {
               child: ElevatedButton(
                 onPressed: () {},
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.blue,
+                  backgroundColor: AppColors.azul,
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                   elevation: 0,
                 ),
-                child: const Text('Comprar', style: TextStyle(color: Colors.white, fontSize: 16)),
+                child: const Text('Comprar', style: TextStyle(color: AppColors.branco, fontSize: 16)),
               ),
             ),
           ],
@@ -171,13 +172,13 @@ class _StartupVideoPlayerState extends State<StartupVideoPlayer> {
         child: Stack(
           alignment: Alignment.center,
           children: [
-            Container(color: Colors.black),
+            Container(color: AppColors.preto),
             if (_hasError)
-              const Text('Erro ao carregar vídeo', style: TextStyle(color: Colors.white54))
+              Text('Erro ao carregar vídeo', style: TextStyle(color: AppColors.branco54))
             else if (_initialized)
               VideoPlayer(_controller!)
             else
-              const CircularProgressIndicator(color: Colors.white),
+              const CircularProgressIndicator(color: AppColors.branco),
             if (_initialized)
               GestureDetector(
                 onTap: () => setState(() {
@@ -186,7 +187,7 @@ class _StartupVideoPlayerState extends State<StartupVideoPlayer> {
                 child: AnimatedOpacity(
                   opacity: _controller!.value.isPlaying ? 0.0 : 1.0,
                   duration: const Duration(milliseconds: 300),
-                  child: const Icon(Icons.play_circle_outline, color: Colors.white, size: 64),
+                  child: const Icon(Icons.play_circle_outline, color: AppColors.branco, size: 64),
                 ),
               ),
           ],

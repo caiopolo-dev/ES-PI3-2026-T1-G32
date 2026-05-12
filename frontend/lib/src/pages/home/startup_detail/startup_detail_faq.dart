@@ -3,6 +3,7 @@
 // Descrição: Dialog e modelo de FAQ da tela de detalhes de startup
 
 import 'package:flutter/material.dart';
+import 'package:mescla_invest/src/theme/app_colors.dart';
 import 'package:mescla_invest/src/services/faq_service.dart';
 
 class FaqResult {
@@ -56,7 +57,7 @@ class _FaqDialogState extends State<FaqDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.branco,
       insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
       title: const Text('Enviar pergunta'),
       content: SizedBox(
@@ -73,7 +74,7 @@ class _FaqDialogState extends State<FaqDialog> {
               decoration: InputDecoration(
                 hintText: 'Digite sua pergunta...',
                 filled: true,
-                fillColor: Colors.grey.shade200,
+                fillColor: AppColors.cinza200,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8),
                   borderSide: BorderSide.none,
@@ -85,10 +86,10 @@ class _FaqDialogState extends State<FaqDialog> {
               children: [
                 Switch(
                   value: _privada,
-                  activeThumbColor: Colors.blue,
-                  activeTrackColor: Colors.blue.shade200,
-                  inactiveTrackColor: Colors.grey.shade200,
-                  inactiveThumbColor: Colors.grey,
+                  activeThumbColor: AppColors.azul,
+                  activeTrackColor: AppColors.azul200,
+                  inactiveTrackColor: AppColors.cinza200,
+                  inactiveThumbColor: AppColors.cinza500,
                   onChanged: (v) => setState(() => _privada = v),
                 ),
                 Text(_privada ? 'Privada' : 'Pública',
@@ -102,13 +103,13 @@ class _FaqDialogState extends State<FaqDialog> {
         TextButton(
           onPressed: _sending ? null : () => Navigator.pop(context),
           style: TextButton.styleFrom(
-            backgroundColor: Colors.grey.shade200,
-            foregroundColor: Colors.black,
+            backgroundColor: AppColors.cinza200,
+            foregroundColor: AppColors.preto,
           ),
           child: const Text('Cancelar'),
         ),
         ElevatedButton(
-          style: ElevatedButton.styleFrom(backgroundColor: Colors.blue),
+          style: ElevatedButton.styleFrom(backgroundColor: AppColors.azul),
           onPressed: _sending ? null : _submit,
           child: _sending
               ? const SizedBox(
@@ -116,10 +117,10 @@ class _FaqDialogState extends State<FaqDialog> {
                   height: 16,
                   child: CircularProgressIndicator(
                     strokeWidth: 2,
-                    color: Colors.white,
+                    color: AppColors.branco,
                   ),
                 )
-              : const Text('Enviar', style: TextStyle(color: Colors.white)),
+              : const Text('Enviar', style: TextStyle(color: AppColors.branco)),
         ),
       ],
     );

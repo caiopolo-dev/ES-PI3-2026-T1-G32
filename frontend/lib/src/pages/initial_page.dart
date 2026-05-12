@@ -1,6 +1,7 @@
 // Autor: Caio Ferreira Polo
 // Descrição: Tela inicial do aplicativo com opções de cadastro e login
 import 'package:flutter/material.dart';
+import 'package:mescla_invest/src/theme/app_colors.dart';
 import 'package:mescla_invest/src/pages/auth/login_page.dart';
 import 'package:mescla_invest/src/pages/auth/registration_steps_page.dart';
 
@@ -10,7 +11,7 @@ class InitialPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.branco,
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 60),
@@ -31,8 +32,8 @@ class InitialPage extends StatelessWidget {
                       shaderCallback: (bounds) => const LinearGradient(
                         colors: [
                           Color(0xFF000000),
-                          Color(0xFF013593),
-                          Color(0xFF080B11),
+                          AppColors.azul,
+                          AppColors.preto,
                         ],
                         stops: [0.0, 0.5, 1.0],
                       ).createShader(bounds),
@@ -40,7 +41,7 @@ class InitialPage extends StatelessWidget {
                         'MesclaInvest',
                         style: TextStyle(
                           fontSize: 45,
-                          color: Colors.white,
+                          color: AppColors.branco,
                           fontFamily: 'JosefinSans',
                         ),
                       ),
@@ -74,19 +75,19 @@ class InitialPage extends StatelessWidget {
                     );
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue,
+                    backgroundColor: AppColors.azul,
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(24),
-                      side: const BorderSide(color: Color(0xFF1565C0), width: 0.25),
+                      side: const BorderSide(color: AppColors.azul800, width: 0.25),
                     ),
                     elevation: 6,
-                    shadowColor: Colors.blue.withOpacity(0.4),
+                    shadowColor: AppColors.azul.withValues(alpha: 0.4),
                   ),
                   child: const Text(
                     'Abrir conta',
                     style: TextStyle(
-                      color: Colors.white,
+                      color: AppColors.branco,
                       fontFamily: 'JosefinSans',
                       fontSize: 22,
                     ),
@@ -107,19 +108,19 @@ class InitialPage extends StatelessWidget {
                     );
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFEEEEEE),
+                    backgroundColor: AppColors.cinza200,
                     padding: const EdgeInsets.symmetric(vertical: 12),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(20),
-                      side: const BorderSide(color: Colors.black12),
+                      side: BorderSide(color: AppColors.cinza300),
                     ),
                     elevation: 3,
-                    shadowColor: Colors.black26,
+                    shadowColor: AppColors.cinza400,
                   ),
                   child: const Text(
                     'Já tenho conta',
                     style: TextStyle(
-                      color: Color(0xFF555555),
+                      color: AppColors.cinza700,
                       fontFamily: 'JosefinSans',
                       fontSize: 18,
                     ),

@@ -4,12 +4,15 @@
 
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:mescla_invest/src/theme/app_colors.dart';
 import 'package:mescla_invest/src/services/startup_service.dart';
 import 'package:mescla_invest/src/services/faq_service.dart';
 import 'package:mescla_invest/src/pages/home/startup_detail/startup_detail_widgets.dart';
 import 'package:mescla_invest/src/pages/home/startup_detail/startup_detail_faq.dart';
 import 'package:mescla_invest/src/pages/home/profile_page.dart';
 import 'package:mescla_invest/src/pages/home/balcao_page.dart';
+import 'package:mescla_invest/src/pages/home/wallet_page.dart';
+import 'package:mescla_invest/src/pages/home/catalog_page.dart';
 import 'package:mescla_invest/src/pages/initial_page.dart';
 
 class StartupDetailPage extends StatefulWidget {
@@ -108,17 +111,17 @@ class _StartupDetailPageState extends State<StartupDetailPage> {
     final inicial = nome.isNotEmpty ? nome[0].toUpperCase() : '?';
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.branco,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: AppColors.branco,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          icon: const Icon(Icons.arrow_back, color: AppColors.preto),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
           startup?['nome'] as String? ?? widget.startupNome,
-          style: const TextStyle(color: Colors.black, fontSize: 22, fontWeight: FontWeight.w400),
+          style: const TextStyle(color: AppColors.preto, fontSize: 22, fontWeight: FontWeight.w400),
         ),
         centerTitle: true,
         actions: [
@@ -127,24 +130,24 @@ class _StartupDetailPageState extends State<StartupDetailPage> {
             child: PopupMenuButton<String>(
               onSelected: (value) {
                 if (value == 'perfil') {
-                  Navigator.push(context, MaterialPageRoute(
+                  Navigator.pushReplacement(context, MaterialPageRoute(
                     builder: (_) => ProfilePage(usuario: widget.usuario),
                   ));
                 } else if (value == 'sair') {
                   _logout();
                 }
               },
-              color: Colors.white,
+              color: AppColors.branco,
               elevation: 3,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
-                side: BorderSide(color: Colors.grey.shade200),
+                side: BorderSide(color: AppColors.cinza200),
               ),
               itemBuilder: (_) => [
                 const PopupMenuItem(
                   value: 'perfil',
                   child: Row(children: [
-                    Icon(Icons.person_outline, size: 20, color: Colors.black87),
+                    Icon(Icons.person_outline, size: 20, color: AppColors.preto87),
                     SizedBox(width: 12),
                     Text('Meu Perfil'),
                   ]),
@@ -153,21 +156,29 @@ class _StartupDetailPageState extends State<StartupDetailPage> {
                   enabled: false,
                   height: 8,
                   padding: EdgeInsets.zero,
-                  child: Divider(indent: 16, endIndent: 16, thickness: 1, height: 1, color: Colors.grey.shade200),
+                  child: Divider(indent: 16, endIndent: 16, thickness: 1, height: 1, color: AppColors.cinza200),
                 ),
                 const PopupMenuItem(
                   value: 'sair',
                   child: Row(children: [
-                    Icon(Icons.logout, size: 20, color: Colors.red),
+                    Icon(Icons.logout, size: 20, color: AppColors.vermelho),
                     SizedBox(width: 12),
-                    Text('Sair', style: TextStyle(color: Colors.red)),
+                    Text('Sair', style: TextStyle(color: AppColors.vermelho)),
                   ]),
                 ),
               ],
               child: CircleAvatar(
                 radius: 18,
-                backgroundColor: Colors.blue,
-                child: Text(inicial, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                backgroundColor: AppColors.azul,
+                child: Text(
+                  inicial,
+                  style: const TextStyle(
+                    inherit: false,
+                    color: AppColors.branco,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18,
+                  ),
+                ),
               ),
             ),
           ),
@@ -175,37 +186,49 @@ class _StartupDetailPageState extends State<StartupDetailPage> {
       ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
-          color: Colors.white,
-          border: Border(top: BorderSide(color: Colors.grey.shade300)),
+          color: AppColors.branco,
+          border: Border(top: BorderSide(color: AppColors.cinza300)),
         ),
         child: BottomNavigationBar(
           type: BottomNavigationBarType.fixed,
-          backgroundColor: Colors.white,
+          backgroundColor: AppColors.branco,
           elevation: 0,
           currentIndex: 1,
-          selectedItemColor: Colors.blue,
-          unselectedItemColor: Colors.grey,
+          selectedItemColor: AppColors.azul,
+          unselectedItemColor: AppColors.cinza500,
           onTap: (index) {
             if (index == 0) {
-              Navigator.pushReplacement(
+              Navigator.pushAndRemoveUntil(
                 context,
                 MaterialPageRoute(builder: (_) => BalcaoNegociacaoPage(usuario: widget.usuario)),
+                (_) => false,
               );
               return;
             }
-            if (index == 1) return;
-            if (index == 3) {
-              Navigator.push(
+            if (index == 1) {
+              Navigator.pushAndRemoveUntil(
                 context,
-                MaterialPageRoute(
-                  builder: (_) => ProfilePage(usuario: widget.usuario),
-                ),
+                MaterialPageRoute(builder: (_) => InitialCatalogPage(usuario: widget.usuario)),
+                (_) => false,
               );
               return;
             }
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Em breve')),
-            );
+            if (index == 2) {
+              Navigator.pushAndRemoveUntil(
+                context,
+                MaterialPageRoute(builder: (_) => WalletPage(usuario: widget.usuario)),
+                (_) => false,
+              );
+              return;
+            }
+            if (index == 3) {
+              Navigator.pushAndRemoveUntil(
+                context,
+                MaterialPageRoute(builder: (_) => ProfilePage(usuario: widget.usuario)),
+                (_) => false,
+              );
+              return;
+            }
           },
           items: const [
             BottomNavigationBarItem(icon: Icon(Icons.store), label: "Mercado"),
@@ -216,7 +239,7 @@ class _StartupDetailPageState extends State<StartupDetailPage> {
         ),
       ),
       body: isLoading
-          ? const Center(child: CircularProgressIndicator(color: Colors.blue))
+          ? const Center(child: CircularProgressIndicator(color: AppColors.azul))
           : error != null
               ? Center(child: Text('Erro: $error'))
               : Column(
@@ -271,12 +294,12 @@ class _StartupDetailPageState extends State<StartupDetailPage> {
           Container(
             height: 180,
             decoration: BoxDecoration(
-              border: Border.all(color: Colors.grey[200]!),
+              border: Border.all(color: AppColors.cinza200),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Center(
               child: Text('Histórico de preços em breve',
-                  style: TextStyle(color: Colors.grey[400], fontSize: 14)),
+                  style: TextStyle(color: AppColors.cinza400, fontSize: 14)),
             ),
           ),
           const SizedBox(height: 14),
@@ -293,13 +316,13 @@ class _StartupDetailPageState extends State<StartupDetailPage> {
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                       decoration: BoxDecoration(
-                        color: selected ? Colors.blue : Colors.transparent,
-                        border: Border.all(color: selected ? Colors.blue : Colors.grey[400]!),
+                        color: selected ? AppColors.azul : AppColors.transparente,
+                        border: Border.all(color: selected ? AppColors.azul : AppColors.cinza400),
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Text(
                         _periods[i],
-                        style: TextStyle(fontSize: 13, color: selected ? Colors.white : Colors.black),
+                        style: TextStyle(fontSize: 13, color: selected ? AppColors.branco : AppColors.preto),
                       ),
                     ),
                   ),
@@ -324,10 +347,10 @@ class _StartupDetailPageState extends State<StartupDetailPage> {
               ),
               style: OutlinedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
-                side: BorderSide(color: Colors.grey[400]!),
+                side: BorderSide(color: AppColors.cinza400),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
               ),
-              child: const Text('Baixar sumário executivo', style: TextStyle(color: Colors.black)),
+              child: const Text('Baixar sumário executivo', style: TextStyle(color: AppColors.preto)),
             ),
           ),
           const SizedBox(height: 28),
@@ -357,13 +380,13 @@ class _StartupDetailPageState extends State<StartupDetailPage> {
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                       decoration: BoxDecoration(
-                        color: selected ? Colors.blue : Colors.transparent,
-                        border: Border.all(color: selected ? Colors.blue : Colors.grey[400]!),
+                        color: selected ? AppColors.azul : AppColors.transparente,
+                        border: Border.all(color: selected ? AppColors.azul : AppColors.cinza400),
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Text(
                         _faqFilters[i],
-                        style: TextStyle(fontSize: 13, color: selected ? Colors.white : Colors.black),
+                        style: TextStyle(fontSize: 13, color: selected ? AppColors.branco : AppColors.preto),
                       ),
                     ),
                   ),
@@ -377,10 +400,10 @@ class _StartupDetailPageState extends State<StartupDetailPage> {
             width: double.infinity,
             child: ElevatedButton.icon(
               onPressed: _showFaqDialog,
-              icon: const Icon(Icons.add_comment_outlined, size: 18, color: Colors.white),
-              label: const Text('Enviar pergunta', style: TextStyle(color: Colors.white)),
+              icon: const Icon(Icons.add_comment_outlined, size: 18, color: AppColors.branco),
+              label: const Text('Enviar pergunta', style: TextStyle(color: AppColors.branco)),
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blue,
+                backgroundColor: AppColors.azul,
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                 elevation: 0,
@@ -390,9 +413,9 @@ class _StartupDetailPageState extends State<StartupDetailPage> {
           const SizedBox(height: 16),
 
           if (_faqsLoading)
-            const Center(child: CircularProgressIndicator(color: Colors.blue))
+            const Center(child: CircularProgressIndicator(color: AppColors.azul))
           else if (_faqs.isEmpty)
-            Center(child: Text('Nenhuma pergunta ainda', style: TextStyle(color: Colors.grey[400])))
+            Center(child: Text('Nenhuma pergunta ainda', style: TextStyle(color: AppColors.cinza400)))
           else
             // Filtra a lista no lado cliente após carregar — sem nova chamada ao backend.
             // _faqFilter: 0=Todas, 1=Públicas, 2=Privadas (apenas as do próprio usuário).
@@ -406,9 +429,9 @@ class _StartupDetailPageState extends State<StartupDetailPage> {
                 margin: const EdgeInsets.only(bottom: 12),
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
-                  color: isPrivada ? Colors.grey.shade200 : Colors.white,
+                  color: isPrivada ? AppColors.cinza200 : AppColors.branco,
                   borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: Colors.grey.shade300),
+                  border: Border.all(color: AppColors.cinza300),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -418,17 +441,17 @@ class _StartupDetailPageState extends State<StartupDetailPage> {
                         Icon(
                           isPrivada ? Icons.lock_outline : Icons.public,
                           size: 14,
-                          color: Colors.grey[500],
+                          color: AppColors.cinza500,
                         ),
                         const SizedBox(width: 4),
                         Text(
                           isPrivada ? 'Privada' : 'Pública',
-                          style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+                          style: TextStyle(fontSize: 12, color: AppColors.cinza500),
                         ),
                         const Spacer(),
                         Text(
                           faq['nomeUsuario'] as String? ?? '',
-                          style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+                          style: TextStyle(fontSize: 12, color: AppColors.cinza500),
                         ),
                       ],
                     ),
@@ -459,7 +482,7 @@ class _StartupDetailPageState extends State<StartupDetailPage> {
             label,
             style: TextStyle(
               fontSize: 14,
-              color: isSelected ? Colors.blue : Colors.grey[500],
+              color: isSelected ? AppColors.azul : AppColors.cinza500,
               fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
             ),
           ),
@@ -468,7 +491,7 @@ class _StartupDetailPageState extends State<StartupDetailPage> {
             duration: const Duration(milliseconds: 200),
             height: 2,
             width: isSelected ? 90 : 0,
-            color: Colors.blue,
+            color: AppColors.azul,
           ),
         ],
       ),
@@ -478,8 +501,8 @@ class _StartupDetailPageState extends State<StartupDetailPage> {
   Widget _videoUnavailable() => AspectRatio(
         aspectRatio: 16 / 9,
         child: Container(
-          decoration: BoxDecoration(color: Colors.black, borderRadius: BorderRadius.circular(8)),
-          child: const Center(child: Text('Vídeo não disponível', style: TextStyle(color: Colors.white54))),
+          decoration: BoxDecoration(color: AppColors.preto, borderRadius: BorderRadius.circular(8)),
+          child: Center(child: Text('Vídeo não disponível', style: TextStyle(color: AppColors.branco54))),
         ),
       );
 
@@ -495,7 +518,7 @@ class _StartupDetailPageState extends State<StartupDetailPage> {
             children: [
               Text(c['nome'] as String? ?? '', style: const TextStyle(fontSize: 15)),
               const SizedBox(height: 2),
-              Text(c['cargo'] as String? ?? '', style: TextStyle(fontSize: 13, color: Colors.grey[500])),
+              Text(c['cargo'] as String? ?? '', style: TextStyle(fontSize: 13, color: AppColors.cinza500)),
             ],
           ),
         ),
@@ -510,7 +533,7 @@ class _StartupDetailPageState extends State<StartupDetailPage> {
               children: [
                 const Text('Membros externos', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                 const SizedBox(width: 6),
-                Icon(Icons.info_outline, size: 18, color: Colors.grey[500]),
+                Icon(Icons.info_outline, size: 18, color: AppColors.cinza500),
               ],
             ),
           ),
