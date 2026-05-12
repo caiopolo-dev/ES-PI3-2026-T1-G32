@@ -44,7 +44,8 @@ ES-PI3-2026-T1-G32/
 ├── frontend/               # Aplicativo Flutter
 │   └── lib/src/
 │       ├── pages/          # Telas da aplicação
-│       └── services/       # Camada de comunicação com Cloud Functions
+│       ├── services/       # Camada de comunicação com Cloud Functions
+│       └── theme/          # Constantes de cores e tema (AppColors)
 │
 └── firebase/
     ├── functions/src/      # Cloud Functions (TypeScript)
