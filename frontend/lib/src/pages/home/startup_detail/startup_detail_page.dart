@@ -9,23 +9,20 @@ import 'package:mescla_invest/src/services/startup_service.dart';
 import 'package:mescla_invest/src/services/faq_service.dart';
 import 'package:mescla_invest/src/pages/home/startup_detail/startup_detail_widgets.dart';
 import 'package:mescla_invest/src/pages/home/startup_detail/startup_detail_faq.dart';
-import 'package:mescla_invest/src/pages/home/home_page.dart';
-import 'package:mescla_invest/src/pages/home/profile_page.dart';
-import 'package:mescla_invest/src/pages/home/balcao_page.dart';
-import 'package:mescla_invest/src/pages/home/wallet_page.dart';
-import 'package:mescla_invest/src/pages/home/catalog_page.dart';
 import 'package:mescla_invest/src/pages/initial_page.dart';
 
 class StartupDetailPage extends StatefulWidget {
   final String startupId;
   final String startupNome;
   final Map<String, dynamic>? usuario;
+  final void Function(int)? onTabSwitch;
 
   const StartupDetailPage({
     super.key,
     required this.startupId,
     required this.startupNome,
     this.usuario,
+    this.onTabSwitch,
   });
 
   @override
@@ -131,9 +128,8 @@ class _StartupDetailPageState extends State<StartupDetailPage> {
             child: PopupMenuButton<String>(
               onSelected: (value) {
                 if (value == 'perfil') {
-                  Navigator.pushReplacement(context, MaterialPageRoute(
-                    builder: (_) => ProfilePage(usuario: widget.usuario),
-                  ));
+                  Navigator.pop(context);
+                  widget.onTabSwitch?.call(4);
                 } else if (value == 'sair') {
                   _logout();
                 }
@@ -184,69 +180,6 @@ class _StartupDetailPageState extends State<StartupDetailPage> {
             ),
           ),
         ],
-      ),
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          color: AppColors.branco,
-          border: Border(top: BorderSide(color: AppColors.cinza300)),
-        ),
-        child: BottomNavigationBar(
-          type: BottomNavigationBarType.fixed,
-          backgroundColor: AppColors.branco,
-          elevation: 0,
-          currentIndex: 2,
-          selectedItemColor: AppColors.azul,
-          unselectedItemColor: AppColors.cinza500,
-          onTap: (index) {
-            if (index == 0) {
-              Navigator.pushAndRemoveUntil(
-                context,
-                MaterialPageRoute(builder: (_) => HomePage(usuario: widget.usuario)),
-                (_) => false,
-              );
-              return;
-            }
-            if (index == 1) {
-              Navigator.pushAndRemoveUntil(
-                context,
-                MaterialPageRoute(builder: (_) => BalcaoNegociacaoPage(usuario: widget.usuario)),
-                (_) => false,
-              );
-              return;
-            }
-            if (index == 2) {
-              Navigator.pushAndRemoveUntil(
-                context,
-                MaterialPageRoute(builder: (_) => InitialCatalogPage(usuario: widget.usuario)),
-                (_) => false,
-              );
-              return;
-            }
-            if (index == 3) {
-              Navigator.pushAndRemoveUntil(
-                context,
-                MaterialPageRoute(builder: (_) => WalletPage(usuario: widget.usuario)),
-                (_) => false,
-              );
-              return;
-            }
-            if (index == 4) {
-              Navigator.pushAndRemoveUntil(
-                context,
-                MaterialPageRoute(builder: (_) => ProfilePage(usuario: widget.usuario)),
-                (_) => false,
-              );
-              return;
-            }
-          },
-          items: const [
-            BottomNavigationBarItem(icon: Icon(Icons.home_outlined), label: "Início"),
-            BottomNavigationBarItem(icon: Icon(Icons.store), label: "Mercado"),
-            BottomNavigationBarItem(icon: Icon(Icons.list), label: "Catálogo"),
-            BottomNavigationBarItem(icon: Icon(Icons.account_balance_wallet), label: "Carteira"),
-            BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: "Perfil"),
-          ],
-        ),
       ),
       body: isLoading
           ? const Center(child: CircularProgressIndicator(color: AppColors.azul))
