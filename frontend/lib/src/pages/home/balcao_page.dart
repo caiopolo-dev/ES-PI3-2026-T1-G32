@@ -25,6 +25,12 @@ class _BalcaoNegociacaoPageState extends State<BalcaoNegociacaoPage>{
   List<dynamic> offers = [];
   bool isLoading = true;
   String? errorMessage;
+
+
+  final TextEditingController _searchController = TextEditingController();
+  String _search = '';
+
+
   @override
   void didUpdateWidget(BalcaoNegociacaoPage oldWidget) {
     super.didUpdateWidget(oldWidget);
@@ -47,7 +53,15 @@ class _BalcaoNegociacaoPageState extends State<BalcaoNegociacaoPage>{
     setState(() {
       isLoading = true;
       errorMessage = null;
+      _search = _searchController.text.toLowerCase();
     });
+
+    @override
+    void dispose() {
+      // Libera o controller para evitar memory leak.
+      _searchController.dispose();
+      super.dispose();
+    }
 
 
     try{
@@ -55,12 +69,15 @@ class _BalcaoNegociacaoPageState extends State<BalcaoNegociacaoPage>{
       final callable  = FirebaseFunctions.instance.httpsCallable('listOffers');
       final result = await callable.call();
       final data = result.data['data'];
-
+// CONTINUAR --------------------------------------------------------------------------------------------------------------------------------------
       setState(() {
+        if (_search != ''){
+
+        }
         offers = List<dynamic>.from(data);
         isLoading = false;
       });
-
+// ------------------------------------------------------------------------------------------------------------------------------------------------
     }catch(e){
       if (!mounted) return;
       setState(() {
