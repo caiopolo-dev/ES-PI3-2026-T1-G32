@@ -3,9 +3,12 @@
 // Descrição: Tela de login (email e senha)
 
 import 'package:flutter/material.dart';
-import '../../services/auth_service.dart';
-import '../catalog_page.dart';
-import 'password_recovery_page.dart';
+import 'package:mescla_invest/src/theme/app_colors.dart';
+import 'package:mescla_invest/src/services/auth_service.dart';
+import 'package:mescla_invest/src/widgets/main_scaffold.dart';
+import 'package:mescla_invest/src/pages/auth/password_recovery_page.dart';
+import 'package:mescla_invest/src/pages/auth/two_factor_verify_page.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -21,6 +24,8 @@ class _LoginPageState extends State<LoginPage> {
   String errorText = '';
   bool isLoading = false;
 
+  // Validação local antes de chamar a Cloud Function, evitando
+  // uma requisição de rede desnecessária para erros evidentes.
   bool validateLogin() {
     setState(() => errorText = '');
 
@@ -47,6 +52,7 @@ class _LoginPageState extends State<LoginPage> {
           senha: passwordController.text,
         );
 
+        // Após qualquer await, o widget pode ter sido descartado — verificar antes de usar context.
         if (!mounted) return;
 
         if (result['success']) {
@@ -54,13 +60,14 @@ class _LoginPageState extends State<LoginPage> {
           final usuario = result['usuario'];
           
           // Redireciona para catálogo
-          Navigator.pushReplacement(
+          Navigator.pushAndRemoveUntil(
             context,
             MaterialPageRoute(
-              builder: (context) => InitialCatalogPage(
+              builder: (_) => MainScaffold(
                 usuario: usuario as Map<String, dynamic>?,
               ),
             ),
+            (_) => false,
           );
         } else {
           // Erro no login
@@ -71,12 +78,26 @@ class _LoginPageState extends State<LoginPage> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(result['message'] ?? 'Erro ao fazer login'),
-              backgroundColor: Colors.red,
+              backgroundColor: AppColors.vermelho,
               duration: const Duration(seconds: 3),
             ),
           );
         }
-      } catch (e) {
+      } on FirebaseAuthMultiFactorException catch (e) {
+  // Usuário tem 2FA ativo: o Firebase não completa o login e lança esta exceção
+  // com o resolver necessário para validar o código TOTP.
+  if (mounted) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => TwoFactorVerifyPage(
+          resolver: e.resolver,
+          usuario: null,
+        ),
+      ),
+    );
+  }
+} catch (e) {
         if (mounted) {
           setState(() {
             errorText = 'Erro de conexão: ${e.toString()}';
@@ -85,12 +106,13 @@ class _LoginPageState extends State<LoginPage> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('Erro: ${e.toString()}'),
-              backgroundColor: Colors.red,
+              backgroundColor: AppColors.vermelho,
               duration: const Duration(seconds: 3),
             ),
           );
         }
       } finally {
+        // finally garante que isLoading é resetado mesmo em caso de exceção.
         if (mounted) {
           setState(() => isLoading = false);
         }
@@ -101,12 +123,12 @@ class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.branco,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: AppColors.branco,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          icon: const Icon(Icons.arrow_back, color: AppColors.preto),
           onPressed: () => Navigator.pop(context),
         ),
       ),
@@ -152,12 +174,12 @@ class _LoginPageState extends State<LoginPage> {
                         style: const TextStyle(fontFamily: 'JosefinSans', fontSize: 18),
                         decoration: const InputDecoration(
                           hintText: 'Digite seu email',
-                          hintStyle: TextStyle(color: Colors.black26),
+                          hintStyle: TextStyle(color: AppColors.cinza400),
                           enabledBorder: UnderlineInputBorder(
-                            borderSide: BorderSide(color: Colors.black26),
+                            borderSide: BorderSide(color: AppColors.cinza400),
                           ),
                           focusedBorder: UnderlineInputBorder(
-                            borderSide: BorderSide(color: Color(0xFF013593), width: 2),
+                            borderSide: BorderSide(color: AppColors.azul, width: 2),
                           ),
                         ),
                       ),
@@ -172,12 +194,12 @@ class _LoginPageState extends State<LoginPage> {
                         style: const TextStyle(fontFamily: 'JosefinSans', fontSize: 18),
                         decoration: const InputDecoration(
                           hintText: 'Digite sua senha',
-                          hintStyle: TextStyle(color: Colors.black26),
+                          hintStyle: TextStyle(color: AppColors.cinza400),
                           enabledBorder: UnderlineInputBorder(
-                            borderSide: BorderSide(color: Colors.black26),
+                            borderSide: BorderSide(color: AppColors.cinza400),
                           ),
                           focusedBorder: UnderlineInputBorder(
-                            borderSide: BorderSide(color: Color(0xFF013593), width: 2),
+                            borderSide: BorderSide(color: AppColors.azul, width: 2),
                           ),
                         ),
                       ),
@@ -188,7 +210,8 @@ class _LoginPageState extends State<LoginPage> {
                       if (errorText.isNotEmpty)
                         Text(
                           errorText,
-                          style: const TextStyle(color: Colors.red),
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(color: AppColors.vermelho),
                         ),
                     ],
                   ),
@@ -201,15 +224,15 @@ class _LoginPageState extends State<LoginPage> {
                 child: ElevatedButton(
                   onPressed: isLoading ? null : login,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue,
-                    foregroundColor: Colors.white,
+                    backgroundColor: AppColors.azul,
+                    foregroundColor: AppColors.branco,
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(24),
-                      side: const BorderSide(color: Color(0xFF1565C0), width: 0.25),
+                      side: const BorderSide(color: AppColors.azul800, width: 0.25),
                     ),
                     elevation: 6,
-                    shadowColor: Colors.blue.withOpacity(0.4),
+                    shadowColor: AppColors.azul.withValues(alpha: 0.4),
                   ),
                   child: isLoading
                       ? const SizedBox(
@@ -217,7 +240,7 @@ class _LoginPageState extends State<LoginPage> {
                           width: 20,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                            valueColor: AlwaysStoppedAnimation<Color>(AppColors.branco),
                           ),
                         )
                       : const Text(
@@ -245,22 +268,22 @@ class _LoginPageState extends State<LoginPage> {
                     );
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFEEEEEE),
-                    foregroundColor: const Color(0xFF555555),
+                    backgroundColor: AppColors.cinza200,
+                    foregroundColor: AppColors.cinza700,
                     padding: const EdgeInsets.symmetric(vertical: 12),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(20),
-                      side: const BorderSide(color: Colors.black12),
+                      side: BorderSide(color: AppColors.cinza300),
                     ),
                     elevation: 3,
-                    shadowColor: Colors.black26,
+                    shadowColor: AppColors.cinza400,
                   ),
                   child: const Text(
                     'Recuperar senha',
                     style: TextStyle(
                       fontFamily: 'JosefinSans',
                       fontSize: 18,
-                      color: Color(0xFF555555),
+                      color: AppColors.cinza700,
                     ),
                   ),
                 ),

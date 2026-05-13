@@ -3,8 +3,9 @@
 // Descrição: Tela de cadastro multi-etapas com validação
 
 import 'package:flutter/material.dart';
+import 'package:mescla_invest/src/theme/app_colors.dart';
 import 'package:flutter/services.dart';
-import '../../services/auth_service.dart';
+import 'package:mescla_invest/src/services/auth_service.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -32,15 +33,23 @@ class _RegisterPageState extends State<RegisterPage> {
     'Senha',
   ];
 
+  // Valida os campos do passo atual antes de avançar.
+  // Cada case corresponde a um step da tela.
   bool validateStep() {
     setState(() => errorText = '');
 
     switch (currentStep) {
-      case 0:
-        if (nameController.text.trim().split(' ').length < 2) {
+      case 0: // Dados pessoais: nome completo e RG
+        final nome = nameController.text.trim();
+        if (nome.split(' ').length < 2) {
           errorText = 'Digite seu nome completo';
           return false;
         }
+        if (RegExp(r'[0-9]').hasMatch(nome)) {
+          errorText = 'Nome não pode conter números';
+          return false;
+        }
+        // Remove a máscara do RG antes de validar o comprimento real.
         final rg = rgController.text.replaceAll(RegExp(r'[^0-9]'), '');
         if (rg.isEmpty || rg.length < 7 || rg.length > 9) {
           errorText = 'RG deve ter entre 7 e 9 dígitos';
@@ -48,11 +57,12 @@ class _RegisterPageState extends State<RegisterPage> {
         }
         return true;
 
-      case 1:
+      case 1: // Contato: email e telefone
         if (!RegExp(r'^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$').hasMatch(emailController.text)) {
           errorText = 'Digite um email válido';
           return false;
         }
+        // Remove a máscara do telefone para verificar se há dígitos suficientes.
         final phone = phoneController.text.replaceAll(RegExp(r'[^0-9]'), '');
         if (phone.length < 10) {
           errorText = 'Número de celular inválido';
@@ -60,7 +70,7 @@ class _RegisterPageState extends State<RegisterPage> {
         }
         return true;
 
-      case 2:
+      case 2: // Senha: regex de complexidade + confirmação
         final password = passwordController.text;
         if (!RegExp(r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$').hasMatch(password)) {
           errorText = 'Senha deve ter 8+ caracteres, maiúscula, minúscula e número';
@@ -82,7 +92,11 @@ class _RegisterPageState extends State<RegisterPage> {
       case 0:
         return Column(
           children: [
-            buildInput(nameController, 'Nome completo'),
+            buildInput(
+              nameController,
+              'Nome completo',
+              inputFormatters: [_NomeFormatter()],
+            ),
             const SizedBox(height: 20),
             buildInput(
               rgController,
@@ -120,7 +134,7 @@ class _RegisterPageState extends State<RegisterPage> {
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 14,
-                    color: Colors.black38,
+                    color: AppColors.cinza500,
                     fontFamily: 'JosefinSans',
                   ),
                 );
@@ -153,13 +167,13 @@ class _RegisterPageState extends State<RegisterPage> {
       style: const TextStyle(fontFamily: 'JosefinSans', fontSize: 18),
       decoration: InputDecoration(
         hintText: hint,
-        hintStyle: const TextStyle(color: Colors.black26),
+        hintStyle: TextStyle(color: AppColors.cinza400),
         counterText: '',
         enabledBorder: const UnderlineInputBorder(
-          borderSide: BorderSide(color: Colors.black26, width: 1),
+          borderSide: BorderSide(color: AppColors.cinza400, width: 1),
         ),
         focusedBorder: const UnderlineInputBorder(
-          borderSide: BorderSide(color: Color(0xFF013593), width: 2),
+          borderSide: BorderSide(color: AppColors.azul, width: 2),
         ),
       ),
     );
@@ -178,6 +192,7 @@ class _RegisterPageState extends State<RegisterPage> {
 
     setState(() => isLoading = true);
 
+    // Remove as máscaras antes de enviar para o backend.
     final result = await AuthService.registerUser(
       rg: rgController.text.replaceAll(RegExp(r'[^0-9]'), ''),
       email: emailController.text,
@@ -192,7 +207,14 @@ class _RegisterPageState extends State<RegisterPage> {
 
     if (result['success']) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Cadastro realizado com sucesso!')),
+        const SnackBar(
+          content: Text(
+            'Cadastro realizado! Verifique seu e-mail para ativar a conta.',
+          ),
+          backgroundColor: AppColors.verde,
+          // 15 segundos para o usuário ter tempo de ler a instrução de verificar o e-mail.
+          duration: Duration(seconds: 15),
+        ),
       );
       Navigator.pop(context);
     } else {
@@ -205,12 +227,12 @@ class _RegisterPageState extends State<RegisterPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.branco,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: AppColors.branco,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          icon: const Icon(Icons.arrow_back, color: AppColors.preto),
           onPressed: () {
             if (currentStep == 0) {
               Navigator.pop(context);
@@ -248,7 +270,7 @@ class _RegisterPageState extends State<RegisterPage> {
 
               Text(
                 'Passo ${currentStep + 1} de 3',
-                style: TextStyle(fontSize: 20, color: Colors.grey[500], fontFamily: 'JosefinSans'),
+                style: TextStyle(fontSize: 20, color: AppColors.cinza500, fontFamily: 'JosefinSans'),
               ),
 
               const SizedBox(height: 30),
@@ -258,7 +280,7 @@ class _RegisterPageState extends State<RegisterPage> {
               const SizedBox(height: 20),
 
               if (errorText.isNotEmpty)
-                Text(errorText, style: const TextStyle(color: Colors.red)),
+                Text(errorText, style: const TextStyle(color: AppColors.vermelho)),
 
               const SizedBox(height: 40),
 
@@ -267,21 +289,21 @@ class _RegisterPageState extends State<RegisterPage> {
                 child: ElevatedButton(
                   onPressed: isLoading ? null : nextStep,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue,
-                    foregroundColor: Colors.white,
+                    backgroundColor: AppColors.azul,
+                    foregroundColor: AppColors.branco,
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(24),
-                      side: const BorderSide(color: Color(0xFF1565C0), width: 0.25),
+                      side: const BorderSide(color: AppColors.azul800, width: 0.25),
                     ),
                     elevation: 6,
-                    shadowColor: Colors.blue.withOpacity(0.4),
+                    shadowColor: AppColors.azul.withValues(alpha: 0.4),
                   ),
                   child: isLoading
                       ? const SizedBox(
                           height: 20,
                           width: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                          child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.branco),
                         )
                       : Text(
                           currentStep == 2 ? 'Finalizar' : 'Continuar',
@@ -297,7 +319,26 @@ class _RegisterPageState extends State<RegisterPage> {
   }
 }
 
-// Máscara RG: XX.XXX.XXX-X
+// Formatadores de input: aplicam máscara em tempo real enquanto o usuário digita.
+// _NomeFormatter: bloqueia números e caracteres especiais no campo de nome.
+class _NomeFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    final sanitized = newValue.text.replaceAll(
+      RegExp(r'[^a-zA-ZÀ-ÿ\s]'),
+      '',
+    );
+    return newValue.copyWith(
+      text: sanitized,
+      selection: TextSelection.collapsed(offset: sanitized.length),
+    );
+  }
+}
+
+// _RgFormatter: aplica máscara XX.XXX.XXX-X conforme o usuário digita.
 class _RgFormatter extends TextInputFormatter {
   @override
   TextEditingValue formatEditUpdate(TextEditingValue oldValue, TextEditingValue newValue) {
@@ -319,7 +360,7 @@ class _RgFormatter extends TextInputFormatter {
   }
 }
 
-// Máscara telefone: (XX) XXXXX-XXXX
+// _PhoneFormatter: aplica máscara (XX) XXXXX-XXXX conforme o usuário digita.
 class _PhoneFormatter extends TextInputFormatter {
   @override
   TextEditingValue formatEditUpdate(TextEditingValue oldValue, TextEditingValue newValue) {

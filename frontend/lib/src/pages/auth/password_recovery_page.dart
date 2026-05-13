@@ -1,7 +1,9 @@
-// Caio Ferreira Polo 25002823
-
+// Autor: Caio Ferreira Polo
+// Descrição: Tela de recuperação de senha por e-mail
 
 import 'package:flutter/material.dart';
+import 'package:mescla_invest/src/theme/app_colors.dart';
+import 'package:mescla_invest/src/services/auth_service.dart';
 
 class PasswordRecoveryPage extends StatefulWidget {
   const PasswordRecoveryPage({super.key});
@@ -16,7 +18,10 @@ class _PasswordRecoveryPageState extends State<PasswordRecoveryPage> {
   String errorText = '';
   bool isLoading = false;
 
+  // Validação local com regex completa antes de qualquer chamada de rede.
+  // Regex mais rigorosa que a do auth_service para evitar requisição com e-mail claramente inválido.
   bool validateEmail() {
+    // Limpa erro anterior antes de revalidar.
     setState(() => errorText = '');
 
     if (!RegExp(r'^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$').hasMatch(emailController.text)) {
@@ -27,59 +32,49 @@ class _PasswordRecoveryPageState extends State<PasswordRecoveryPage> {
     return true;
   }
 
+  // Fluxo de recuperação:
+  // 1. Valida o e-mail localmente
+  // 2. Chama AuthService que: verifica existência no Firestore, depois aciona Firebase
+  // 3. Se bem-sucedido, exibe snackbar e retorna à tela anterior
+  // 4. Se falhar (e-mail não cadastrado, etc.), exibe a mensagem de erro na tela
   Future<void> sendRecoveryEmail() async {
-    if (validateEmail()) {
-      setState(() => isLoading = true);
+    // Aborta se a validação local falhar — evita requisição desnecessária.
+    if (!validateEmail()) return;
 
-      try {
-        await Future.delayed(const Duration(seconds: 2));
+    // Ativa o indicador de carregamento e limpa qualquer erro residual.
+    setState(() { isLoading = true; errorText = ''; });
 
-        if (!mounted) return;
+    final result = await AuthService.sendPasswordReset(email: emailController.text);
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Email de recuperação enviado para ${emailController.text}'),
-            backgroundColor: Colors.green,
-            duration: const Duration(seconds: 3),
-          ),
-        );
+    // Após await, o widget pode ter sido destruído — não usar context sem verificar.
+    if (!mounted) return;
+    setState(() => isLoading = false);
 
-        // Aguardar 1 segundo e voltar para login
-        await Future.delayed(const Duration(seconds: 1));
-        if (mounted) {
-          Navigator.pop(context);
-        }
-      } catch (e) {
-        if (mounted) {
-          setState(() {
-            errorText = 'Erro ao enviar email: ${e.toString()}';
-          });
-
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Erro: ${e.toString()}'),
-              backgroundColor: Colors.red,
-              duration: const Duration(seconds: 3),
-            ),
-          );
-        }
-      } finally {
-        if (mounted) {
-          setState(() => isLoading = false);
-        }
-      }
+    if (result['success'] as bool) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('E-mail de recuperação enviado com sucesso'),
+          backgroundColor: AppColors.verde,
+          duration: Duration(seconds: 3),
+        ),
+      );
+      // Retorna à tela de login após o envio bem-sucedido.
+      Navigator.pop(context);
+    } else {
+      // Exibe a mensagem de erro retornada pelo AuthService (ex: "Nenhuma conta encontrada").
+      setState(() => errorText = result['message'] as String? ?? 'Erro ao enviar e-mail');
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.branco,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: AppColors.branco,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          icon: const Icon(Icons.arrow_back, color: AppColors.preto),
           onPressed: () => Navigator.pop(context),
         ),
       ),
@@ -124,7 +119,7 @@ class _PasswordRecoveryPageState extends State<PasswordRecoveryPage> {
                         style: TextStyle(
                           fontSize: 15,
                           fontFamily: 'JosefinSans',
-                          color: Colors.black54,
+                          color: AppColors.preto54,
                         ),
                       ),
 
@@ -138,12 +133,12 @@ class _PasswordRecoveryPageState extends State<PasswordRecoveryPage> {
                         style: const TextStyle(fontFamily: 'JosefinSans', fontSize: 18),
                         decoration: const InputDecoration(
                           hintText: 'Digite seu email',
-                          hintStyle: TextStyle(color: Colors.black26),
+                          hintStyle: TextStyle(color: AppColors.cinza400),
                           enabledBorder: UnderlineInputBorder(
-                            borderSide: BorderSide(color: Colors.black26),
+                            borderSide: BorderSide(color: AppColors.cinza400),
                           ),
                           focusedBorder: UnderlineInputBorder(
-                            borderSide: BorderSide(color: Color(0xFF013593), width: 2),
+                            borderSide: BorderSide(color: AppColors.azul, width: 2),
                           ),
                         ),
                       ),
@@ -154,7 +149,7 @@ class _PasswordRecoveryPageState extends State<PasswordRecoveryPage> {
                       if (errorText.isNotEmpty)
                         Text(
                           errorText,
-                          style: const TextStyle(color: Colors.red),
+                          style: const TextStyle(color: AppColors.vermelho),
                         ),
                     ],
                   ),
@@ -167,15 +162,15 @@ class _PasswordRecoveryPageState extends State<PasswordRecoveryPage> {
                 child: ElevatedButton(
                   onPressed: isLoading ? null : sendRecoveryEmail,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue,
-                    foregroundColor: Colors.white,
+                    backgroundColor: AppColors.azul,
+                    foregroundColor: AppColors.branco,
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(24),
-                      side: const BorderSide(color: Color(0xFF1565C0), width: 0.25),
+                      side: const BorderSide(color: AppColors.azul800, width: 0.25),
                     ),
                     elevation: 6,
-                    shadowColor: Colors.blue.withOpacity(0.4),
+                    shadowColor: AppColors.azul.withValues(alpha: 0.4),
                   ),
                   child: isLoading
                       ? const SizedBox(
@@ -183,7 +178,7 @@ class _PasswordRecoveryPageState extends State<PasswordRecoveryPage> {
                           width: 20,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                            valueColor: AlwaysStoppedAnimation<Color>(AppColors.branco),
                           ),
                         )
                       : const Text(
