@@ -10,9 +10,8 @@ import 'package:mescla_invest/src/pages/home/startup_detail/startup_detail_widge
 import 'package:mescla_invest/src/pages/home/startup_detail/startup_detail_faq.dart';
 import 'package:mescla_invest/src/widgets/user_avatar_menu.dart';
 import 'package:mescla_invest/src/widgets/app_loading_indicator.dart';
-//---------------
 import 'package:mescla_invest/src/pages/home/buy_steps_page.dart';
-//---------------
+
 
 
 class StartupDetailPage extends StatefulWidget {
@@ -170,7 +169,6 @@ class _StartupDetailPageState extends State<StartupDetailPage> {
           ),
         ],
       ),
-     //-------------------
       body: isLoading
         ? const AppLoadingIndicator()
         : error != null
@@ -183,7 +181,6 @@ class _StartupDetailPageState extends State<StartupDetailPage> {
                   ),
                 ],
               ),
-      //-------------------
     );
   }
 
