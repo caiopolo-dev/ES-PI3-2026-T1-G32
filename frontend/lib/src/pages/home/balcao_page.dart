@@ -25,6 +25,10 @@ class _BalcaoNegociacaoPageState extends State<BalcaoNegociacaoPage>{
   List<dynamic> offers = [];
   bool isLoading = true;
   String? errorMessage;
+
+  final TextEditingController _searchController = TextEditingController();
+  String _search = '';
+
   @override
   void didUpdateWidget(BalcaoNegociacaoPage oldWidget) {
     super.didUpdateWidget(oldWidget);
@@ -39,6 +43,11 @@ class _BalcaoNegociacaoPageState extends State<BalcaoNegociacaoPage>{
     loadOffers();
   }
   
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
 
   Future<void> loadOffers() async{
@@ -55,6 +64,9 @@ class _BalcaoNegociacaoPageState extends State<BalcaoNegociacaoPage>{
       final callable  = FirebaseFunctions.instance.httpsCallable('listOffers');
       final result = await callable.call();
       final data = result.data['data'];
+      if (!mounted){
+        return;
+      } 
 
       setState(() {
         offers = List<dynamic>.from(data);
@@ -72,6 +84,21 @@ class _BalcaoNegociacaoPageState extends State<BalcaoNegociacaoPage>{
 
   }
 
+
+  List<dynamic> get filteredOffers {
+  final searchText = _search.trim().toLowerCase();
+
+  if (searchText.isEmpty) {
+    return offers;
+  }
+
+  return offers.where((offer) {
+    final startupName = (offer['startupId'] ?? '').toString().toLowerCase();
+
+    return startupName.contains(searchText);
+
+  }).toList();
+  }
     
 
   @override
@@ -98,9 +125,26 @@ class _BalcaoNegociacaoPageState extends State<BalcaoNegociacaoPage>{
 
               // Barra de busca
               TextField(
+                controller: _searchController,
+                onChanged: (value) {
+                  setState(() {
+                    _search = value;
+                  });
+                },
                 decoration: InputDecoration(
                   hintText: "Buscar startup",
                   prefixIcon: const Icon(Icons.search, color: AppColors.azul),
+                  suffixIcon: _search.isNotEmpty
+                      ? IconButton(
+                          icon: const Icon(Icons.clear),
+                          onPressed: () {
+                            _searchController.clear();
+                            setState(() {
+                              _search = '';
+                            });
+                          },
+                        )
+                      : null,
                   filled: true,
                   fillColor: AppColors.cinza200,
                   border: OutlineInputBorder(
@@ -140,12 +184,14 @@ class _BalcaoNegociacaoPageState extends State<BalcaoNegociacaoPage>{
                     ? const AppLoadingIndicator()
                     : errorMessage != null
                     ? Center(child: Text("Erro: $errorMessage", style: _textStyle))
-                        : offers.isEmpty
-                      ? const Center(child: Text("Nenhuma oferta de venda encontrada", style: _textStyle))
+                      : offers.isEmpty
+                        ? const Center(child: Text("Nenhuma oferta de venda encontrada", style: _textStyle))
+                        : filteredOffers.isEmpty
+                            ? const Center(child: Text("Nenhuma oferta encontrada", style: _textStyle))
                             : ListView.builder(
-                                itemCount: offers.length,
+                                itemCount: filteredOffers.length,
                                 itemBuilder: (context, index){
-                                  final data = offers[index];
+                                  final data = filteredOffers[index];
                                   final startupId = data['startupId'] ?? '';
                                   final amount = data['amount'] ?? 0;
                                   final valorCentavos = data['valorUnitarioCentavos'] ?? 0;
@@ -183,7 +229,7 @@ class _BalcaoNegociacaoPageState extends State<BalcaoNegociacaoPage>{
                                           children: [
                                             Expanded(
                                               flex: 2,
-                                              child: Text(startupId, style: _textStyle),
+                                              child: Text(startupId.toString(), style: _textStyle),
                                             ),
                                             Expanded(
                                               flex: 1,

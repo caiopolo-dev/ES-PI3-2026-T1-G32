@@ -5,7 +5,7 @@ import {FieldValue} from "firebase-admin/firestore";
 import {db} from "../../../shared/firebase";
 import {HttpsError} from "firebase-functions/v2/https";
 import {
-  USERS, TOKEN_OFFERS, TOKEN_TRANSACTIONS, USER_TOKENS, WALLET, WALLET_SALDO,
+  USERS, TOKEN_OFFERS, TOKEN_TRANSACTIONS, WALLET, WALLET_SALDO,
 } from "../../../shared/collections";
 
 import {
@@ -133,8 +133,10 @@ export async function buyTokenOffer(
       .doc(WALLET_SALDO);
 
     const userTokenRef = db
-      .collection(USER_TOKENS)
-      .doc(`${buyerId}_${startupId}`);
+      .collection(USERS)
+      .doc(buyerId)
+      .collection("tokens")
+      .doc(startupId);
 
     const buyerWalletSnap = await transaction.get(buyerWalletRef);
     const sellerWalletSnap = await transaction.get(sellerWalletRef);
