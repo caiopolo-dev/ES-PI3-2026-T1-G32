@@ -12,14 +12,18 @@ class BuyStepsPage extends StatefulWidget {
   final String startupName;
   final int availableQuantity;
   final int pricePerTokenCents;
-  final String offerId;
+  final String? offerId;
+  final String? startupId;
+  final bool isStartupFlow;
 
   const BuyStepsPage({
     super.key,
     required this.startupName,
     required this.availableQuantity,
     required this.pricePerTokenCents,
-    required this.offerId,
+    this.offerId,
+    this.startupId,
+    this.isStartupFlow = false,
   });
 }
 
@@ -80,10 +84,35 @@ class _BuyStepsPageState extends State<BuyStepsPage> {
     errorText = '';
   });
 
-  final result = await TokenDataService.buyOffer(
-    offerId: widget.offerId,
-    quantity: tokenAmount,
-  );
+  Map<String, dynamic> result;
+
+  if (widget.isStartupFlow) {
+    if (widget.startupId == null || widget.startupId!.isEmpty) {
+      setState(() {
+        isLoading = false;
+        errorText = 'ID da startup não informado.';
+      });
+      return;
+    }
+
+    result = await TokenDataService.buyStartupToken(
+      startupId: widget.startupId!,
+      quantity: tokenAmount,
+    );
+  } else {
+    if (widget.offerId == null || widget.offerId!.isEmpty) {
+      setState(() {
+        isLoading = false;
+        errorText = 'ID da oferta não informado.';
+      });
+      return;
+    }
+
+    result = await TokenDataService.buyOffer(
+      offerId: widget.offerId!,
+      quantity: tokenAmount,
+    );
+  }
 
   if (!mounted) return;
 
@@ -101,9 +130,6 @@ class _BuyStepsPageState extends State<BuyStepsPage> {
     });
   }
 }
-
-
-
 
 
   String formatMoney(int cents) {

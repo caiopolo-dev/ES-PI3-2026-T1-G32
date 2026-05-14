@@ -53,6 +53,41 @@ class TokenDataService {
     };
   }
 }
+
+// Executa a compra direta de tokens pela página da startup.
+// O backend busca o preço atual e a quantidade disponível direto na collection startups.
+static Future<Map<String, dynamic>> buyStartupToken({
+  required String startupId,
+  required int quantity,
+}) async {
+  try {
+    final callable = FirebaseFunctions.instance.httpsCallable('buyStartupToken');
+
+    // buyerId e preço do token são definidos no backend.
+    // O Flutter envia apenas a startup e a quantidade desejada.
+    final result = await callable.call({
+      'startupId': startupId,
+      'quantity': quantity,
+    });
+
+    return {
+      'success': true,
+      'data': result.data['data'],
+    };
+  } on FirebaseFunctionsException catch (e) {
+    return {
+      'success': false,
+      'message': e.message ?? 'Erro ao comprar tokens da startup',
+      'error': e.code,
+    };
+  } catch (e) {
+    return {
+      'success': false,
+      'message': e.toString(),
+      'error': 'unexpected',
+    };
+  }
+}
 }
 
 

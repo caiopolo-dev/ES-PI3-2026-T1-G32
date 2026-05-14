@@ -10,6 +10,10 @@ import 'package:mescla_invest/src/pages/home/startup_detail/startup_detail_widge
 import 'package:mescla_invest/src/pages/home/startup_detail/startup_detail_faq.dart';
 import 'package:mescla_invest/src/widgets/user_avatar_menu.dart';
 import 'package:mescla_invest/src/widgets/app_loading_indicator.dart';
+//---------------
+import 'package:mescla_invest/src/pages/home/buy_steps_page.dart';
+//---------------
+
 
 class StartupDetailPage extends StatefulWidget {
   final String startupId;
@@ -91,6 +95,55 @@ class _StartupDetailPageState extends State<StartupDetailPage> {
     });
   }
 
+  Future<void> _openBuyStepsFromStartup() async {
+    final data = startup;
+
+    if (data == null) {
+      return;
+    }
+
+    final startupName = data['nome'] as String? ?? widget.startupNome;
+    final precoToken = (data['precoToken'] as num?)?.toDouble() ?? 0.0;
+    final availableQuantity = (data['tokensDisponiveis'] as num?)?.toInt() ?? 0;
+    final pricePerTokenCents = (precoToken * 100).round();
+
+    if (availableQuantity <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Essa startup não possui tokens disponíveis.')),
+      );
+      return;
+    }
+
+    if (pricePerTokenCents <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Preço do token inválido.')),
+      );
+      return;
+    }
+
+    final comprou = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => BuyStepsPage(
+          startupName: startupName,
+          startupId: widget.startupId,
+          availableQuantity: availableQuantity,
+          pricePerTokenCents: pricePerTokenCents,
+          isStartupFlow: true,
+        ),
+      ),
+    );
+
+    if (!mounted) return;
+
+    if (comprou == true) {
+      _fetchDetail();
+    }
+  }
+
+
+
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -117,16 +170,20 @@ class _StartupDetailPageState extends State<StartupDetailPage> {
           ),
         ],
       ),
+     //-------------------
       body: isLoading
-          ? const AppLoadingIndicator()
-          : error != null
-              ? Center(child: Text('Erro: $error'))
-              : Column(
-                  children: [
-                    Expanded(child: _buildContent()),
-                    const BottomActionBar(),
-                  ],
-                ),
+        ? const AppLoadingIndicator()
+        : error != null
+            ? Center(child: Text('Erro: $error'))
+            : Column(
+                children: [
+                  Expanded(child: _buildContent()),
+                  BottomActionBar(
+                    onComprar: _openBuyStepsFromStartup,
+                  ),
+                ],
+              ),
+      //-------------------
     );
   }
 

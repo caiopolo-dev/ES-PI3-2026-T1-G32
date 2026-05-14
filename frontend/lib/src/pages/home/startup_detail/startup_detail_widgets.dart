@@ -80,7 +80,16 @@ class TokensInfo extends StatelessWidget {
 }
 
 class BottomActionBar extends StatelessWidget {
-  const BottomActionBar({super.key});
+
+
+  //-------------------------------------
+  const BottomActionBar({
+    super.key,
+    this.onComprar,
+  });
+
+  final VoidCallback? onComprar;
+  //-------------------------------------
 
   @override
   Widget build(BuildContext context) => Container(
@@ -93,6 +102,7 @@ class BottomActionBar extends StatelessWidget {
           children: [
             Expanded(
               child: OutlinedButton(
+//-------------------------------------
                 onPressed: () {},
                 style: OutlinedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 16),
@@ -101,11 +111,14 @@ class BottomActionBar extends StatelessWidget {
                 ),
                 child: const Text('Vender', style: TextStyle(color: AppColors.preto, fontSize: 16)),
               ),
+//-------------------------------------
             ),
             const SizedBox(width: 12),
             Expanded(
+//-------------------------------------   i          
               child: ElevatedButton(
-                onPressed: () {},
+                onPressed: onComprar,
+//-------------------------------------   i
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.azul,
                   padding: const EdgeInsets.symmetric(vertical: 16),
