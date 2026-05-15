@@ -14,6 +14,30 @@ import {
 } from "../types/tokenOfferTypes";
 
 /**
+ * Lists open sell offers created by a specific seller.
+ * @param {string} sellerId Seller user ID.
+ * @return {Promise<Array<object>>} List of the seller's offers.
+ */
+export async function listOffersBySeller(sellerId: string) {
+  const snapshot = await db
+    .collection(TOKEN_OFFERS)
+    .where("sellerId", "==", sellerId)
+    .get();
+
+  return snapshot.docs.map((doc) => {
+    const data = doc.data();
+    return {
+      offerId: doc.id,
+      startupId: data.startupId,
+      startupName: data.startupName,
+      amount: data.amount,
+      valorUnitarioCentavos: data.valorUnitarioCentavos,
+      createdAt: data.createdAt?.toDate?.()?.toISOString() ?? null,
+    };
+  });
+}
+
+/**
  * Lists token offers from Firestore.
  * @param {string=} excludeSellerId User id to exclude from results.
  * @return {Promise<Array<object>>} List of token offers.
@@ -27,6 +51,7 @@ export async function listAllOffers(excludeSellerId?: string) {
       return {
         offerId: doc.id,
         startupId: data.startupId,
+        startupName: data.startupName ?? data.startupId,
         sellerId: data.sellerId,
         amount: data.amount,
         valorUnitarioCentavos: data.valorUnitarioCentavos,
@@ -210,12 +235,14 @@ export async function buyTokenOffer(
     transaction.set(transactionRef, {
       offerId,
       startupId,
+      startupName: offerData.startupName ?? startupId,
       buyerId,
       sellerId,
       quantity,
       pricePerTokenCents,
       totalCents,
       type: "buy",
+      source: "offer",
       createdAt: FieldValue.serverTimestamp(),
     });
 

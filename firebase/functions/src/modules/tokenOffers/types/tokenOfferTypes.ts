@@ -16,3 +16,18 @@ export type BuyTokenOfferResult = {
   totalCents: number;
   remainingAmount: number;
 };
+
+export type CreateSellOfferParams = {
+  startupId: string;
+  sellerId: string;
+  quantity: number;
+  pricePerTokenCents: number;
+};
+
+export type CreateSellOfferResult = {
+  offerId: string;
+  startupId: string;
+  startupName: string;
+  quantity: number;
+  pricePerTokenCents: number;
+};

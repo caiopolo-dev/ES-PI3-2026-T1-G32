@@ -4,6 +4,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:mescla_invest/src/theme/app_colors.dart';
 import 'package:mescla_invest/src/services/wallet_service.dart';
 import 'package:mescla_invest/src/services/startup_service.dart';
@@ -34,7 +35,18 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
+    _loadVisibility();
     if (widget.isActive) _loadData();
+  }
+
+  Future<void> _loadVisibility() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (mounted) setState(() => _saldoVisivel = prefs.getBool('balance_visible') ?? false);
+  }
+
+  Future<void> _saveVisibility(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('balance_visible', value);
   }
 
   @override
@@ -182,12 +194,13 @@ class _HomePageState extends State<HomePage> {
                           children: [
                             SaldoDisplay(
                               saldo: _saldo,
+                              visivel: _saldoVisivel,
                               label: 'Saldo disponível',
                               labelColor: AppColors.branco,
                               balanceColor: AppColors.branco,
                               eyeColor: AppColors.branco54,
                               balanceFontSize: 32,
-                              onVisibilityChanged: (v) => setState(() => _saldoVisivel = v),
+                              onVisibilityChanged: (v) { setState(() => _saldoVisivel = v); _saveVisibility(v); },
                             ),
                             GestureDetector(
                               onTap: _showAddBalanceDialog,
@@ -372,7 +385,7 @@ class _HomePageState extends State<HomePage> {
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
                             Text(
-                              'R\$ ${NumberFormat('#,##0.00', 'pt_BR').format((data['precoToken'] as num?)?.toDouble() ?? 0.0)}',
+                              'R\$ ${NumberFormat('#,##0.00', 'pt_BR').format(((data['precoToken'] as num?)?.toDouble() ?? 0.0) / 100)}',
                               style: const TextStyle(
                                 fontFamily: 'JosefinSans',
                                 fontSize: 14,

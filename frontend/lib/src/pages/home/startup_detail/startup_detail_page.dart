@@ -10,6 +10,7 @@ import 'package:mescla_invest/src/pages/home/startup_detail/startup_detail_widge
 import 'package:mescla_invest/src/pages/home/startup_detail/startup_detail_faq.dart';
 import 'package:mescla_invest/src/widgets/widgets.dart';
 import 'package:mescla_invest/src/pages/home/buy_steps_page.dart';
+import 'package:mescla_invest/src/services/wallet_service.dart';
 
 
 
@@ -36,6 +37,7 @@ class _StartupDetailPageState extends State<StartupDetailPage> {
   bool isLoading = true;
   String? error;
   bool _houvePurchase = false;
+  int _userTokenQuantity = 0;
   int _selectedTab = 0;
   int _selectedPeriod = 3;
   List<Map<String, dynamic>> _faqs = [];
@@ -48,9 +50,73 @@ class _StartupDetailPageState extends State<StartupDetailPage> {
   @override
   void initState() {
     super.initState();
-    // Carrega dados da startup e FAQs em paralelo ao abrir a tela.
-    _fetchDetail();
+    _initPage();
     _loadFaqs();
+  }
+
+  Future<void> _initPage() async {
+    final results = await Future.wait([
+      StartupService.getStartupById(widget.startupId),
+      WalletService.getUserTokens(),
+    ]);
+    if (!mounted) return;
+
+    final startupResult = results[0];
+    final tokensResult = results[1];
+    final tokens = tokensResult['success'] == true
+        ? List<Map<String, dynamic>>.from(tokensResult['tokens'] ?? [])
+        : <Map<String, dynamic>>[];
+    final match = tokens.where((t) => t['startupId'] == widget.startupId);
+
+    setState(() {
+      isLoading = false;
+      if (startupResult['success'] as bool) {
+        startup = startupResult['data'] as Map<String, dynamic>;
+      } else {
+        error = startupResult['message'] as String?;
+      }
+      _userTokenQuantity = match.isNotEmpty
+          ? (match.first['quantidade'] as num?)?.toInt() ?? 0
+          : 0;
+    });
+  }
+
+  Future<void> _loadUserTokens() async {
+    final result = await WalletService.getUserTokens();
+    if (!mounted || result['success'] != true) return;
+    final tokens = List<Map<String, dynamic>>.from(result['tokens'] ?? []);
+    final match = tokens.where((t) => t['startupId'] == widget.startupId);
+    setState(() {
+      _userTokenQuantity = match.isNotEmpty
+          ? (match.first['quantidade'] as num?)?.toInt() ?? 0
+          : 0;
+    });
+  }
+
+  Future<void> _openSellSteps() async {
+    final data = startup;
+    if (data == null) return;
+    final pricePerTokenCents = (data['precoToken'] as num?)?.toInt() ?? 0;
+
+    final vendeu = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => BuyStepsPage(
+          startupName: data['nome'] as String? ?? widget.startupNome,
+          startupId: widget.startupId,
+          availableQuantity: _userTokenQuantity,
+          pricePerTokenCents: pricePerTokenCents,
+          isSellMode: true,
+        ),
+      ),
+    );
+
+    if (!mounted) return;
+    if (vendeu == true) {
+      _houvePurchase = true;
+      _loadUserTokens();
+      _fetchDetail();
+    }
   }
 
   // Busca as FAQs da startup via Cloud Function.
@@ -102,9 +168,8 @@ class _StartupDetailPageState extends State<StartupDetailPage> {
     }
 
     final startupName = data['nome'] as String? ?? widget.startupNome;
-    final precoToken = (data['precoToken'] as num?)?.toDouble() ?? 0.0;
+    final pricePerTokenCents = (data['precoToken'] as num?)?.toInt() ?? 0;
     final availableQuantity = (data['tokensDisponiveis'] as num?)?.toInt() ?? 0;
-    final pricePerTokenCents = (precoToken * 100).round();
 
     if (availableQuantity <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -179,6 +244,8 @@ class _StartupDetailPageState extends State<StartupDetailPage> {
                   Expanded(child: _buildContent()),
                   BottomActionBar(
                     onComprar: _openBuyStepsFromStartup,
+                    onVender: _openSellSteps,
+                    temTokens: _userTokenQuantity > 0,
                   ),
                 ],
               ),
@@ -187,7 +254,7 @@ class _StartupDetailPageState extends State<StartupDetailPage> {
 
   Widget _buildContent() {
     final data = startup!;
-    final precoToken = (data['precoToken'] as num?)?.toDouble() ?? 0.0;
+    final precoToken = ((data['precoToken'] as num?)?.toDouble() ?? 0.0) / 100;
     final totalTokens = (data['totalTokens'] as num?)?.toInt() ?? 0;
     final tokensDisponiveis = (data['tokensDisponiveis'] as num?)?.toInt() ?? 0;
     final descricao = data['descricao'] as String? ?? '';

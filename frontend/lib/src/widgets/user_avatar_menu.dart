@@ -3,6 +3,7 @@
 // Descrição: Avatar do usuário com menu de contexto — reutilizado em todas as AppBars
 
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:mescla_invest/src/theme/app_colors.dart';
 import 'package:mescla_invest/src/pages/initial_page.dart';
@@ -14,6 +15,8 @@ class UserAvatarMenu extends StatelessWidget {
   const UserAvatarMenu({super.key, this.usuario, this.onPerfilTap});
 
   Future<void> _logout(BuildContext context) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('balance_visible', false);
     await FirebaseAuth.instance.signOut();
     if (!context.mounted) return;
     Navigator.pushAndRemoveUntil(
