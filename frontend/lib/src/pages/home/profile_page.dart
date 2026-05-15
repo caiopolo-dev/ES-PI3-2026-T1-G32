@@ -3,6 +3,7 @@
 // Descrição: Tela de perfil do usuário, com informações da conta e opção de logout
 
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:mescla_invest/src/theme/app_colors.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:mescla_invest/src/pages/initial_page.dart';
@@ -53,6 +54,8 @@ class _ProfilePageState extends State<ProfilePage> {
 
   // Faz logout e retorna para a tela inicial, limpando toda a pilha de navegação.
   Future<void> _logout() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('balance_visible', false);
     await FirebaseAuth.instance.signOut();
     if (!mounted) return;
     Navigator.pushAndRemoveUntil(

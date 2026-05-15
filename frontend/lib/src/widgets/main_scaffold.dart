@@ -50,27 +50,35 @@ class _MainScaffoldState extends State<MainScaffold> {
           ProfilePage(usuario: widget.usuario, onTabSwitch: _switchTab, isActive: _currentIndex == 4),
         ],
       ),
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          color: AppColors.branco,
-          border: Border(top: BorderSide(color: AppColors.cinza300)),
-        ),
-        child: BottomNavigationBar(
-          type: BottomNavigationBarType.fixed,
-          backgroundColor: AppColors.branco,
-          elevation: 0,
-          currentIndex: _currentIndex,
-          selectedItemColor: AppColors.azul,
-          unselectedItemColor: AppColors.cinza500,
-          onTap: _switchTab,
-          items: const [
-            BottomNavigationBarItem(icon: Icon(Icons.home_outlined), label: "Início"),
-            BottomNavigationBarItem(icon: Icon(Icons.store), label: "Mercado"),
-            BottomNavigationBarItem(icon: Icon(Icons.list), label: "Catálogo"),
-            BottomNavigationBarItem(icon: Icon(Icons.account_balance_wallet), label: "Carteira"),
-            BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: "Perfil"),
-          ],
-        ),
+      bottomNavigationBar: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            children: List.generate(5, (i) => Expanded(
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                height: 2.5,
+                color: _currentIndex == i ? AppColors.azul : AppColors.cinza200,
+              ),
+            )),
+          ),
+          BottomNavigationBar(
+            type: BottomNavigationBarType.fixed,
+            backgroundColor: AppColors.branco,
+            elevation: 0,
+            currentIndex: _currentIndex,
+            selectedItemColor: AppColors.azul,
+            unselectedItemColor: AppColors.cinza500,
+            onTap: _switchTab,
+            items: const [
+              BottomNavigationBarItem(icon: Icon(Icons.home_outlined), label: "Início"),
+              BottomNavigationBarItem(icon: Icon(Icons.store), label: "Mercado"),
+              BottomNavigationBarItem(icon: Icon(Icons.list), label: "Catálogo"),
+              BottomNavigationBarItem(icon: Icon(Icons.account_balance_wallet), label: "Carteira"),
+              BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: "Perfil"),
+            ],
+          ),
+        ],
       ),
     );
   }

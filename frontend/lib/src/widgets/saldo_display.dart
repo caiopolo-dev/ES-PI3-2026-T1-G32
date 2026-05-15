@@ -5,8 +5,9 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
-class SaldoDisplay extends StatefulWidget {
+class SaldoDisplay extends StatelessWidget {
   final double saldo;
+  final bool visivel;
   final String label;
   final Color labelColor;
   final Color balanceColor;
@@ -17,6 +18,7 @@ class SaldoDisplay extends StatefulWidget {
   const SaldoDisplay({
     super.key,
     required this.saldo,
+    required this.visivel,
     required this.label,
     required this.labelColor,
     required this.balanceColor,
@@ -26,51 +28,40 @@ class SaldoDisplay extends StatefulWidget {
   });
 
   @override
-  State<SaldoDisplay> createState() => _SaldoDisplayState();
-}
-
-class _SaldoDisplayState extends State<SaldoDisplay> {
-  bool _visivel = false;
-
-  final _fmt = NumberFormat.currency(locale: 'pt_BR', symbol: 'R\$');
-
-  @override
   Widget build(BuildContext context) {
+    final fmt = NumberFormat.currency(locale: 'pt_BR', symbol: 'R\$');
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           children: [
             Text(
-              widget.label,
+              label,
               style: TextStyle(
                 fontFamily: 'JosefinSans',
                 fontSize: 13,
-                color: widget.labelColor,
+                color: labelColor,
               ),
             ),
             const SizedBox(width: 6),
             GestureDetector(
-              onTap: () {
-                setState(() => _visivel = !_visivel);
-                widget.onVisibilityChanged?.call(_visivel);
-              },
+              onTap: () => onVisibilityChanged?.call(!visivel),
               child: Icon(
-                _visivel ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                visivel ? Icons.visibility_outlined : Icons.visibility_off_outlined,
                 size: 20,
-                color: widget.eyeColor,
+                color: eyeColor,
               ),
             ),
           ],
         ),
         const SizedBox(height: 8),
         Text(
-          _visivel ? _fmt.format(widget.saldo) : 'R\$ ••••••',
+          visivel ? fmt.format(saldo) : 'R\$ ••••••',
           style: TextStyle(
             fontFamily: 'JosefinSans',
-            fontSize: widget.balanceFontSize,
+            fontSize: balanceFontSize,
             fontWeight: FontWeight.bold,
-            color: widget.balanceColor,
+            color: balanceColor,
           ),
         ),
       ],
