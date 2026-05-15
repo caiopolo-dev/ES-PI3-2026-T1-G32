@@ -34,7 +34,7 @@ class _ProfilePageState extends State<ProfilePage> {
   void initState() {
     super.initState();
     // Verifica se o usuário já tem TOTP registrado para exibir o toggle correto.
-    _loadTwoFactorStatus();
+    if (widget.isActive) _loadTwoFactorStatus();
   }
 
   // Consulta diretamente o Firebase Auth (client-side) para verificar se há

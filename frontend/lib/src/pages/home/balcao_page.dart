@@ -4,8 +4,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:mescla_invest/src/theme/app_colors.dart';
-import 'package:mescla_invest/src/widgets/user_avatar_menu.dart';
-import 'package:mescla_invest/src/widgets/app_loading_indicator.dart';
+import 'package:mescla_invest/src/widgets/widgets.dart';
 import 'buy_steps_page.dart';
 
 class BalcaoNegociacaoPage extends StatefulWidget {
@@ -40,7 +39,7 @@ class _BalcaoNegociacaoPageState extends State<BalcaoNegociacaoPage>{
   @override
   void initState(){
     super.initState();
-    loadOffers();
+    if (widget.isActive) loadOffers();
   }
   
   @override

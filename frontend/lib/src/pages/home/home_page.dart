@@ -8,8 +8,7 @@ import 'package:mescla_invest/src/theme/app_colors.dart';
 import 'package:mescla_invest/src/services/wallet_service.dart';
 import 'package:mescla_invest/src/services/startup_service.dart';
 import 'package:mescla_invest/src/pages/home/startup_detail/startup_detail_page.dart';
-import 'package:mescla_invest/src/widgets/user_avatar_menu.dart';
-import 'package:mescla_invest/src/widgets/app_loading_indicator.dart';
+import 'package:mescla_invest/src/widgets/widgets.dart';
 
 class HomePage extends StatefulWidget {
   final Map<String, dynamic>? usuario;
@@ -24,6 +23,7 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   bool _isLoading = true;
+  bool _saldoVisivel = false;
   double _saldo = 0;
   double _valorPortfolio = 0;
   int _totalTokens = 0;
@@ -34,7 +34,7 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
-    _loadData();
+    if (widget.isActive) _loadData();
   }
 
   @override
@@ -43,6 +43,29 @@ class _HomePageState extends State<HomePage> {
     // Recarrega quando a aba passa de inativa para ativa,
     // refletindo compras ou mudanças feitas em outras abas.
     if (widget.isActive && !oldWidget.isActive) _loadData();
+  }
+
+  Future<void> _showAddBalanceDialog() async {
+    final amountCents = await showDialog<int>(
+      context: context,
+      builder: (_) => const DepositDialog(),
+    );
+    if (!mounted || amountCents == null) return;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) setState(() => _isLoading = true);
+    });
+
+    final result = await WalletService.addBalance(amountCents);
+    if (!mounted) return;
+    if (result['success'] == true) {
+      _loadData();
+    } else {
+      setState(() => _isLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(result['message'] ?? 'Erro ao depositar')),
+      );
+    }
   }
 
   Future<void> _loadData() async {
@@ -154,25 +177,52 @@ class _HomePageState extends State<HomePage> {
                   : Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
-                          'Saldo disponível',
-                          style: TextStyle(color: AppColors.branco, fontFamily: 'JosefinSans', fontSize: 13),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          currencyFormat.format(_saldo),
-                          style: const TextStyle(
-                            color: AppColors.branco,
-                            fontFamily: 'JosefinSans',
-                            fontSize: 32,
-                            fontWeight: FontWeight.bold,
-                          ),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            SaldoDisplay(
+                              saldo: _saldo,
+                              label: 'Saldo disponível',
+                              labelColor: AppColors.branco,
+                              balanceColor: AppColors.branco,
+                              eyeColor: AppColors.branco54,
+                              balanceFontSize: 32,
+                              onVisibilityChanged: (v) => setState(() => _saldoVisivel = v),
+                            ),
+                            GestureDetector(
+                              onTap: _showAddBalanceDialog,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10.5),
+                                decoration: BoxDecoration(
+                                  color: AppColors.azul800.withValues(alpha: 0.25),
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(color: AppColors.azul200.withValues(alpha: 0.5)),
+                                ),
+                                child: const Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.add, size: 16, color: AppColors.branco),
+                                    SizedBox(width: 6),
+                                    Text(
+                                      'Depositar',
+                                      style: TextStyle(
+                                        fontFamily: 'JosefinSans',
+                                        fontSize: 14,
+                                        color: AppColors.branco,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                         const SizedBox(height: 20),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            _StatItem(label: 'Portfólio', value: currencyFormat.format(_valorPortfolio)),
+                            _StatItem(label: 'Portfólio', value: _saldoVisivel ? currencyFormat.format(_valorPortfolio) : '••••••'),
                             _StatItem(label: 'Tokens', value: '$_totalTokens'),
                           ],
                         ),
@@ -262,17 +312,20 @@ class _HomePageState extends State<HomePage> {
                 final logoUrl = photos?['logoPhoto'] as String?;
 
                 return GestureDetector(
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => StartupDetailPage(
-                        startupId: data['id'] as String? ?? '',
-                        startupNome: data['nome'] as String? ?? '',
-                        usuario: widget.usuario,
-                        onTabSwitch: widget.onTabSwitch,
+                  onTap: () async {
+                    final comprou = await Navigator.push<bool>(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => StartupDetailPage(
+                          startupId: data['id'] as String? ?? '',
+                          startupNome: data['nome'] as String? ?? '',
+                          usuario: widget.usuario,
+                          onTabSwitch: widget.onTabSwitch,
+                        ),
                       ),
-                    ),
-                  ),
+                    );
+                    if (comprou == true && mounted) _loadData();
+                  },
                   child: Container(
                     margin: const EdgeInsets.only(bottom: 12),
                     padding: const EdgeInsets.all(16),

@@ -7,8 +7,7 @@ import 'package:mescla_invest/src/theme/app_colors.dart';
 import 'package:intl/intl.dart';
 import 'package:mescla_invest/src/services/startup_service.dart';
 import 'package:mescla_invest/src/pages/home/startup_detail/startup_detail_page.dart';
-import 'package:mescla_invest/src/widgets/user_avatar_menu.dart';
-import 'package:mescla_invest/src/widgets/app_loading_indicator.dart';
+import 'package:mescla_invest/src/widgets/widgets.dart';
 
 const Map<String, String> _estagioLabels = {
   'nova': 'Nova',
@@ -51,8 +50,8 @@ class _InitialCatalogPageState extends State<InitialCatalogPage> {
   @override
   void initState() {
     super.initState();
-    // Carrega o catálogo completo na abertura da tela.
-    fetchStartups();
+    // Carrega o catálogo completo na primeira visita à aba.
+    if (widget.isActive) fetchStartups();
     // Atualiza _searchQuery a cada keystroke para filtrar a lista em tempo real.
     _searchController.addListener(() {
       if (!mounted) return;
@@ -203,17 +202,20 @@ class _InitialCatalogPageState extends State<InitialCatalogPage> {
                                   final logoUrl = photos?['logoPhoto'] as String?;
 
                                   return GestureDetector(
-                                    onTap: () => Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (_) => StartupDetailPage(
-                                          startupId: data['id'] as String? ?? '',
-                                          startupNome: data['nome'] as String? ?? '',
-                                          usuario: widget.usuario,
-                                          onTabSwitch: widget.onTabSwitch,
+                                    onTap: () async {
+                                      final comprou = await Navigator.push<bool>(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (_) => StartupDetailPage(
+                                            startupId: data['id'] as String? ?? '',
+                                            startupNome: data['nome'] as String? ?? '',
+                                            usuario: widget.usuario,
+                                            onTabSwitch: widget.onTabSwitch,
+                                          ),
                                         ),
-                                      ),
-                                    ),
+                                      );
+                                      if (comprou == true && mounted) fetchStartups();
+                                    },
                                     child: StartupCard(
                                       nome: data['nome'] as String? ?? '',
                                       setor: data['setor'] as String? ?? '',

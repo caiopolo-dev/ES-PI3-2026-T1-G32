@@ -43,6 +43,19 @@ class WalletService {
     }
   }
 
+  static Future<Map<String, dynamic>> addBalance(int amountCents) async {
+    try {
+      await FirebaseFunctions.instance
+          .httpsCallable('addBalance')
+          .call({'amountCents': amountCents});
+      return {'success': true};
+    } on FirebaseFunctionsException catch (e) {
+      return {'success': false, 'message': e.message ?? 'Erro ao adicionar saldo'};
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
   // Busca o portfólio de tokens do usuário com preço médio ponderado e valor atual.
   // O backend agrega direto de token_transactions para cobrir compras antigas
   // feitas antes da coleção userTokens existir (retrocompatibilidade).
