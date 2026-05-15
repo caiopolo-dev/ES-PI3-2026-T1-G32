@@ -62,10 +62,10 @@ export async function buyStartupTokenDirectly(params: {
 
 
     const startupName = String(startupData.nome ?? startupId);
-    const priceTokenReais = Number(startupData.precoToken ?? 0);
+    const pricePerTokenCents = Number(startupData.precoToken ?? 0);
     const availableTokens = Number(startupData.tokensDisponiveis ?? 0);
 
-    if (priceTokenReais <= 0) {
+    if (pricePerTokenCents <= 0) {
       throw new HttpsError(
         "failed-precondition",
         "Preço do token inválido"
@@ -85,7 +85,6 @@ export async function buyStartupTokenDirectly(params: {
         "Quantidade maior que a disponível"
       );
     }
-    const pricePerTokenCents = Math.round(priceTokenReais * 100);
     const totalCents = quantity * pricePerTokenCents;
     const buyerBalance = Number(buyerWalletSnap.data()?.saldo ?? 0);
 

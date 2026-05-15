@@ -104,49 +104,63 @@ class TokensInfo extends StatelessWidget {
 }
 
 class BottomActionBar extends StatelessWidget {
-
-
   const BottomActionBar({
     super.key,
     this.onComprar,
+    this.onVender,
+    this.temTokens = false,
   });
 
   final VoidCallback? onComprar;
+  final VoidCallback? onVender;
+  final bool temTokens;
 
   @override
-  Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
-        decoration: BoxDecoration(
-          color: AppColors.branco,
-          border: Border(top: BorderSide(color: AppColors.cinza200)),
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              child: OutlinedButton(
-                onPressed: () {},
-                style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  side: BorderSide(color: AppColors.cinza400),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+  Widget build(BuildContext context) => SafeArea(
+        top: false,
+        child: Container(
+          height: kBottomNavigationBarHeight,
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+          decoration: BoxDecoration(
+            color: AppColors.branco,
+            border: Border(top: BorderSide(color: AppColors.cinza200)),
+          ),
+          child: Row(
+            children: [
+              if (temTokens) ...[
+                Expanded(
+                  child: SizedBox(
+                    height: double.infinity,
+                    child: OutlinedButton(
+                      onPressed: onVender,
+                      style: OutlinedButton.styleFrom(
+                        padding: EdgeInsets.zero,
+                        side: const BorderSide(color: AppColors.vermelho),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                      ),
+                      child: const Text('Vender', style: TextStyle(color: AppColors.vermelho, fontSize: 15)),
+                    ),
+                  ),
                 ),
-                child: const Text('Vender', style: TextStyle(color: AppColors.preto, fontSize: 16)),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(        
-              child: ElevatedButton(
-                onPressed: onComprar,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.azul,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                  elevation: 0,
+                const SizedBox(width: 12),
+              ],
+              Expanded(
+                child: SizedBox(
+                  height: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: onComprar,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.azul,
+                      padding: EdgeInsets.zero,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                      elevation: 0,
+                    ),
+                    child: const Text('Comprar', style: TextStyle(color: AppColors.branco, fontSize: 15)),
+                  ),
                 ),
-                child: const Text('Comprar', style: TextStyle(color: AppColors.branco, fontSize: 16)),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       );
 }
@@ -199,7 +213,7 @@ class _StartupVideoPlayerState extends State<StartupVideoPlayer> {
     return AspectRatio(
       aspectRatio: 16 / 9,
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(24),
         child: Stack(
           alignment: Alignment.center,
           children: [

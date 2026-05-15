@@ -138,6 +138,7 @@ class _InitialCatalogPageState extends State<InitialCatalogPage> {
                 controller: _searchController,
                 decoration: InputDecoration(
                   hintText: "Buscar startup",
+                  hintStyle: const TextStyle(fontFamily: 'JosefinSans', color: AppColors.cinza500),
                   prefixIcon: const Icon(Icons.search, color: AppColors.azul),
                   filled: true,
                   fillColor: AppColors.cinza200,
@@ -220,7 +221,7 @@ class _InitialCatalogPageState extends State<InitialCatalogPage> {
                                       nome: data['nome'] as String? ?? '',
                                       setor: data['setor'] as String? ?? '',
                                       estagio: data['estagio'] as String? ?? '',
-                                      precoToken: (data['precoToken'] as num?)?.toDouble() ?? 0.0,
+                                      precoToken: ((data['precoToken'] as num?)?.toDouble() ?? 0.0) / 100,
                                       totalTokens: (data['totalTokens'] as num?)?.toInt() ?? 0,
                                       logoUrl: logoUrl,
                                     ),
