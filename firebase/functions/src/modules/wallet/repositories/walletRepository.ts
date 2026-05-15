@@ -5,7 +5,7 @@
 import {FieldValue} from "firebase-admin/firestore";
 import {db} from "../../../shared/firebase";
 import {
-  USERS, TOKEN_TRANSACTIONS, STARTUPS, WALLET, WALLET_SALDO,
+  USERS, TOKEN_TRANSACTIONS, STARTUPS, WALLET, WALLET_SALDO, USER_TOKENS,
 } from "../../../shared/collections";
 
 /**
@@ -14,54 +14,87 @@ import {
  * @return {Promise<object>} Wallet data.
  */
 export async function getWalletDataByUserId(uid: string) {
-  const [walletDoc, txSnap] = await Promise.all([
+  const [walletDoc, tokenSnap] = await Promise.all([
     db.collection(USERS).doc(uid).collection(WALLET).doc(WALLET_SALDO).get(),
-    db.collection(TOKEN_TRANSACTIONS)
-      .where("buyerId", "==", uid)
-      .where("type", "==", "buy")
-      .get(),
+    db.collection(USERS).doc(uid).collection(USER_TOKENS).get(),
   ]);
 
   const saldo = Number(walletDoc.data()?.saldo ?? 0);
 
-  let totalInvestido = 0;
   let totalTokens = 0;
-
-  txSnap.docs.forEach((doc) => {
-    const data = doc.data();
-    totalInvestido += Number(data.totalCents ?? 0);
-    totalTokens += Number(data.quantity ?? 0);
+  let totalInvestido = 0;
+  tokenSnap.docs.forEach((doc) => {
+    const d = doc.data();
+    const qty = Number(d.quantidade ?? 0);
+    totalTokens += qty;
+    totalInvestido += qty * Number(d.precoMedio ?? 0);
   });
 
   return {saldo, totalInvestido, totalTokens};
 }
 
 /**
- * Returns transaction history for a user.
+ * Returns transaction history for a user (as buyer and as seller).
  * @param {string} uid User ID.
  * @return {Promise<object>} Transaction list.
  */
 export async function getTransactionHistoryByUserId(uid: string) {
-  const snapshot = await db
+  const buyerSnap = await db
     .collection(TOKEN_TRANSACTIONS)
     .where("buyerId", "==", uid)
     .orderBy("createdAt", "desc")
     .limit(50)
     .get();
 
-  const transactions = snapshot.docs.map((doc) => {
+  // Graceful fallback: if sellerId index is still building, skip sell records.
+  let sellerSnap: FirebaseFirestore.QuerySnapshot | null = null;
+  try {
+    sellerSnap = await db
+      .collection(TOKEN_TRANSACTIONS)
+      .where("sellerId", "==", uid)
+      .orderBy("createdAt", "desc")
+      .limit(50)
+      .get();
+  } catch (e) {
+    console.warn("sellerId query failed (index may still be building):", e);
+  }
+
+  const fromBuyer = buyerSnap.docs.map((doc) => {
     const data = doc.data();
     return {
       id: doc.id,
-      type: data.type,
-      startupId: data.startupId,
+      type: data.type as string,
+      startupId: data.startupId ?? null,
+      startupName: data.startupName ?? null,
       quantity: Number(data.quantity ?? 0),
+      pricePerTokenCents: Number(data.pricePerTokenCents ?? 0),
       totalCents: Number(data.totalCents ?? 0),
       createdAt: data.createdAt?.toDate?.()?.toISOString() ?? null,
     };
   });
 
-  return {transactions};
+  // Records where uid is the seller: override type to "sell" for display.
+  const fromSeller = (sellerSnap?.docs ?? []).map((doc) => {
+    const data = doc.data();
+    return {
+      id: doc.id,
+      type: "sell",
+      startupId: data.startupId ?? null,
+      startupName: data.startupName ?? null,
+      quantity: Number(data.quantity ?? 0),
+      pricePerTokenCents: Number(data.pricePerTokenCents ?? 0),
+      totalCents: Number(data.totalCents ?? 0),
+      createdAt: data.createdAt?.toDate?.()?.toISOString() ?? null,
+    };
+  });
+
+  const all = [...fromBuyer, ...fromSeller].sort((a, b) => {
+    if (!a.createdAt) return 1;
+    if (!b.createdAt) return -1;
+    return b.createdAt.localeCompare(a.createdAt);
+  });
+
+  return {transactions: all};
 }
 
 /**
@@ -70,29 +103,15 @@ export async function getTransactionHistoryByUserId(uid: string) {
  * @return {Promise<object>} Token list.
  */
 export async function getUserTokensByUserId(uid: string) {
-  const txSnap = await db
-    .collection(TOKEN_TRANSACTIONS)
-    .where("buyerId", "==", uid)
-    .where("type", "==", "buy")
+  const tokenSnap = await db
+    .collection(USERS)
+    .doc(uid)
+    .collection(USER_TOKENS)
     .get();
 
-  if (txSnap.empty) return {tokens: []};
+  if (tokenSnap.empty) return {tokens: []};
 
-  // Acumula quantidade e custo por startup para calcular preço médio.
-  const portfolioMap: Record<string, {quantidade: number; totalCost: number}> =
-    {};
-
-  txSnap.docs.forEach((doc) => {
-    const d = doc.data();
-    const sid = d.startupId as string;
-    const qty = Number(d.quantity ?? 0);
-    const price = Number(d.pricePerTokenCents ?? 0);
-    if (!portfolioMap[sid]) portfolioMap[sid] = {quantidade: 0, totalCost: 0};
-    portfolioMap[sid].quantidade += qty;
-    portfolioMap[sid].totalCost += qty * price;
-  });
-
-  const startupIds = Object.keys(portfolioMap);
+  const startupIds = tokenSnap.docs.map((doc) => doc.id);
 
   const startupDocs = await Promise.all(
     startupIds.map((id) => db.collection(STARTUPS).doc(id).get())
@@ -106,19 +125,16 @@ export async function getUserTokensByUserId(uid: string) {
     }
   });
 
-  const tokens = startupIds.map((startupId) => {
-    const {quantidade, totalCost} = portfolioMap[startupId];
-    const startup = startupMap[startupId] ?? {};
-    const precoMedio = quantidade > 0 ?
-      Math.round(totalCost / quantidade) :
-      0;
+  const tokens = tokenSnap.docs.map((doc) => {
+    const d = doc.data();
+    const startup = startupMap[doc.id] ?? {};
     return {
-      startupId,
+      startupId: doc.id,
       startupNome: startup.nome ?? "—",
       startupLogo: startup.logoUrl ?? null,
-      quantidade,
-      precoMedio,
-      valorAtual: precoMedio,
+      quantidade: Number(d.quantidade ?? 0),
+      precoMedio: Number(d.precoMedio ?? 0),
+      valorAtual: Number(startup.precoToken ?? d.valorAtual ?? 0),
     };
   });
 
@@ -126,7 +142,8 @@ export async function getUserTokensByUserId(uid: string) {
 }
 
 /**
- * Adds amountCents to the user's wallet balance atomically.
+ * Adds amountCents to the user's wallet balance atomically
+ * and records a deposit entry in the transaction history.
  * @param {string} uid User ID.
  * @param {number} amountCents Amount in cents to add.
  */
@@ -137,6 +154,8 @@ export async function addBalanceToWallet(uid: string, amountCents: number) {
     .collection(WALLET)
     .doc(WALLET_SALDO);
 
+  const txRef = db.collection(TOKEN_TRANSACTIONS).doc();
+
   await db.runTransaction(async (transaction) => {
     const snap = await transaction.get(walletRef);
     const current = Number(snap.data()?.saldo ?? 0);
@@ -145,5 +164,11 @@ export async function addBalanceToWallet(uid: string, amountCents: number) {
       {saldo: current + amountCents, updatedAt: FieldValue.serverTimestamp()},
       {merge: true}
     );
+    transaction.set(txRef, {
+      type: "deposit",
+      buyerId: uid,
+      totalCents: amountCents,
+      createdAt: FieldValue.serverTimestamp(),
+    });
   });
 }

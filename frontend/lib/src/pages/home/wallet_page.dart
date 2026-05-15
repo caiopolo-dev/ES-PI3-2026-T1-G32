@@ -3,9 +3,12 @@
 // Descrição: Tela de carteira do usuário
 
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:mescla_invest/src/theme/app_colors.dart';
 import 'package:mescla_invest/src/services/wallet_service.dart';
 import 'package:mescla_invest/src/widgets/widgets.dart';
+import 'package:mescla_invest/src/pages/home/startup_detail/startup_detail_page.dart';
+import 'package:mescla_invest/src/pages/home/buy_steps_page.dart';
 import 'package:intl/intl.dart';
 
 class WalletPage extends StatefulWidget {
@@ -47,13 +50,23 @@ class _WalletPageState extends State<WalletPage>
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    _loadVisibility();
     if (widget.isActive) _loadAll();
+  }
+
+  Future<void> _loadVisibility() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (mounted) setState(() => _saldoVisivel = prefs.getBool('balance_visible') ?? false);
+  }
+
+  Future<void> _saveVisibility(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('balance_visible', value);
   }
 
   Future<void> _loadAll() async {
     setState(() {
       _isLoading = true;
-      _saldoVisivel = false;
       _errorText = '';
     });
 
@@ -120,6 +133,56 @@ class _WalletPageState extends State<WalletPage>
     }
   }
 
+  Future<void> _openTokenActions(Map<String, dynamic> token) async {
+    final startupId = token['startupId'] as String? ?? '';
+    final startupNome = token['startupNome'] as String? ?? '';
+    final quantidade = (token['quantidade'] as num?)?.toInt() ?? 0;
+    final valorAtual = (token['valorAtual'] as num?)?.toDouble() ?? 0.0;
+    final logoUrl = token['startupLogo'] as String?;
+    final pricePerTokenCents = (valorAtual * 100).round();
+
+    if (!mounted) return;
+
+    final action = await showTokenActionsSheet(
+      context,
+      startupNome: startupNome,
+      quantidade: quantidade,
+      valorAtual: valorAtual,
+      logoUrl: logoUrl,
+    );
+
+    if (!mounted || action == null) return;
+
+    if (action == 'buy') {
+      final comprou = await Navigator.push<bool>(
+        context,
+        MaterialPageRoute(
+          builder: (_) => StartupDetailPage(
+            startupId: startupId,
+            startupNome: startupNome,
+            usuario: widget.usuario,
+            onTabSwitch: widget.onTabSwitch,
+          ),
+        ),
+      );
+      if (comprou == true && mounted) _loadAll();
+    } else if (action == 'sell') {
+      final vendeu = await Navigator.push<bool>(
+        context,
+        MaterialPageRoute(
+          builder: (_) => BuyStepsPage(
+            startupName: startupNome,
+            startupId: startupId,
+            availableQuantity: quantidade,
+            pricePerTokenCents: pricePerTokenCents,
+            isSellMode: true,
+          ),
+        ),
+      );
+      if (vendeu == true && mounted) _loadAll();
+    }
+  }
+
   @override
   void dispose() {
     _tabController.dispose();
@@ -170,12 +233,13 @@ class _WalletPageState extends State<WalletPage>
                                   children: [
                                     SaldoDisplay(
                                       saldo: _saldo,
+                                      visivel: _saldoVisivel,
                                       label: 'Saldo em conta',
                                       labelColor: AppColors.cinza500,
                                       balanceColor: AppColors.azul,
                                       eyeColor: AppColors.cinza500,
                                       balanceFontSize: 28,
-                                      onVisibilityChanged: (v) => setState(() => _saldoVisivel = v),
+                                      onVisibilityChanged: (v) { setState(() => _saldoVisivel = v); _saveVisibility(v); },
                                     ),
                                     GestureDetector(
                                       onTap: _showAddBalanceDialog,
@@ -324,8 +388,9 @@ class _WalletPageState extends State<WalletPage>
                                   final positivo = valorAtual >= precoMedio;
                                   final logoUrl = token['startupLogo'] as String?;
 
-                                  // AQUI DEVE SER FEITA A LOGICA DE VENDA
-                                  return Container(
+                                  return GestureDetector(
+                                    onTap: () => _openTokenActions(token),
+                                    child: Container(
                                     margin: const EdgeInsets.symmetric(vertical: 6),
                                     padding: const EdgeInsets.all(16),
                                     decoration: BoxDecoration(
@@ -372,7 +437,7 @@ class _WalletPageState extends State<WalletPage>
                                               crossAxisAlignment: CrossAxisAlignment.end,
                                               children: [
                                                 Text(
-                                                  _saldoVisivel ? '${currencyFormat.format(valorAtual)}/un' : '••••••',
+                                                  '${currencyFormat.format(valorAtual)}/un',
                                                   style: const TextStyle(
                                                     fontFamily: 'JosefinSans',
                                                     fontSize: 15,
@@ -432,6 +497,7 @@ class _WalletPageState extends State<WalletPage>
                                         ),
                                       ],
                                     ),
+                                  ),
                                   );
                                 },
                               ),
@@ -449,18 +515,40 @@ class _WalletPageState extends State<WalletPage>
                             : ListView.separated(
                                 padding: const EdgeInsets.symmetric(horizontal: 24),
                                 itemCount: _transactions.length,
-                                separatorBuilder: (_, _) => const Divider(height: 1),
+                                separatorBuilder: (_, _) => const SizedBox.shrink(),
                                 itemBuilder: (context, index) {
                                   final tx = _transactions[index];
-                                  final isCompra = tx['type'] == 'buy';
+                                  final tipo = tx['type'] as String? ?? 'buy';
+                                  final isDeposit = tipo == 'deposit';
+                                  final isSell = tipo == 'sell';
+
                                   final valor = ((tx['totalCents'] as num?) ?? 0).toDouble() / 100;
                                   final data = tx['createdAt'] != null
-                                      ? DateFormat('dd/MM/yyyy HH:mm').format(DateTime.parse(tx['createdAt']))
+                                      ? DateFormat('dd/MM/yyyy HH:mm').format(DateTime.parse(tx['createdAt'] as String))
                                       : '—';
-
                                   final quantidade = (tx['quantity'] as num?)?.toInt() ?? 0;
-                                  final precoPorToken = quantidade > 0 ? valor / quantidade : 0.0;
-                                  final corTipo = isCompra ? AppColors.vermelho : AppColors.verde;
+                                  final precoPorTokenCents = (tx['pricePerTokenCents'] as num?)?.toDouble() ?? 0;
+                                  final precoPorToken = precoPorTokenCents / 100;
+                                  final titulo = tx['startupName'] as String?
+                                      ?? tx['startupId'] as String?
+                                      ?? '—';
+
+                                  final Color corTipo;
+                                  final String labelTipo;
+                                  final IconData iconeTipo;
+                                  if (isDeposit) {
+                                    corTipo = AppColors.azul;
+                                    labelTipo = 'Depósito';
+                                    iconeTipo = Icons.account_balance_wallet_outlined;
+                                  } else if (isSell) {
+                                    corTipo = AppColors.verde;
+                                    labelTipo = 'Venda';
+                                    iconeTipo = Icons.arrow_upward;
+                                  } else {
+                                    corTipo = AppColors.vermelho;
+                                    labelTipo = 'Compra';
+                                    iconeTipo = Icons.arrow_downward;
+                                  }
 
                                   return Container(
                                     margin: const EdgeInsets.symmetric(vertical: 6),
@@ -475,14 +563,8 @@ class _WalletPageState extends State<WalletPage>
                                           children: [
                                             CircleAvatar(
                                               radius: 20,
-                                              backgroundColor: isCompra
-                                                  ? AppColors.verde.withValues(alpha: 0.1)
-                                                  : AppColors.vermelho.withValues(alpha: 0.1),
-                                              child: Icon(
-                                                isCompra ? Icons.arrow_downward : Icons.arrow_upward,
-                                                color: isCompra ? AppColors.verde : AppColors.vermelho,
-                                                size: 18,
-                                              ),
+                                              backgroundColor: corTipo.withValues(alpha: 0.1),
+                                              child: Icon(iconeTipo, color: corTipo, size: 18),
                                             ),
                                             const SizedBox(width: 12),
                                             Expanded(
@@ -490,7 +572,7 @@ class _WalletPageState extends State<WalletPage>
                                                 crossAxisAlignment: CrossAxisAlignment.start,
                                                 children: [
                                                   Text(
-                                                    tx['startupId'] ?? '—',
+                                                    isDeposit ? 'Depósito em conta' : titulo,
                                                     style: const TextStyle(
                                                       fontFamily: 'JosefinSans',
                                                       fontSize: 15,
@@ -507,7 +589,7 @@ class _WalletPageState extends State<WalletPage>
                                                           borderRadius: BorderRadius.circular(4),
                                                         ),
                                                         child: Text(
-                                                          isCompra ? 'Compra' : 'Venda',
+                                                          labelTipo,
                                                           style: TextStyle(
                                                             fontFamily: 'JosefinSans',
                                                             fontSize: 10,
@@ -531,7 +613,9 @@ class _WalletPageState extends State<WalletPage>
                                               ),
                                             ),
                                             Text(
-                                              _saldoVisivel ? '${isCompra ? '-' : '+'} ${currencyFormat.format(valor)}' : '••••••',
+                                              _saldoVisivel
+                                                  ? '${isSell || isDeposit ? '+' : '-'} ${currencyFormat.format(valor)}'
+                                                  : '••••••',
                                               style: TextStyle(
                                                 fontFamily: 'JosefinSans',
                                                 fontSize: 15,
@@ -541,16 +625,22 @@ class _WalletPageState extends State<WalletPage>
                                             ),
                                           ],
                                         ),
-                                        const SizedBox(height: 10),
-                                        Container(height: 1, color: AppColors.cinza300),
-                                        const SizedBox(height: 10),
-                                        Row(
-                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                          children: [
-                                            _TxStat(label: 'Quantidade', value: '$quantidade tokens'),
-                                            _TxStat(label: 'Preço/token', value: _saldoVisivel ? currencyFormat.format(precoPorToken) : '••••••', alignEnd: true),
-                                          ],
-                                        ),
+                                        if (!isDeposit) ...[
+                                          const SizedBox(height: 10),
+                                          Container(height: 1, color: AppColors.cinza300),
+                                          const SizedBox(height: 10),
+                                          Row(
+                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                            children: [
+                                              _TxStat(label: 'Quantidade', value: '$quantidade tokens'),
+                                              _TxStat(
+                                                label: 'Preço/token',
+                                                value: _saldoVisivel ? currencyFormat.format(precoPorToken) : '••••••',
+                                                alignEnd: true,
+                                              ),
+                                            ],
+                                          ),
+                                        ],
                                       ],
                                     ),
                                   );
