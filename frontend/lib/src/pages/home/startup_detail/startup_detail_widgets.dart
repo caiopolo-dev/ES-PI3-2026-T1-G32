@@ -64,18 +64,42 @@ class PriceRow extends StatelessWidget {
 
 class TokensInfo extends StatelessWidget {
   final int totalTokens;
-  const TokensInfo({super.key, required this.totalTokens});
+  final int tokensDisponiveis;
+  const TokensInfo({super.key, required this.totalTokens, required this.tokensDisponiveis});
 
   @override
-  Widget build(BuildContext context) => Column(
-        children: [
-          Text('Tokens em circulação', style: TextStyle(fontSize: 14, color: AppColors.cinza700)),
-          const SizedBox(height: 4),
-          Text(
-            NumberFormat('#,##0', 'pt_BR').format(totalTokens),
-            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-          ),
-        ],
+  Widget build(BuildContext context) => IntrinsicHeight(
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Tokens em circulação', style: TextStyle(fontSize: 14, color: AppColors.cinza700)),
+                  const SizedBox(height: 4),
+                  Text(
+                    NumberFormat('#,##0', 'pt_BR').format(totalTokens),
+                    style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
+            ),
+            VerticalDivider(color: AppColors.cinza300, thickness: 1, width: 32),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text('Tokens disponíveis', style: TextStyle(fontSize: 14, color: AppColors.cinza700)),
+                  const SizedBox(height: 4),
+                  Text(
+                    NumberFormat('#,##0', 'pt_BR').format(tokensDisponiveis),
+                    style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       );
 }
 

@@ -8,8 +8,7 @@ import 'package:mescla_invest/src/services/startup_service.dart';
 import 'package:mescla_invest/src/services/faq_service.dart';
 import 'package:mescla_invest/src/pages/home/startup_detail/startup_detail_widgets.dart';
 import 'package:mescla_invest/src/pages/home/startup_detail/startup_detail_faq.dart';
-import 'package:mescla_invest/src/widgets/user_avatar_menu.dart';
-import 'package:mescla_invest/src/widgets/app_loading_indicator.dart';
+import 'package:mescla_invest/src/widgets/widgets.dart';
 import 'package:mescla_invest/src/pages/home/buy_steps_page.dart';
 
 
@@ -36,6 +35,7 @@ class _StartupDetailPageState extends State<StartupDetailPage> {
   Map<String, dynamic>? startup;
   bool isLoading = true;
   String? error;
+  bool _houvePurchase = false;
   int _selectedTab = 0;
   int _selectedPeriod = 3;
   List<Map<String, dynamic>> _faqs = [];
@@ -136,6 +136,7 @@ class _StartupDetailPageState extends State<StartupDetailPage> {
     if (!mounted) return;
 
     if (comprou == true) {
+      _houvePurchase = true;
       _fetchDetail();
     }
   }
@@ -152,7 +153,7 @@ class _StartupDetailPageState extends State<StartupDetailPage> {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: AppColors.preto),
-          onPressed: () => Navigator.pop(context),
+          onPressed: () => Navigator.pop(context, _houvePurchase),
         ),
         title: Text(
           startup?['nome'] as String? ?? widget.startupNome,
@@ -188,6 +189,7 @@ class _StartupDetailPageState extends State<StartupDetailPage> {
     final data = startup!;
     final precoToken = (data['precoToken'] as num?)?.toDouble() ?? 0.0;
     final totalTokens = (data['totalTokens'] as num?)?.toInt() ?? 0;
+    final tokensDisponiveis = (data['tokensDisponiveis'] as num?)?.toInt() ?? 0;
     final descricao = data['descricao'] as String? ?? '';
     final socios = (data['socios'] as List?)
             ?.map((s) => Map<String, dynamic>.from(s as Map))
@@ -210,7 +212,7 @@ class _StartupDetailPageState extends State<StartupDetailPage> {
           const SizedBox(height: 16),
           const Divider(),
           const SizedBox(height: 12),
-          TokensInfo(totalTokens: totalTokens),
+          TokensInfo(totalTokens: totalTokens, tokensDisponiveis: tokensDisponiveis),
           const SizedBox(height: 16),
           const Divider(),
           const SizedBox(height: 16),

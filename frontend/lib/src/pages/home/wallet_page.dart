@@ -5,8 +5,7 @@
 import 'package:flutter/material.dart';
 import 'package:mescla_invest/src/theme/app_colors.dart';
 import 'package:mescla_invest/src/services/wallet_service.dart';
-import 'package:mescla_invest/src/widgets/user_avatar_menu.dart';
-import 'package:mescla_invest/src/widgets/app_loading_indicator.dart';
+import 'package:mescla_invest/src/widgets/widgets.dart';
 import 'package:intl/intl.dart';
 
 class WalletPage extends StatefulWidget {
@@ -25,6 +24,7 @@ class _WalletPageState extends State<WalletPage>
   late TabController _tabController;
 
   bool _isLoading = true;
+  bool _saldoVisivel = false;
   double _saldo = 0;
   double _totalInvestido = 0;
   int _totalTokens = 0;
@@ -47,12 +47,13 @@ class _WalletPageState extends State<WalletPage>
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
-    _loadAll();
+    if (widget.isActive) _loadAll();
   }
 
   Future<void> _loadAll() async {
     setState(() {
       _isLoading = true;
+      _saldoVisivel = false;
       _errorText = '';
     });
 
@@ -96,6 +97,29 @@ class _WalletPageState extends State<WalletPage>
     return sum + valorAtual * quantidade;
   });
 
+  Future<void> _showAddBalanceDialog() async {
+    final amountCents = await showDialog<int>(
+      context: context,
+      builder: (_) => const DepositDialog(),
+    );
+    if (!mounted || amountCents == null) return;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) setState(() => _isLoading = true);
+    });
+
+    final result = await WalletService.addBalance(amountCents);
+    if (!mounted) return;
+    if (result['success'] == true) {
+      _loadAll();
+    } else {
+      setState(() => _isLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(result['message'] ?? 'Erro ao depositar')),
+      );
+    }
+  }
+
   @override
   void dispose() {
     _tabController.dispose();
@@ -110,14 +134,6 @@ class _WalletPageState extends State<WalletPage>
         backgroundColor: AppColors.branco,
         elevation: 0,
         automaticallyImplyLeading: false,
-        title: const Text(
-          'Minha Carteira',
-          style: TextStyle(
-            color: AppColors.preto,
-            fontFamily: 'JosefinSans',
-            fontSize: 20,
-          ),
-        ),
         actions: [
           UserAvatarMenu(
             usuario: widget.usuario,
@@ -149,23 +165,45 @@ class _WalletPageState extends State<WalletPage>
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Text(
-                                  'Saldo em conta',
-                                  style: TextStyle(
-                                    fontFamily: 'JosefinSans',
-                                    fontSize: 12,
-                                    color: AppColors.cinza500,
-                                  ),
-                                ),
-                                const SizedBox(height: 6),
-                                Text(
-                                  currencyFormat.format(_saldo),
-                                  style: const TextStyle(
-                                    fontFamily: 'JosefinSans',
-                                    fontSize: 28,
-                                    fontWeight: FontWeight.bold,
-                                    color: AppColors.azul,
-                                  ),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    SaldoDisplay(
+                                      saldo: _saldo,
+                                      label: 'Saldo em conta',
+                                      labelColor: AppColors.cinza500,
+                                      balanceColor: AppColors.azul,
+                                      eyeColor: AppColors.cinza500,
+                                      balanceFontSize: 28,
+                                      onVisibilityChanged: (v) => setState(() => _saldoVisivel = v),
+                                    ),
+                                    GestureDetector(
+                                      onTap: _showAddBalanceDialog,
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10.5),
+                                        decoration: BoxDecoration(
+                                          color: AppColors.azul.withValues(alpha: 0.1),
+                                          borderRadius: BorderRadius.circular(20),
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: const [
+                                            Icon(Icons.add, size: 17, color: AppColors.azul),
+                                            SizedBox(width: 6),
+                                            Text(
+                                              'Depositar',
+                                              style: TextStyle(
+                                                fontFamily: 'JosefinSans',
+                                                fontSize: 14,
+                                                color: AppColors.azul,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                                 const SizedBox(height: 16),
                                 Container(height: 1, color: AppColors.cinza200),
@@ -175,7 +213,7 @@ class _WalletPageState extends State<WalletPage>
                                     Expanded(
                                       child: _CardStat(
                                         label: 'Valor investido',
-                                        value: currencyFormat.format(_totalInvestido),
+                                        value: _saldoVisivel ? currencyFormat.format(_totalInvestido) : '••••••',
                                         valueColor: AppColors.preto,
                                       ),
                                     ),
@@ -184,8 +222,8 @@ class _WalletPageState extends State<WalletPage>
                                       child: Padding(
                                         padding: const EdgeInsets.only(left: 16),
                                         child: _CardStat(
-                                          label: 'Valor atual',
-                                          value: currencyFormat.format(_valorAtualPortfolio),
+                                          label: 'Portfólio',
+                                          value: _saldoVisivel ? currencyFormat.format(_valorAtualPortfolio) : '••••••',
                                           valueColor: _valorAtualPortfolio >= _totalInvestido
                                               ? AppColors.verde
                                               : AppColors.vermelho,
@@ -334,7 +372,7 @@ class _WalletPageState extends State<WalletPage>
                                               crossAxisAlignment: CrossAxisAlignment.end,
                                               children: [
                                                 Text(
-                                                  '${currencyFormat.format(valorAtual)}/un',
+                                                  _saldoVisivel ? '${currencyFormat.format(valorAtual)}/un' : '••••••',
                                                   style: const TextStyle(
                                                     fontFamily: 'JosefinSans',
                                                     fontSize: 15,
@@ -367,7 +405,7 @@ class _WalletPageState extends State<WalletPage>
                                                   style: TextStyle(fontFamily: 'JosefinSans', fontSize: 11, color: AppColors.cinza500),
                                                 ),
                                                 Text(
-                                                  currencyFormat.format(totalInvestido),
+                                                  _saldoVisivel ? currencyFormat.format(totalInvestido) : '••••••',
                                                   style: const TextStyle(fontFamily: 'JosefinSans', fontSize: 13, fontWeight: FontWeight.bold),
                                                 ),
                                               ],
@@ -380,7 +418,7 @@ class _WalletPageState extends State<WalletPage>
                                                   style: TextStyle(fontFamily: 'JosefinSans', fontSize: 11, color: AppColors.cinza500),
                                                 ),
                                                 Text(
-                                                  currencyFormat.format(totalAtual),
+                                                  _saldoVisivel ? currencyFormat.format(totalAtual) : '••••••',
                                                   style: TextStyle(
                                                     fontFamily: 'JosefinSans',
                                                     fontSize: 13,
@@ -459,19 +497,41 @@ class _WalletPageState extends State<WalletPage>
                                                       fontWeight: FontWeight.bold,
                                                     ),
                                                   ),
-                                                  Text(
-                                                    data,
-                                                    style: const TextStyle(
-                                                      fontFamily: 'JosefinSans',
-                                                      fontSize: 11,
-                                                      color: AppColors.cinza500,
-                                                    ),
+                                                  const SizedBox(height: 4),
+                                                  Row(
+                                                    children: [
+                                                      Container(
+                                                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                        decoration: BoxDecoration(
+                                                          color: corTipo.withValues(alpha: 0.12),
+                                                          borderRadius: BorderRadius.circular(4),
+                                                        ),
+                                                        child: Text(
+                                                          isCompra ? 'Compra' : 'Venda',
+                                                          style: TextStyle(
+                                                            fontFamily: 'JosefinSans',
+                                                            fontSize: 10,
+                                                            fontWeight: FontWeight.bold,
+                                                            color: corTipo,
+                                                          ),
+                                                        ),
+                                                      ),
+                                                      const SizedBox(width: 6),
+                                                      Text(
+                                                        data,
+                                                        style: const TextStyle(
+                                                          fontFamily: 'JosefinSans',
+                                                          fontSize: 11,
+                                                          color: AppColors.cinza500,
+                                                        ),
+                                                      ),
+                                                    ],
                                                   ),
                                                 ],
                                               ),
                                             ),
                                             Text(
-                                              '${isCompra ? '-' : '+'} ${currencyFormat.format(valor)}',
+                                              _saldoVisivel ? '${isCompra ? '-' : '+'} ${currencyFormat.format(valor)}' : '••••••',
                                               style: TextStyle(
                                                 fontFamily: 'JosefinSans',
                                                 fontSize: 15,
@@ -488,7 +548,7 @@ class _WalletPageState extends State<WalletPage>
                                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                           children: [
                                             _TxStat(label: 'Quantidade', value: '$quantidade tokens'),
-                                            _TxStat(label: 'Preço/token', value: currencyFormat.format(precoPorToken), alignEnd: true),
+                                            _TxStat(label: 'Preço/token', value: _saldoVisivel ? currencyFormat.format(precoPorToken) : '••••••', alignEnd: true),
                                           ],
                                         ),
                                       ],

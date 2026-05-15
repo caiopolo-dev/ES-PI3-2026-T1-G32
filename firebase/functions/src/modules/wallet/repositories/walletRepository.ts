@@ -2,6 +2,7 @@
 // Data: 08/05/2026
 // Descrição: Repository da carteira do usuário
 
+import {FieldValue} from "firebase-admin/firestore";
 import {db} from "../../../shared/firebase";
 import {
   USERS, TOKEN_TRANSACTIONS, STARTUPS, WALLET, WALLET_SALDO,
@@ -69,8 +70,6 @@ export async function getTransactionHistoryByUserId(uid: string) {
  * @return {Promise<object>} Token list.
  */
 export async function getUserTokensByUserId(uid: string) {
-  // Agrega direto de token_transactions para cobrir compras feitas antes
-  // da coleção userTokens existir (retrocompatível com histórico antigo).
   const txSnap = await db
     .collection(TOKEN_TRANSACTIONS)
     .where("buyerId", "==", uid)
@@ -124,4 +123,27 @@ export async function getUserTokensByUserId(uid: string) {
   });
 
   return {tokens};
+}
+
+/**
+ * Adds amountCents to the user's wallet balance atomically.
+ * @param {string} uid User ID.
+ * @param {number} amountCents Amount in cents to add.
+ */
+export async function addBalanceToWallet(uid: string, amountCents: number) {
+  const walletRef = db
+    .collection(USERS)
+    .doc(uid)
+    .collection(WALLET)
+    .doc(WALLET_SALDO);
+
+  await db.runTransaction(async (transaction) => {
+    const snap = await transaction.get(walletRef);
+    const current = Number(snap.data()?.saldo ?? 0);
+    transaction.set(
+      walletRef,
+      {saldo: current + amountCents, updatedAt: FieldValue.serverTimestamp()},
+      {merge: true}
+    );
+  });
 }
