@@ -9,6 +9,7 @@ import {
   TOKEN_TRANSACTIONS,
   WALLET,
   WALLET_SALDO,
+  USER_TOKENS,
 } from "../../../shared/collections";
 
 /**
@@ -36,7 +37,7 @@ export async function buyStartupTokenDirectly(params: {
     const userTokenRef = db
       .collection(USERS)
       .doc(buyerId)
-      .collection("tokens")
+      .collection(USER_TOKENS)
       .doc(startupId);
 
     const startupSnap = await transaction.get(startupRef);

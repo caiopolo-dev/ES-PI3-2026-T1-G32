@@ -10,5 +10,5 @@ export {createUser, getUserData, checkUserExists} from "./modules/users";
 export {getStartups, getStartupById, createFaq, getFaqs}
   from "./modules/startups";
 export {listOffers, buyOffer, buyStartupToken} from "./modules/tokenOffers";
-export {getWalletInfo, getTransactionHistory, getUserTokens}
+export {getWalletInfo, getTransactionHistory, getUserTokens, addBalance}
   from "./modules/wallet";
