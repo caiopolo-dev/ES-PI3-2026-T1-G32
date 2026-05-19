@@ -86,10 +86,12 @@ class _StartupDetailPageState extends State<StartupDetailPage> {
     if (!mounted || result['success'] != true) return;
     final tokens = List<Map<String, dynamic>>.from(result['tokens'] ?? []);
     final match = tokens.where((t) => t['startupId'] == widget.startupId);
+    final qty = match.isNotEmpty
+        ? (match.first['quantidade'] as num?)?.toInt() ?? 0
+        : 0;
     setState(() {
-      _userTokenQuantity = match.isNotEmpty
-          ? (match.first['quantidade'] as num?)?.toInt() ?? 0
-          : 0;
+      _userTokenQuantity = qty;
+      if (qty == 0 && _faqFilter == 2) _faqFilter = 0;
     });
   }
 
@@ -115,6 +117,7 @@ class _StartupDetailPageState extends State<StartupDetailPage> {
     if (vendeu == true) {
       _houvePurchase = true;
       _loadUserTokens();
+      _loadFaqs();
       _fetchDetail();
     }
   }
@@ -137,7 +140,7 @@ class _StartupDetailPageState extends State<StartupDetailPage> {
   Future<void> _showFaqDialog() async {
     final result = await showDialog<FaqResult>(
       context: context,
-      builder: (_) => FaqDialog(startupId: widget.startupId),
+      builder: (_) => FaqDialog(startupId: widget.startupId, temTokens: _userTokenQuantity > 0),
     );
     // Recarrega as FAQs após o envio. addPostFrameCallback evita chamar setState
     // durante a fase de build que ocorre imediatamente após o pop do dialog.
@@ -202,6 +205,8 @@ class _StartupDetailPageState extends State<StartupDetailPage> {
 
     if (comprou == true) {
       _houvePurchase = true;
+      _loadUserTokens();
+      _loadFaqs();
       _fetchDetail();
     }
   }
@@ -374,6 +379,8 @@ class _StartupDetailPageState extends State<StartupDetailPage> {
             scrollDirection: Axis.horizontal,
             child: Row(
               children: List.generate(_faqFilters.length, (i) {
+                // Esconde o filtro "Privadas" (índice 2) para quem não tem tokens.
+                if (i == 2 && _userTokenQuantity == 0) return const SizedBox.shrink();
                 final selected = _faqFilter == i;
                 return Padding(
                   padding: EdgeInsets.only(right: i < _faqFilters.length - 1 ? 8 : 0),
