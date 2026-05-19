@@ -22,13 +22,18 @@ const docToFaq = (doc: FirebaseFirestore.QueryDocumentSnapshot): Faq => ({
 });
 
 export const faqsRepository = {
-  async findByStartup(startupId: string, userEmail: string): Promise<Faq[]> {
+  async findByStartup(
+    startupId: string,
+    hasTokens: boolean,
+    userEmail: string
+  ): Promise<Faq[]> {
     const snapshot = await faqsRef(startupId).get();
 
-    // FAQs privadas só são visíveis para o próprio autor (via email do token).
+    // Públicas: sempre visíveis.
+    // Privadas: visíveis só para o autor, se ele tiver tokens.
     return snapshot.docs
       .map(docToFaq)
-      .filter((faq) => !faq.privada || faq.email === userEmail)
+      .filter((faq) => !faq.privada || (hasTokens && faq.email === userEmail))
       .sort((a, b) => (b.criadoEm ?? 0) - (a.criadoEm ?? 0));
   },
 

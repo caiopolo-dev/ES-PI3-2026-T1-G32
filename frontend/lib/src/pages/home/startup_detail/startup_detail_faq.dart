@@ -14,7 +14,8 @@ class FaqResult {
 
 class FaqDialog extends StatefulWidget {
   final String startupId;
-  const FaqDialog({super.key, required this.startupId});
+  final bool temTokens;
+  const FaqDialog({super.key, required this.startupId, this.temTokens = false});
 
   @override
   State<FaqDialog> createState() => _FaqDialogState();
@@ -81,21 +82,23 @@ class _FaqDialogState extends State<FaqDialog> {
                 ),
               ),
             ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Switch(
-                  value: _privada,
-                  activeThumbColor: AppColors.azul,
-                  activeTrackColor: AppColors.azul200,
-                  inactiveTrackColor: AppColors.cinza200,
-                  inactiveThumbColor: AppColors.cinza500,
-                  onChanged: (v) => setState(() => _privada = v),
-                ),
-                Text(_privada ? 'Privada' : 'Pública',
-                    style: const TextStyle(fontSize: 14)),
-              ],
-            ),
+            if (widget.temTokens) ...[
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Switch(
+                    value: _privada,
+                    activeThumbColor: AppColors.azul,
+                    activeTrackColor: AppColors.azul200,
+                    inactiveTrackColor: AppColors.cinza200,
+                    inactiveThumbColor: AppColors.cinza500,
+                    onChanged: (v) => setState(() => _privada = v),
+                  ),
+                  Text(_privada ? 'Privada' : 'Pública',
+                      style: const TextStyle(fontSize: 14)),
+                ],
+              ),
+            ],
           ],
         ),
       ),
