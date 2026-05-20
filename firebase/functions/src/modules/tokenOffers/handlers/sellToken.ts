@@ -1,52 +1,76 @@
 // Autor: Rafael Mendes Valente
-// Descrição: Handler para criação de oferta de venda de tokens no balcão
+// Descrição: Handler para venda de tokens
 
 import {onCall, HttpsError} from "firebase-functions/v2/https";
-import {requireAuth} from "../../../shared/validation";
-import {createSellOffer as createSellOfferInRepo}
-  from "../repositories/sellTokenRepository";
+import {FieldValue} from "firebase-admin/firestore";
+import {exchangeRepository} from "../repositories/exchangeRepository";
 
-export const createSellOffer = onCall(async (request) => {
-  requireAuth(request.auth);
+const FATOR_IMPACTO = 0.5;
 
-  const {startupId, quantity, pricePerTokenCents} = request.data ?? {};
+export const sellToken = onCall(async (request) => {
+  if (!request.auth) {
+    throw new HttpsError("unauthenticated", "Usuário não autenticado");
+  }
 
-  if (!startupId || typeof startupId !== "string") {
+  const {startupId, quantidade} = request.data;
+  const uid = request.auth.uid;
+
+  if (!startupId || !quantidade || quantidade <= 0) {
+    throw new HttpsError("invalid-argument", "Dados inválidos");
+  }
+
+  const tokenDoc = await exchangeRepository.getTokenDoUsuario(uid, startupId);
+  if (!tokenDoc.exists) {
+    throw new HttpsError("not-found", "Você não possui tokens desta startup");
+  }
+
+  const tokenAtual = tokenDoc.data()!;
+  if (tokenAtual.quantidade < quantidade) {
     throw new HttpsError(
-      "invalid-argument",
-      "ID da startup não informado"
+      "failed-precondition",
+      "Quantidade insuficiente de tokens"
     );
   }
 
-  const quantityNumber = Number(quantity);
+  const startupDoc = await exchangeRepository.getStartup(startupId);
+  const startup = startupDoc.data()!;
+  const precoUnitario: number = startup.precoToken ?? 100;
+  const totalTokens: number = startup.totalTokens ?? 1000;
+  const total = precoUnitario * quantidade;
 
-  if (!Number.isInteger(quantityNumber) || quantityNumber <= 0) {
-    throw new HttpsError(
-      "invalid-argument",
-      "Quantidade inválida"
-    );
+  const saldoAtual = await exchangeRepository.getSaldo(uid);
+  await exchangeRepository.updateSaldo(uid, saldoAtual + total);
+
+  const novaQtd = tokenAtual.quantidade - quantidade;
+  if (novaQtd === 0) {
+    await exchangeRepository.deleteTokenDoUsuario(uid, startupId);
+  } else {
+    await exchangeRepository.updateTokenDoUsuario(uid, startupId, {
+      quantidade: novaQtd,
+      valorAtual: precoUnitario,
+    });
   }
 
-  const priceNumber = Number(pricePerTokenCents);
+  // Calcula novo preço baseado em oferta e demanda
+  const impacto = (quantidade / totalTokens) * FATOR_IMPACTO;
+  const novoPreco = parseFloat((precoUnitario * (1 - impacto)).toFixed(2));
+  await exchangeRepository.updateTokenPrice(startupId, novoPreco);
 
-  const priceInvalid = !Number.isInteger(priceNumber) ||
-    priceNumber < 1 || priceNumber > 5000000;
-  if (priceInvalid) {
-    throw new HttpsError(
-      "invalid-argument",
-      "Preço inválido. Deve ser entre R$0,01 e R$50.000"
-    );
-  }
-
-  const result = await createSellOfferInRepo({
+  await exchangeRepository.registrarTransacao({
+    uid,
     startupId,
-    sellerId: request.auth.uid,
-    quantity: quantityNumber,
-    pricePerTokenCents: priceNumber,
+    startupName: startup.nome,
+    tipo: "venda",
+    quantidade,
+    precoUnitario,
+    total,
+    criadoEm: FieldValue.serverTimestamp() as FirebaseFirestore.Timestamp,
   });
 
   return {
     success: true,
-    data: result,
+    message: "Venda realizada com sucesso",
+    novoSaldo: saldoAtual + total,
+    novoPrecoToken: novoPreco,
   };
 });
