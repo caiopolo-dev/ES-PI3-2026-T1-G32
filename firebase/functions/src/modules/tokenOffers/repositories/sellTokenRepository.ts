@@ -1,4 +1,4 @@
-// Autor: Rafael Mendes Valente
+// Autor: Rafael Mendes Valente - RA: 25002875
 // Descrição: Repository para criação de ofertas de venda de tokens
 
 import {FieldValue} from "firebase-admin/firestore";
@@ -11,6 +11,9 @@ import {
   CreateSellOfferParams,
   CreateSellOfferResult,
 } from "../types/tokenOfferTypes";
+
+// Fator de impacto no preço ao listar tokens para venda (oferta/demanda)
+const FATOR_IMPACTO = 0.5;
 
 /**
  * Creates a sell offer and locks the seller's tokens atomically.
@@ -84,6 +87,13 @@ export async function createSellOffer(
       valorUnitarioCentavos: pricePerTokenCents,
       createdAt: FieldValue.serverTimestamp(),
     });
+
+    // Atualiza o preço do token com base na oferta/demanda
+    const totalTokens = Number(startupData.totalTokens ?? 1000);
+    const precoAtual = Number(startupData.precoToken ?? 100);
+    const impacto = (quantity / totalTokens) * FATOR_IMPACTO;
+    const novoPreco = Math.max(1, Math.round(precoAtual * (1 - impacto)));
+    transaction.update(startupRef, {precoToken: novoPreco});
 
     return {
       offerId: offerRef.id,

@@ -8,9 +8,13 @@ import 'package:mescla_invest/src/services/startup_service.dart';
 import 'package:mescla_invest/src/services/faq_service.dart';
 import 'package:mescla_invest/src/pages/home/startup_detail/startup_detail_widgets.dart';
 import 'package:mescla_invest/src/pages/home/startup_detail/startup_detail_faq.dart';
-import 'package:mescla_invest/src/widgets/user_avatar_menu.dart';
-import 'package:mescla_invest/src/widgets/app_loading_indicator.dart';
+import 'package:mescla_invest/src/widgets/widgets.dart';
+import 'package:mescla_invest/src/pages/home/buy_steps_page.dart';
+import 'package:mescla_invest/src/services/wallet_service.dart';
+import 'package:mescla_invest/src/services/storage_service.dart';
 import 'package:url_launcher/url_launcher.dart';
+
+
 
 class StartupDetailPage extends StatefulWidget {
   final String startupId;
@@ -34,6 +38,10 @@ class _StartupDetailPageState extends State<StartupDetailPage> {
   Map<String, dynamic>? startup;
   bool isLoading = true;
   String? error;
+  bool _houvePurchase = false;
+  int _userTokenQuantity = 0;
+  String? _videoUrl;
+  String? _summaryUrl;
   int _selectedTab = 0;
   int _selectedPeriod = 3;
   List<Map<String, dynamic>> _faqs = [];
@@ -46,9 +54,91 @@ class _StartupDetailPageState extends State<StartupDetailPage> {
   @override
   void initState() {
     super.initState();
-    // Carrega dados da startup e FAQs em paralelo ao abrir a tela.
-    _fetchDetail();
+    _initPage();
     _loadFaqs();
+  }
+
+  Future<void> _initPage() async {
+    final results = await Future.wait([
+      StartupService.getStartupById(widget.startupId),
+      WalletService.getUserTokens(),
+    ]);
+    if (!mounted) return;
+
+    final startupResult = results[0];
+    final tokensResult = results[1];
+    final tokens = tokensResult['success'] == true
+        ? List<Map<String, dynamic>>.from(tokensResult['tokens'] ?? [])
+        : <Map<String, dynamic>>[];
+    final match = tokens.where((t) => t['startupId'] == widget.startupId);
+
+    setState(() {
+      isLoading = false;
+      if (startupResult['success'] as bool) {
+        startup = startupResult['data'] as Map<String, dynamic>;
+      } else {
+        error = startupResult['message'] as String?;
+      }
+      _userTokenQuantity = match.isNotEmpty
+          ? (match.first['quantidade'] as num?)?.toInt() ?? 0
+          : 0;
+    });
+    if (startup != null) {
+      _loadStorageAssets(startup!['nome'] as String? ?? '');
+    }
+  }
+
+  Future<void> _loadStorageAssets(String nome) async {
+    final results = await Future.wait([
+      StorageService.getStartupAsset(nome, 'video.mp4'),
+      StorageService.getStartupAsset(nome, 'summary.pdf'),
+    ]);
+    if (!mounted) return;
+    setState(() {
+      _videoUrl = results[0];
+      _summaryUrl = results[1];
+    });
+  }
+
+  Future<void> _loadUserTokens() async {
+    final result = await WalletService.getUserTokens();
+    if (!mounted || result['success'] != true) return;
+    final tokens = List<Map<String, dynamic>>.from(result['tokens'] ?? []);
+    final match = tokens.where((t) => t['startupId'] == widget.startupId);
+    final qty = match.isNotEmpty
+        ? (match.first['quantidade'] as num?)?.toInt() ?? 0
+        : 0;
+    setState(() {
+      _userTokenQuantity = qty;
+      if (qty == 0 && _faqFilter == 2) _faqFilter = 0;
+    });
+  }
+
+  Future<void> _openSellSteps() async {
+    final data = startup;
+    if (data == null) return;
+    final pricePerTokenCents = (data['precoToken'] as num?)?.toInt() ?? 0;
+
+    final vendeu = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => BuyStepsPage(
+          startupName: data['nome'] as String? ?? widget.startupNome,
+          startupId: widget.startupId,
+          availableQuantity: _userTokenQuantity,
+          pricePerTokenCents: pricePerTokenCents,
+          isSellMode: true,
+        ),
+      ),
+    );
+
+    if (!mounted) return;
+    if (vendeu == true) {
+      _houvePurchase = true;
+      _loadUserTokens();
+      _loadFaqs();
+      _fetchDetail();
+    }
   }
 
   // Busca as FAQs da startup via Cloud Function.
@@ -69,7 +159,7 @@ class _StartupDetailPageState extends State<StartupDetailPage> {
   Future<void> _showFaqDialog() async {
     final result = await showDialog<FaqResult>(
       context: context,
-      builder: (_) => FaqDialog(startupId: widget.startupId),
+      builder: (_) => FaqDialog(startupId: widget.startupId, temTokens: _userTokenQuantity > 0),
     );
     // Recarrega as FAQs após o envio. addPostFrameCallback evita chamar setState
     // durante a fase de build que ocorre imediatamente após o pop do dialog.
@@ -92,6 +182,57 @@ class _StartupDetailPageState extends State<StartupDetailPage> {
     });
   }
 
+  Future<void> _openBuyStepsFromStartup() async {
+    final data = startup;
+
+    if (data == null) {
+      return;
+    }
+
+    final startupName = data['nome'] as String? ?? widget.startupNome;
+    final pricePerTokenCents = (data['precoToken'] as num?)?.toInt() ?? 0;
+    final availableQuantity = (data['tokensDisponiveis'] as num?)?.toInt() ?? 0;
+
+    if (availableQuantity <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Essa startup não possui tokens disponíveis.')),
+      );
+      return;
+    }
+
+    if (pricePerTokenCents <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Preço do token inválido.')),
+      );
+      return;
+    }
+
+    final comprou = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => BuyStepsPage(
+          startupName: startupName,
+          startupId: widget.startupId,
+          availableQuantity: availableQuantity,
+          pricePerTokenCents: pricePerTokenCents,
+          isStartupFlow: true,
+        ),
+      ),
+    );
+
+    if (!mounted) return;
+
+    if (comprou == true) {
+      _houvePurchase = true;
+      _loadUserTokens();
+      _loadFaqs();
+      _fetchDetail();
+    }
+  }
+
+
+
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -101,7 +242,7 @@ class _StartupDetailPageState extends State<StartupDetailPage> {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: AppColors.preto),
-          onPressed: () => Navigator.pop(context),
+          onPressed: () => Navigator.pop(context, _houvePurchase),
         ),
         title: Text(
           startup?['nome'] as String? ?? widget.startupNome,
@@ -119,22 +260,27 @@ class _StartupDetailPageState extends State<StartupDetailPage> {
         ],
       ),
       body: isLoading
-          ? const AppLoadingIndicator()
-          : error != null
-              ? Center(child: Text('Erro: $error'))
-              : Column(
-                  children: [
-                    Expanded(child: _buildContent()),
-                    const BottomActionBar(),
-                  ],
-                ),
+        ? const AppLoadingIndicator()
+        : error != null
+            ? Center(child: Text('Erro: $error'))
+            : Column(
+                children: [
+                  Expanded(child: _buildContent()),
+                  BottomActionBar(
+                    onComprar: _openBuyStepsFromStartup,
+                    onVender: _openSellSteps,
+                    temTokens: _userTokenQuantity > 0,
+                  ),
+                ],
+              ),
     );
   }
 
   Widget _buildContent() {
     final data = startup!;
-    final precoToken = (data['precoToken'] as num?)?.toDouble() ?? 0.0;
+    final precoToken = ((data['precoToken'] as num?)?.toDouble() ?? 0.0) / 100;
     final totalTokens = (data['totalTokens'] as num?)?.toInt() ?? 0;
+    final tokensDisponiveis = (data['tokensDisponiveis'] as num?)?.toInt() ?? 0;
     final descricao = data['descricao'] as String? ?? '';
     final socios = (data['socios'] as List?)
             ?.map((s) => Map<String, dynamic>.from(s as Map))
@@ -144,8 +290,6 @@ class _StartupDetailPageState extends State<StartupDetailPage> {
             ?.map((c) => Map<String, dynamic>.from(c as Map))
             .toList() ??
         [];
-    final assets = data['assets'] as Map<String, dynamic>?;
-    final videoUrl = assets?['video'] as String?;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -157,7 +301,7 @@ class _StartupDetailPageState extends State<StartupDetailPage> {
           const SizedBox(height: 16),
           const Divider(),
           const SizedBox(height: 12),
-          TokensInfo(totalTokens: totalTokens),
+          TokensInfo(totalTokens: totalTokens, tokensDisponiveis: tokensDisponiveis),
           const SizedBox(height: 16),
           const Divider(),
           const SizedBox(height: 16),
@@ -214,17 +358,16 @@ class _StartupDetailPageState extends State<StartupDetailPage> {
 
           const SectionTitle(title: 'Apresentação em vídeo'),
           const SizedBox(height: 14),
-          videoUrl != null ? StartupVideoPlayer(url: videoUrl) : _videoUnavailable(),
+          _videoUrl != null ? StartupVideoPlayer(url: _videoUrl!) : _videoUnavailable(),
           const SizedBox(height: 20),
 
           Text(descricao, style: const TextStyle(fontSize: 15, height: 1.6)),
           const SizedBox(height: 20),
 
-        // Rafael Mendes Valente - RA: 25002875
-        // feat: Adicionar botão para baixar sumário executivo em PDF, se disponível
+          // Exibe o botão de download apenas quando summaryUrl estiver disponível.
           Builder(
             builder: (context) {
-              final summaryUrl = assets?['summaryUrl'] as String?;
+              final summaryUrl = _summaryUrl;
               if (summaryUrl == null || summaryUrl.isEmpty) {
                 return const SizedBox.shrink();
               }
@@ -272,6 +415,8 @@ class _StartupDetailPageState extends State<StartupDetailPage> {
             scrollDirection: Axis.horizontal,
             child: Row(
               children: List.generate(_faqFilters.length, (i) {
+                // Esconde o filtro "Privadas" (índice 2) para quem não tem tokens.
+                if (i == 2 && _userTokenQuantity == 0) return const SizedBox.shrink();
                 final selected = _faqFilter == i;
                 return Padding(
                   padding: EdgeInsets.only(right: i < _faqFilters.length - 1 ? 8 : 0),

@@ -6,6 +6,7 @@ import 'package:cloud_functions/cloud_functions.dart';
 import 'package:intl/intl.dart';
 import 'package:mescla_invest/src/theme/app_colors.dart';
 import 'package:mescla_invest/src/services/wallet_service.dart';
+import 'package:mescla_invest/src/services/storage_service.dart';
 import 'package:mescla_invest/src/widgets/widgets.dart';
 import 'buy_steps_page.dart';
 
@@ -32,6 +33,7 @@ class _BalcaoNegociacaoPageState extends State<BalcaoNegociacaoPage> {
   List<dynamic> myOffers = [];
   bool isLoadingMyOffers = true;
   String? myOffersError;
+  Map<String, String?> _logoUrls = {};
 
   @override
   void initState() {
@@ -53,6 +55,22 @@ class _BalcaoNegociacaoPageState extends State<BalcaoNegociacaoPage> {
 
   Future<void> _loadAll() async {
     await Future.wait([loadOffers(), loadMyOffers()]);
+    _loadLogoUrls();
+  }
+
+  Future<void> _loadLogoUrls() async {
+    final names = <String>{
+      for (final o in [...offers, ...myOffers])
+        (o['startupName'] ?? o['startupId'] ?? '').toString(),
+    }..remove('');
+    final entries = await Future.wait(
+      names.map((name) async {
+        final url = await StorageService.getStartupAsset(name, 'logoPhoto.jpeg');
+        return MapEntry(name, url);
+      }),
+    );
+    if (!mounted) return;
+    setState(() => _logoUrls = Map.fromEntries(entries));
   }
 
   Future<void> loadOffers() async {
@@ -218,22 +236,26 @@ class _BalcaoNegociacaoPageState extends State<BalcaoNegociacaoPage> {
                               child: ListView.builder(
                                 padding: const EdgeInsets.fromLTRB(20, 4, 20, 100),
                                 itemCount: filteredOffers.length,
-                                itemBuilder: (context, index) => _OfferCard(
-                                  data: filteredOffers[index],
-                                  currency: _currency,
-                                  onTap: () async {
-                                    final data = filteredOffers[index];
-                                    final comprou = await Navigator.push<bool>(context,
-                                      MaterialPageRoute(builder: (_) => BuyStepsPage(
-                                        startupName: (data['startupName'] ?? data['startupId'] ?? '').toString(),
-                                        availableQuantity: int.tryParse((data['amount'] ?? 0).toString()) ?? 0,
-                                        pricePerTokenCents: int.tryParse((data['valorUnitarioCentavos'] ?? 0).toString()) ?? 0,
-                                        offerId: (data['offerId'] ?? '').toString(),
-                                      )),
-                                    );
-                                    if (comprou == true && mounted) loadOffers();
-                                  },
-                                ),
+                                itemBuilder: (context, index) {
+                                  final data = filteredOffers[index];
+                                  final name = (data['startupName'] ?? data['startupId'] ?? '').toString();
+                                  return _OfferCard(
+                                    data: data,
+                                    currency: _currency,
+                                    logoUrl: _logoUrls[name],
+                                    onTap: () async {
+                                      final comprou = await Navigator.push<bool>(context,
+                                        MaterialPageRoute(builder: (_) => BuyStepsPage(
+                                          startupName: name,
+                                          availableQuantity: int.tryParse((data['amount'] ?? 0).toString()) ?? 0,
+                                          pricePerTokenCents: int.tryParse((data['valorUnitarioCentavos'] ?? 0).toString()) ?? 0,
+                                          offerId: (data['offerId'] ?? '').toString(),
+                                        )),
+                                      );
+                                      if (comprou == true && mounted) loadOffers();
+                                    },
+                                  );
+                                },
                               ),
                             ),
         ),
@@ -253,10 +275,15 @@ class _BalcaoNegociacaoPageState extends State<BalcaoNegociacaoPage> {
                     child: ListView.builder(
                       padding: const EdgeInsets.fromLTRB(20, 16, 20, 100),
                       itemCount: myOffers.length,
-                      itemBuilder: (context, index) => _MyOrderCard(
-                        data: myOffers[index],
-                        currency: _currency,
-                      ),
+                      itemBuilder: (context, index) {
+                        final data = myOffers[index];
+                        final name = (data['startupName'] ?? data['startupId'] ?? '').toString();
+                        return _MyOrderCard(
+                          data: data,
+                          currency: _currency,
+                          logoUrl: _logoUrls[name],
+                        );
+                      },
                     ),
                   );
   }
@@ -283,8 +310,9 @@ class _OfferCard extends StatelessWidget {
   final Map<String, dynamic> data;
   final NumberFormat currency;
   final VoidCallback onTap;
+  final String? logoUrl;
 
-  const _OfferCard({required this.data, required this.currency, required this.onTap});
+  const _OfferCard({required this.data, required this.currency, required this.onTap, this.logoUrl});
 
   @override
   Widget build(BuildContext context) {
@@ -307,7 +335,8 @@ class _OfferCard extends StatelessWidget {
             CircleAvatar(
               radius: 24,
               backgroundColor: AppColors.azul.withValues(alpha: 0.1),
-              child: const Icon(Icons.business, color: AppColors.azul, size: 22),
+              backgroundImage: logoUrl != null ? NetworkImage(logoUrl!) : null,
+              child: logoUrl == null ? const Icon(Icons.business, color: AppColors.azul, size: 22) : null,
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -366,8 +395,9 @@ class _OfferCard extends StatelessWidget {
 class _MyOrderCard extends StatelessWidget {
   final Map<String, dynamic> data;
   final NumberFormat currency;
+  final String? logoUrl;
 
-  const _MyOrderCard({required this.data, required this.currency});
+  const _MyOrderCard({required this.data, required this.currency, this.logoUrl});
 
   @override
   Widget build(BuildContext context) {
@@ -391,7 +421,8 @@ class _MyOrderCard extends StatelessWidget {
               CircleAvatar(
                 radius: 24,
                 backgroundColor: AppColors.vermelho.withValues(alpha: 0.1),
-                child: const Icon(Icons.arrow_upward, color: AppColors.vermelho, size: 22),
+                backgroundImage: logoUrl != null ? NetworkImage(logoUrl!) : null,
+                child: logoUrl == null ? const Icon(Icons.arrow_upward, color: AppColors.vermelho, size: 22) : null,
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -435,7 +466,7 @@ class _MyOrderCard extends StatelessWidget {
                       fontFamily: 'JosefinSans',
                       fontSize: 15,
                       fontWeight: FontWeight.bold,
-                      color: AppColors.vermelho,
+                      color: AppColors.azul,
                     ),
                   ),
                   const Text(
@@ -495,6 +526,7 @@ class _UserTokensSheet extends StatefulWidget {
 class _UserTokensSheetState extends State<_UserTokensSheet> {
   List<Map<String, dynamic>> _tokens = [];
   bool _isLoading = true;
+  Map<String, String?> _logoUrls = {};
 
   @override
   void initState() {
@@ -511,6 +543,19 @@ class _UserTokensSheetState extends State<_UserTokensSheet> {
         _tokens = List<Map<String, dynamic>>.from(result['tokens'] ?? []);
       }
     });
+    _loadLogoUrls();
+  }
+
+  Future<void> _loadLogoUrls() async {
+    final entries = await Future.wait(
+      _tokens.map((t) async {
+        final nome = (t['startupNome'] as String?) ?? '';
+        final url = await StorageService.getStartupAsset(nome, 'logoPhoto.jpeg');
+        return MapEntry(nome, url);
+      }),
+    );
+    if (!mounted) return;
+    setState(() => _logoUrls = Map.fromEntries(entries));
   }
 
   @override
@@ -563,7 +608,7 @@ class _UserTokensSheetState extends State<_UserTokensSheet> {
                         itemCount: _tokens.length,
                         itemBuilder: (context, index) {
                           final token = _tokens[index];
-                          final logoUrl = token['startupLogo'] as String?;
+                          final logoUrl = _logoUrls[token['startupNome'] as String? ?? ''];
                           final quantidade = (token['quantidade'] as num?)?.toInt() ?? 0;
                           final valorAtual = (token['valorAtual'] as num?)?.toDouble() ?? 0.0;
 

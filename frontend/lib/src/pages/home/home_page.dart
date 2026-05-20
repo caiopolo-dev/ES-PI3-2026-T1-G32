@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:mescla_invest/src/theme/app_colors.dart';
 import 'package:mescla_invest/src/services/wallet_service.dart';
 import 'package:mescla_invest/src/services/startup_service.dart';
+import 'package:mescla_invest/src/services/storage_service.dart';
 import 'package:mescla_invest/src/pages/home/startup_detail/startup_detail_page.dart';
 import 'package:mescla_invest/src/widgets/widgets.dart';
 
@@ -29,6 +30,7 @@ class _HomePageState extends State<HomePage> {
   double _valorPortfolio = 0;
   int _totalTokens = 0;
   List<Map<String, dynamic>> _destaques = [];
+  Map<String, String?> _logoUrls = {};
 
   final currencyFormat = NumberFormat.currency(locale: 'pt_BR', symbol: 'R\$');
 
@@ -114,6 +116,20 @@ class _HomePageState extends State<HomePage> {
     }
 
     setState(() => _isLoading = false);
+    _loadLogoUrls();
+  }
+
+  Future<void> _loadLogoUrls() async {
+    final entries = await Future.wait(
+      _destaques.map((data) async {
+        final id = data['id'] as String? ?? '';
+        final url = await StorageService.getStartupAsset(
+          data['nome'] as String? ?? '', 'logoPhoto.jpeg');
+        return MapEntry(id, url);
+      }),
+    );
+    if (!mounted) return;
+    setState(() => _logoUrls = Map.fromEntries(entries));
   }
 
   @override
@@ -320,9 +336,8 @@ class _HomePageState extends State<HomePage> {
               )
             else
               ..._destaques.map((data) {
-                final assets = data['assets'] as Map<String, dynamic>?;
-                final photos = assets?['photos'] as Map<String, dynamic>?;
-                final logoUrl = photos?['logoPhoto'] as String?;
+                final id = data['id'] as String? ?? '';
+                final logoUrl = _logoUrls[id];
 
                 return GestureDetector(
                   onTap: () async {

@@ -5,6 +5,7 @@
 import 'package:flutter/material.dart';
 import 'package:mescla_invest/src/theme/app_colors.dart';
 import 'package:intl/intl.dart';
+import 'package:mescla_invest/src/services/storage_service.dart';
 import 'package:mescla_invest/src/services/startup_service.dart';
 import 'package:mescla_invest/src/pages/home/startup_detail/startup_detail_page.dart';
 import 'package:mescla_invest/src/widgets/widgets.dart';
@@ -29,6 +30,7 @@ class InitialCatalogPage extends StatefulWidget {
 class _InitialCatalogPageState extends State<InitialCatalogPage> {
   int selectedFilter = 0;
   List<Map<String, dynamic>> startups = [];
+  Map<String, String?> _bannerUrls = {};
   bool isLoading = true;
   String? error;
   int _requestId = 0;
@@ -96,6 +98,20 @@ class _InitialCatalogPageState extends State<InitialCatalogPage> {
         error = result['message'] as String?;
       }
     });
+    _loadBannerUrls();
+  }
+
+  Future<void> _loadBannerUrls() async {
+    final entries = await Future.wait(
+      startups.map((data) async {
+        final id = data['id'] as String? ?? '';
+        final url = await StorageService.getStartupAsset(
+          data['nome'] as String? ?? '', 'bannerPhoto.png');
+        return MapEntry(id, url);
+      }),
+    );
+    if (!mounted) return;
+    setState(() => _bannerUrls = Map.fromEntries(entries));
   }
 
   // Filtra a lista de startups pelo texto digitado na barra de busca.
@@ -197,10 +213,9 @@ class _InitialCatalogPageState extends State<InitialCatalogPage> {
                             : ListView.builder(
                                 itemCount: _filteredStartups.length,
                                 itemBuilder: (context, index) {
-                                  final data = _filteredStartups[index];
-                                  final assets = data['assets'] as Map<String, dynamic>?;
-                                  final photos = assets?['photos'] as Map<String, dynamic>?;
-                                  final logoUrl = photos?['logoPhoto'] as String?;
+                                                  final data = _filteredStartups[index];
+                                  final id = data['id'] as String? ?? '';
+                                  final bannerUrl = _bannerUrls[id];
 
                                   return GestureDetector(
                                     onTap: () async {
@@ -223,7 +238,7 @@ class _InitialCatalogPageState extends State<InitialCatalogPage> {
                                       estagio: data['estagio'] as String? ?? '',
                                       precoToken: ((data['precoToken'] as num?)?.toDouble() ?? 0.0) / 100,
                                       totalTokens: (data['totalTokens'] as num?)?.toInt() ?? 0,
-                                      logoUrl: logoUrl,
+                                      logoUrl: bannerUrl,
                                     ),
                                   );
                                 },

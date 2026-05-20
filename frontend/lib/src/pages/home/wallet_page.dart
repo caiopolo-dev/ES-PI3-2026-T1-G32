@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:mescla_invest/src/theme/app_colors.dart';
 import 'package:mescla_invest/src/services/wallet_service.dart';
+import 'package:mescla_invest/src/services/storage_service.dart';
 import 'package:mescla_invest/src/widgets/widgets.dart';
 import 'package:mescla_invest/src/pages/home/startup_detail/startup_detail_page.dart';
 import 'package:mescla_invest/src/pages/home/buy_steps_page.dart';
@@ -33,6 +34,7 @@ class _WalletPageState extends State<WalletPage>
   int _totalTokens = 0;
   List<Map<String, dynamic>> _transactions = [];
   List<Map<String, dynamic>> _tokens = [];
+  Map<String, String?> _logoUrls = {};
   String _errorText = '';
 
   final currencyFormat =
@@ -102,6 +104,31 @@ class _WalletPageState extends State<WalletPage>
   }
 
   setState(() => _isLoading = false);
+  _loadLogoUrls();
+  }
+
+  Future<void> _loadLogoUrls() async {
+    final Map<String, String> idToNome = {};
+    for (final t in _tokens) {
+      final id = t['startupId'] as String? ?? '';
+      final nome = t['startupNome'] as String? ?? '';
+      if (id.isNotEmpty && nome.isNotEmpty) idToNome[id] = nome;
+    }
+    for (final tx in _transactions) {
+      final id = tx['startupId'] as String? ?? '';
+      final nome = tx['startupName'] as String? ?? '';
+      if (id.isNotEmpty && nome.isNotEmpty && !idToNome.containsKey(id)) {
+        idToNome[id] = nome;
+      }
+    }
+    final entries = await Future.wait(
+      idToNome.entries.map((e) async {
+        final url = await StorageService.getStartupAsset(e.value, 'logoPhoto.jpeg');
+        return MapEntry(e.key, url);
+      }),
+    );
+    if (!mounted) return;
+    setState(() => _logoUrls = Map.fromEntries(entries));
   }
 
   double get _valorAtualPortfolio => _tokens.fold(0.0, (sum, t) {
@@ -138,7 +165,7 @@ class _WalletPageState extends State<WalletPage>
     final startupNome = token['startupNome'] as String? ?? '';
     final quantidade = (token['quantidade'] as num?)?.toInt() ?? 0;
     final valorAtual = (token['valorAtual'] as num?)?.toDouble() ?? 0.0;
-    final logoUrl = token['startupLogo'] as String?;
+    final logoUrl = _logoUrls[token['startupId'] as String? ?? ''];
     final pricePerTokenCents = (valorAtual * 100).round();
 
     if (!mounted) return;
@@ -386,7 +413,7 @@ class _WalletPageState extends State<WalletPage>
                                       ? ((valorAtual - precoMedio) / precoMedio * 100).toStringAsFixed(2)
                                       : '0.00';
                                   final positivo = valorAtual >= precoMedio;
-                                  final logoUrl = token['startupLogo'] as String?;
+                                  final logoUrl = _logoUrls[token['startupId'] as String? ?? ''];
 
                                   return GestureDetector(
                                     onTap: () => _openTokenActions(token),
@@ -550,6 +577,10 @@ class _WalletPageState extends State<WalletPage>
                                     iconeTipo = Icons.arrow_downward;
                                   }
 
+                                  final txLogoUrl = isDeposit
+                                      ? null
+                                      : _logoUrls[tx['startupId'] as String? ?? ''];
+
                                   return Container(
                                     margin: const EdgeInsets.symmetric(vertical: 6),
                                     padding: const EdgeInsets.all(16),
@@ -564,7 +595,8 @@ class _WalletPageState extends State<WalletPage>
                                             CircleAvatar(
                                               radius: 20,
                                               backgroundColor: corTipo.withValues(alpha: 0.1),
-                                              child: Icon(iconeTipo, color: corTipo, size: 18),
+                                              backgroundImage: txLogoUrl != null ? NetworkImage(txLogoUrl) : null,
+                                              child: txLogoUrl == null ? Icon(iconeTipo, color: corTipo, size: 18) : null,
                                             ),
                                             const SizedBox(width: 12),
                                             Expanded(
