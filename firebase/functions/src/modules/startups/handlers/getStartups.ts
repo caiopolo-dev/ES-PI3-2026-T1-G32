@@ -13,9 +13,13 @@ export const getStartups = onCall(async (request) => {
   try {
     // Pega o estágio enviado pelo Flutter (opcional)
     const estagio = request.data?.estagio as EstagioStartup | undefined;
+    const includeDailyVariation =
+      request.data?.includeDailyVariation === true;
 
-    // Chama o repository que vai buscar no Firestore
-    const startups = await startupRepository.findAll(estagio);
+    const startups = await startupRepository.findAll(
+      estagio,
+      includeDailyVariation
+    );
 
     // Retorna os dados direto, sem res.status()
     // pois onCall faz isso automaticamente
