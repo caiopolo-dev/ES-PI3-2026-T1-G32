@@ -22,6 +22,7 @@ export async function listOffersBySeller(sellerId: string) {
   const snapshot = await db
     .collection(TOKEN_OFFERS)
     .where("sellerId", "==", sellerId)
+    .where("status", "==", "open")
     .get();
 
   return snapshot.docs.map((doc) => {

@@ -31,3 +31,14 @@ export type CreateSellOfferResult = {
   quantity: number;
   pricePerTokenCents: number;
 };
+
+export type CancelSellOfferParams = {
+  offerId: string;
+  sellerId: string;
+};
+
+export type CancelSellOfferResult = {
+  offerId: string;
+  startupId: string;
+  returnedAmount: number;
+};

@@ -9,7 +9,8 @@ initializeApp();
 export {createUser, getUserData, checkUserExists} from "./modules/users";
 export {getStartups, getStartupById, createFaq, getFaqs}
   from "./modules/startups";
-export {listOffers, listMyOffers, buyOffer, buyStartupToken, createSellOffer}
+export {listOffers, listMyOffers, buyOffer, buyStartupToken, createSellOffer,
+  cancelOffer}
   from "./modules/tokenOffers";
 export {getWalletInfo, getTransactionHistory, getUserTokens, addBalance}
   from "./modules/wallet";

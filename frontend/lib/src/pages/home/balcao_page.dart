@@ -125,6 +125,78 @@ class _BalcaoNegociacaoPageState extends State<BalcaoNegociacaoPage> {
     );
     if (vendeu == true && mounted) _loadAll();
   }
+  
+
+  Future<void> _confirmCancelOffer(Map<String, dynamic> offer) async {
+    final offerId = (offer['offerId'] ?? '').toString();
+
+    if (offerId.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('ID da oferta não encontrado')),
+      );
+      return;
+    }
+
+    final shouldCancel = await showDialog<bool>(
+      context: context,
+      
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.white,
+         title: Text(
+          'Cancelar oferta',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontFamily: 'JosefinSans',
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+
+        content: Text(
+          'Deseja cancelar a oferta?',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontFamily: 'JosefinSans',
+          ),
+        ),
+        actionsAlignment: MainAxisAlignment.center,
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Não', style: TextStyle(fontSize: 20, color: Colors.black)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Sim', style: TextStyle(fontSize: 20, color: Colors.black)),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldCancel != true) return;
+
+    final result = await WalletService.cancelOffer(offerId);
+
+    if (!mounted) return;
+
+    if (result['success'] == true) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Oferta cancelada com sucesso')),
+      );
+      _loadAll();
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            result['message']?.toString() ?? 'Erro ao cancelar oferta',
+          ),
+        ),
+      );
+    }
+  }
+
+
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -253,11 +325,15 @@ class _BalcaoNegociacaoPageState extends State<BalcaoNegociacaoPage> {
                     child: ListView.builder(
                       padding: const EdgeInsets.fromLTRB(20, 16, 20, 100),
                       itemCount: myOffers.length,
-                      itemBuilder: (context, index) => _MyOrderCard(
-                        data: myOffers[index],
-                        currency: _currency,
-                      ),
-                    ),
+                      itemBuilder: (context, index) {
+                        final offer = Map<String, dynamic>.from(myOffers[index] as Map);
+                        return _MyOrderCard(
+                          data: offer,
+                          currency: _currency,
+                          onCancel: () => _confirmCancelOffer(offer),
+                        );
+                      },
+                    )
                   );
   }
 
@@ -366,8 +442,14 @@ class _OfferCard extends StatelessWidget {
 class _MyOrderCard extends StatelessWidget {
   final Map<String, dynamic> data;
   final NumberFormat currency;
+  final VoidCallback onCancel;
 
-  const _MyOrderCard({required this.data, required this.currency});
+  const _MyOrderCard({
+    required this.data,
+    required this.currency,
+    required this.onCancel,
+  });
+    
 
   @override
   Widget build(BuildContext context) {
@@ -459,6 +541,22 @@ class _MyOrderCard extends StatelessWidget {
               _Stat(label: 'Tokens ofertados', value: '$amount tokens'),
               _Stat(label: 'Total da ordem', value: currency.format(total), alignEnd: true),
             ],
+          ),
+          const SizedBox(height: 12),
+          Align(
+            alignment: Alignment.centerRight,
+            child: InkWell(
+              onTap: onCancel,
+              child: const Text(
+                'Cancelar oferta',
+                style: TextStyle(
+                  fontFamily: 'JosefinSans',
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.vermelho,
+                ),
+              ),
+            ),
           ),
         ],
       ),

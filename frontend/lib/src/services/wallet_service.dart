@@ -114,4 +114,22 @@ class WalletService {
       return {'success': false, 'message': e.toString()};
     }
   }
+  //-------------------- modificacao - caio
+  static Future<Map<String, dynamic>> cancelOffer(String offerId) async {
+    try {
+      await FirebaseFunctions.instance
+          .httpsCallable('cancelOffer')
+          .call({'offerId': offerId});
+
+      return {'success': true};
+    } on FirebaseFunctionsException catch (e) {
+      return {
+        'success': false,
+        'message': e.message ?? 'Erro ao cancelar ordem de venda',
+      };
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+  //-------------------- modificacao - caio
 }
