@@ -8,7 +8,7 @@ import 'package:mescla_invest/src/theme/app_colors.dart';
 import 'package:mescla_invest/src/pages/home/home_page.dart';
 import 'package:mescla_invest/src/pages/home/balcao_page.dart';
 import 'package:mescla_invest/src/pages/home/catalog_page.dart';
-import 'package:mescla_invest/src/pages/home/wallet_page.dart';
+import 'package:mescla_invest/src/pages/home/wallet/wallet_page.dart';
 import 'package:mescla_invest/src/pages/home/profile_page.dart';
 
 class MainScaffold extends StatefulWidget {
