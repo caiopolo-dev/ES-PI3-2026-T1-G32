@@ -2,7 +2,9 @@
 // Descrição: Repository de usuários — cadastro, busca e verificação
 
 import {db} from "../../../shared/firebase";
-import {USERS, WALLET, WALLET_SALDO} from "../../../shared/collections";
+import {
+  USERS, WALLET, WALLET_SALDO, USER_TOKENS,
+} from "../../../shared/collections";
 
 /**
  * Registers a new user in Firestore.
@@ -49,6 +51,24 @@ export async function registerUser(
  */
 export async function getUserById(uid: string) {
   return db.collection(USERS).doc(uid).get();
+}
+
+
+/**
+ * Returns true if the user holds at least one token of a given startup.
+ * @param {string} uid User ID.
+ * @param {string} startupId Startup document ID.
+ * @return {Promise<boolean>}
+ */
+export async function hasTokensForStartup(
+  uid: string,
+  startupId: string
+): Promise<boolean> {
+  const doc = await db
+    .collection(USERS).doc(uid)
+    .collection(USER_TOKENS).doc(startupId)
+    .get();
+  return doc.exists && Number(doc.data()?.quantidade ?? 0) > 0;
 }
 
 

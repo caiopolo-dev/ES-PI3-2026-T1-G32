@@ -4,9 +4,8 @@
 
 import {onCall, HttpsError} from "firebase-functions/v2/https";
 import {faqsRepository} from "../repositories/faqsRepository";
+import {hasTokensForStartup} from "../../users/repositories/userRepository";
 import {requireAuth} from "../../../shared/validation";
-import {db} from "../../../shared/firebase";
-import {USERS, USER_TOKENS} from "../../../shared/collections";
 
 export const getFaqs = onCall(async (request) => {
   requireAuth(request.auth);
@@ -20,13 +19,7 @@ export const getFaqs = onCall(async (request) => {
   const uid = request.auth.uid;
   const email = request.auth.token.email!;
 
-  const tokenDoc = await db
-    .collection(USERS).doc(uid)
-    .collection(USER_TOKENS).doc(startupId)
-    .get();
-
-  const hasTokens =
-    tokenDoc.exists && Number(tokenDoc.data()?.quantidade ?? 0) > 0;
+  const hasTokens = await hasTokensForStartup(uid, startupId);
 
   const faqs = await faqsRepository.findByStartup(startupId, hasTokens, email);
 

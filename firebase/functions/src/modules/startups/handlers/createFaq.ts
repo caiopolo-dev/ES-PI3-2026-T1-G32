@@ -4,10 +4,11 @@
 
 import {onCall, HttpsError} from "firebase-functions/v2/https";
 import {faqsRepository} from "../repositories/faqsRepository";
-import {getUserById} from "../../users/repositories/userRepository";
+import {
+  getUserById,
+  hasTokensForStartup,
+} from "../../users/repositories/userRepository";
 import {requireAuth} from "../../../shared/validation";
-import {db} from "../../../shared/firebase";
-import {USERS, USER_TOKENS} from "../../../shared/collections";
 
 export const createFaq = onCall(async (request) => {
   requireAuth(request.auth);
@@ -25,12 +26,7 @@ export const createFaq = onCall(async (request) => {
   const email = request.auth.token.email!;
 
   if (privada === true) {
-    const tokenDoc = await db
-      .collection(USERS).doc(uid)
-      .collection(USER_TOKENS).doc(startupId)
-      .get();
-    const hasTokens =
-      tokenDoc.exists && Number(tokenDoc.data()?.quantidade ?? 0) > 0;
+    const hasTokens = await hasTokensForStartup(uid, startupId);
     if (!hasTokens) {
       throw new HttpsError(
         "permission-denied",
