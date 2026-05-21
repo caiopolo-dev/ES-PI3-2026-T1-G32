@@ -54,13 +54,6 @@ class _InitialCatalogPageState extends State<InitialCatalogPage> {
     super.initState();
     // Carrega o catálogo completo na primeira visita à aba.
     if (widget.isActive) fetchStartups();
-    // Atualiza _searchQuery a cada keystroke para filtrar a lista em tempo real.
-    _searchController.addListener(() {
-      if (!mounted) return;
-      setState(() {
-        _searchQuery = _searchController.text.toLowerCase();
-      });
-    });
   }
 
   @override
@@ -84,6 +77,7 @@ class _InitialCatalogPageState extends State<InitialCatalogPage> {
 
     final result = await StartupService.getStartups(
       estagio: filterValues[selectedFilter],
+      includeDailyVariation: true,
     );
 
     // Se outro filtro foi selecionado enquanto aguardávamos a resposta, aborta.
@@ -149,51 +143,28 @@ class _InitialCatalogPageState extends State<InitialCatalogPage> {
             children: [
               const SizedBox(height: 20),
 
-              // Barra de busca
-              TextField(
+              AppSearchField(
                 controller: _searchController,
-                decoration: InputDecoration(
-                  hintText: "Buscar startup",
-                  hintStyle: const TextStyle(fontFamily: 'JosefinSans', color: AppColors.cinza500),
-                  prefixIcon: const Icon(Icons.search, color: AppColors.azul),
-                  filled: true,
-                  fillColor: AppColors.cinza200,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(20),
-                    borderSide: BorderSide.none,
-                  ),
-                ),
+                hintText: 'Buscar startup',
+                onChanged: (v) =>
+                    setState(() => _searchQuery = v.toLowerCase()),
               ),
 
               const SizedBox(height: 20),
 
-              // Filtros
               SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 child: Row(
                   children: List.generate(filters.length, (index) {
-                    final isSelected = selectedFilter == index;
-
                     return Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 5),
-                      child: GestureDetector(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: AppFilterChip(
+                        label: filters[index],
+                        selected: selectedFilter == index,
                         onTap: () {
                           setState(() => selectedFilter = index);
                           fetchStartups();
                         },
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                          decoration: BoxDecoration(
-                            color: isSelected ? AppColors.azul : AppColors.cinza300,
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Text(
-                            filters[index],
-                            style: TextStyle(
-                              color: isSelected ? AppColors.branco : AppColors.preto,
-                            ),
-                          ),
-                        ),
                       ),
                     );
                   }),
@@ -237,7 +208,8 @@ class _InitialCatalogPageState extends State<InitialCatalogPage> {
                                       setor: data['setor'] as String? ?? '',
                                       estagio: data['estagio'] as String? ?? '',
                                       precoToken: ((data['precoToken'] as num?)?.toDouble() ?? 0.0) / 100,
-                                      totalTokens: (data['totalTokens'] as num?)?.toInt() ?? 0,
+                                      totalTokens: (data['tokensDisponiveis'] as num?)?.toInt() ?? 0,
+                                      fechamentoOntem: ((data['fechamentoOntemCentavos'] as num?)?.toDouble() ?? 0.0) / 100,
                                       logoUrl: bannerUrl,
                                     ),
                                   );
@@ -252,12 +224,18 @@ class _InitialCatalogPageState extends State<InitialCatalogPage> {
   }
 }
 
-// Card de cada startup
+const Map<String, Color> _estagioColors = {
+  'nova': AppColors.verde,
+  'em_operacao': AppColors.azul,
+  'em_expansao': AppColors.laranja,
+};
+
 class StartupCard extends StatelessWidget {
   final String nome;
   final String setor;
   final String estagio;
   final double precoToken;
+  final double fechamentoOntem;
   final int totalTokens;
   final String? logoUrl;
 
@@ -267,12 +245,31 @@ class StartupCard extends StatelessWidget {
     required this.setor,
     required this.estagio,
     required this.precoToken,
+    required this.fechamentoOntem,
     required this.totalTokens,
     this.logoUrl,
   });
 
   @override
   Widget build(BuildContext context) {
+    final fmt = NumberFormat.currency(locale: 'pt_BR', symbol: 'R\$');
+    final accentColor = _estagioColors[estagio] ?? AppColors.azul;
+    final Color precoColor;
+    final String? variacaoStr;
+    if (fechamentoOntem <= 0) {
+      precoColor = AppColors.azul;
+      variacaoStr = null;
+    } else {
+      final pct = (precoToken - fechamentoOntem) / fechamentoOntem * 100;
+      variacaoStr =
+          '${pct >= 0 ? '+' : ''}${pct.toStringAsFixed(1)}% · hoje';
+      precoColor = pct > 0
+          ? AppColors.verde
+          : pct < 0
+              ? AppColors.vermelho
+              : AppColors.azul;
+    }
+
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
@@ -284,7 +281,7 @@ class StartupCard extends StatelessWidget {
                 image: NetworkImage(logoUrl!),
                 fit: BoxFit.cover,
                 colorFilter: ColorFilter.mode(
-                  AppColors.branco.withValues(alpha: 0.85),
+                  AppColors.branco.withValues(alpha: 0.82),
                   BlendMode.srcOver,
                 ),
               )
@@ -298,49 +295,119 @@ class StartupCard extends StatelessWidget {
             Text(
               nome,
               style: const TextStyle(
+                fontFamily: 'JosefinSans',
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
               ),
             ),
-
-            const SizedBox(height: 6),
-
+            const SizedBox(height: 4),
             Text(
               setor,
-              style: TextStyle(color: AppColors.cinza700),
-            ),
-
-            const SizedBox(height: 10),
-
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text("Preço do token"),
-                Text("R\$ ${NumberFormat('#,##0.00', 'pt_BR').format(precoToken)}"),
-              ],
-            ),
-
-            const SizedBox(height: 5),
-
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text("Total de tokens"),
-                Text(NumberFormat('#,##0', 'pt_BR').format(totalTokens)),
-              ],
-            ),
-
-            const SizedBox(height: 10),
-
-            Text(
-              _estagioLabels[estagio] ?? estagio.replaceAll('_', ' '),
-              style: TextStyle(
-                color: AppColors.cinza500,
-                fontSize: 12,
+              style: const TextStyle(
+                fontFamily: 'JosefinSans',
+                fontSize: 13,
+                color: AppColors.cinza700,
               ),
             ),
-
-            const SizedBox(height: 6),
+            const SizedBox(height: 12),
+            Container(height: 1, color: AppColors.cinza300),
+            const SizedBox(height: 12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Preço por token',
+                  style: TextStyle(
+                    fontFamily: 'JosefinSans',
+                    fontSize: 12,
+                    color: AppColors.cinza700,
+                  ),
+                ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.transparent,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: precoColor, width: 1.5),
+                      ),
+                      child: Text(
+                        fmt.format(precoToken),
+                        style: TextStyle(
+                          fontFamily: 'JosefinSans',
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: precoColor,
+                        ),
+                      ),
+                    ),
+                    if (variacaoStr != null) ...[
+                      const SizedBox(height: 3),
+                      Text(
+                        variacaoStr,
+                        style: TextStyle(
+                          fontFamily: 'JosefinSans',
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: precoColor,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: AppColors.azul.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.toll_outlined,
+                          size: 13, color: AppColors.azul),
+                      const SizedBox(width: 4),
+                      Text(
+                        '${NumberFormat('#,##0', 'pt_BR').format(totalTokens)} tokens',
+                        style: const TextStyle(
+                          fontFamily: 'JosefinSans',
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.azul,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 7, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: accentColor.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    _estagioLabels[estagio] ?? estagio,
+                    style: TextStyle(
+                      fontFamily: 'JosefinSans',
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      color: accentColor,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ],
         ),
       ),

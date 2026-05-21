@@ -9,14 +9,19 @@ class StartupService {
 
   // Busca todas as startups, com filtro opcional por estágio
   // Exemplo: getStartups(estagio: 'nova')
-  static Future<Map<String, dynamic>> getStartups({String? estagio}) async {
+  static Future<Map<String, dynamic>> getStartups({
+    String? estagio,
+    bool includeDailyVariation = false,
+  }) async {
     try {
       final callable = FirebaseFunctions.instance
           .httpsCallable('getStartups');
 
-      final result = await callable.call(
-        estagio != null ? {'estagio': estagio} : {},
-      );
+      final params = <String, dynamic>{};
+      if (estagio != null) params['estagio'] = estagio;
+      if (includeDailyVariation) params['includeDailyVariation'] = true;
+
+      final result = await callable.call(params);
 
       // jsonDecode(jsonEncode(...)) converte o objeto dinâmico retornado pelo SDK
       // em tipos Dart nativos (Map/List), necessário para o cast funcionar corretamente.

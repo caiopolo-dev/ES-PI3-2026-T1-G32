@@ -35,6 +35,8 @@ class _BalcaoNegociacaoPageState extends State<BalcaoNegociacaoPage> {
   String? myOffersError;
   Map<String, String?> _logoUrls = {};
 
+  _SortMode _sortMode = _SortMode.alphabetical;
+
   @override
   void initState() {
     super.initState();
@@ -108,10 +110,32 @@ class _BalcaoNegociacaoPageState extends State<BalcaoNegociacaoPage> {
 
   List<dynamic> get filteredOffers {
     final q = _search.trim().toLowerCase();
-    if (q.isEmpty) return offers;
-    return offers.where((o) =>
-      (o['startupName'] ?? o['startupId'] ?? '').toString().toLowerCase().contains(q)
-    ).toList();
+    var list = q.isEmpty
+        ? List<dynamic>.from(offers)
+        : offers.where((o) =>
+            (o['startupName'] ?? o['startupId'] ?? '')
+                .toString()
+                .toLowerCase()
+                .contains(q))
+            .toList();
+
+    switch (_sortMode) {
+      case _SortMode.alphabetical:
+        list.sort((a, b) =>
+            (a['startupName'] ?? a['startupId'] ?? '')
+                .toString()
+                .compareTo((b['startupName'] ?? b['startupId'] ?? '').toString()));
+      case _SortMode.priceAsc:
+        list.sort((a, b) =>
+            ((a['valorUnitarioCentavos'] as num?) ?? 0)
+                .compareTo((b['valorUnitarioCentavos'] as num?) ?? 0));
+      case _SortMode.priceDesc:
+        list.sort((a, b) =>
+            ((b['valorUnitarioCentavos'] as num?) ?? 0)
+                .compareTo((a['valorUnitarioCentavos'] as num?) ?? 0));
+    }
+
+    return list;
   }
 
   Future<void> _openUserTokensForSell() async {
@@ -197,28 +221,38 @@ class _BalcaoNegociacaoPageState extends State<BalcaoNegociacaoPage> {
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
-          child: TextField(
+          child: AppSearchField(
             controller: _searchController,
+            hintText: 'Buscar startup…',
             onChanged: (v) => setState(() => _search = v),
-            decoration: InputDecoration(
-              hintText: 'Buscar startup',
-              hintStyle: const TextStyle(fontFamily: 'JosefinSans', color: AppColors.cinza500),
-              prefixIcon: const Icon(Icons.search, color: AppColors.azul),
-              suffixIcon: _search.isNotEmpty
-                  ? IconButton(
-                      icon: const Icon(Icons.clear, color: AppColors.cinza500),
-                      onPressed: () {
-                        _searchController.clear();
-                        setState(() => _search = '');
-                      },
-                    )
-                  : null,
-              filled: true,
-              fillColor: AppColors.cinza100,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(20),
-                borderSide: BorderSide.none,
-              ),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                AppFilterChip(
+                  label: 'A–Z',
+                  selected: _sortMode == _SortMode.alphabetical,
+                  onTap: () => setState(() => _sortMode = _SortMode.alphabetical),
+                ),
+                const SizedBox(width: 8),
+                AppFilterChip(
+                  label: 'Menor preço',
+                  icon: Icons.arrow_downward,
+                  selected: _sortMode == _SortMode.priceAsc,
+                  onTap: () => setState(() => _sortMode = _SortMode.priceAsc),
+                ),
+                const SizedBox(width: 8),
+                AppFilterChip(
+                  label: 'Maior preço',
+                  icon: Icons.arrow_upward,
+                  selected: _sortMode == _SortMode.priceDesc,
+                  onTap: () => setState(() => _sortMode = _SortMode.priceDesc),
+                ),
+              ],
             ),
           ),
         ),
@@ -306,6 +340,8 @@ class _BalcaoNegociacaoPageState extends State<BalcaoNegociacaoPage> {
   }
 }
 
+enum _SortMode { alphabetical, priceAsc, priceDesc }
+
 class _OfferCard extends StatelessWidget {
   final Map<String, dynamic> data;
   final NumberFormat currency;
@@ -320,72 +356,175 @@ class _OfferCard extends StatelessWidget {
     final amount = (data['amount'] as num?)?.toInt() ?? 0;
     final centavos = (data['valorUnitarioCentavos'] as num?)?.toDouble() ?? 0;
     final preco = centavos / 100;
+    final mercadoCentavos = (data['precoMercadoCentavos'] as num?)?.toDouble() ?? 0;
+    final temMercado = mercadoCentavos > 0;
+    final abaixo = temMercado && centavos < mercadoCentavos;
+    final acima = temMercado && centavos > mercadoCentavos;
+
+    final accentColor = abaixo
+        ? AppColors.verde
+        : acima
+            ? AppColors.vermelho
+            : AppColors.azul;
+
+    final double diffPct = temMercado && mercadoCentavos > 0
+        ? ((centavos - mercadoCentavos) / mercadoCentavos * 100)
+        : 0;
+    final diffLabel = diffPct == 0
+        ? 'No mercado'
+        : '${diffPct > 0 ? '+' : ''}${diffPct.toStringAsFixed(1)}%';
 
     return GestureDetector(
       onTap: onTap,
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: AppColors.cinza100,
+          color: AppColors.branco,
           borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.cinza200),
         ),
-        child: Row(
-          children: [
-            CircleAvatar(
-              radius: 24,
-              backgroundColor: AppColors.azul.withValues(alpha: 0.1),
-              backgroundImage: logoUrl != null ? NetworkImage(logoUrl!) : null,
-              child: logoUrl == null ? const Icon(Icons.business, color: AppColors.azul, size: 22) : null,
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    name,
-                    style: const TextStyle(
-                      fontFamily: 'JosefinSans',
-                      fontSize: 15,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    '$amount tokens disponíveis',
-                    style: const TextStyle(
-                      fontFamily: 'JosefinSans',
-                      fontSize: 12,
-                      color: AppColors.cinza500,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text(
-                  currency.format(preco),
-                  style: const TextStyle(
-                    fontFamily: 'JosefinSans',
-                    fontSize: 15,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.azul,
-                  ),
-                ),
-                const Text(
-                  'por token',
-                  style: TextStyle(
-                    fontFamily: 'JosefinSans',
-                    fontSize: 11,
-                    color: AppColors.cinza500,
+                // Borda colorida lateral
+                Container(width: 5, color: accentColor),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(14, 14, 14, 12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Linha superior: logo + nome + preço
+                        Row(
+                          children: [
+                            CircleAvatar(
+                              radius: 22,
+                              backgroundColor: accentColor.withValues(alpha: 0.1),
+                              backgroundImage: logoUrl != null ? NetworkImage(logoUrl!) : null,
+                              child: logoUrl == null
+                                  ? Icon(Icons.business, color: accentColor, size: 20)
+                                  : null,
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                name,
+                                style: const TextStyle(
+                                  fontFamily: 'JosefinSans',
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                Text(
+                                  currency.format(preco),
+                                  style: TextStyle(
+                                    fontFamily: 'JosefinSans',
+                                    fontSize: 17,
+                                    fontWeight: FontWeight.bold,
+                                    color: accentColor,
+                                  ),
+                                ),
+                                const Text(
+                                  'por token',
+                                  style: TextStyle(
+                                    fontFamily: 'JosefinSans',
+                                    fontSize: 10,
+                                    color: AppColors.cinza500,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+
+                        const SizedBox(height: 10),
+                        Container(height: 1, color: AppColors.cinza200),
+                        const SizedBox(height: 10),
+
+                        // Linha inferior: quantidade + referência de mercado
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            // Quantidade em destaque
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: AppColors.azul.withValues(alpha: 0.08),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(Icons.toll_outlined, size: 13, color: AppColors.azul),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    NumberFormat('#,##0', 'pt_BR').format(amount),
+                                    style: const TextStyle(
+                                      fontFamily: 'JosefinSans',
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppColors.azul,
+                                    ),
+                                  ),
+                                  const Text(
+                                    ' tokens',
+                                    style: TextStyle(
+                                      fontFamily: 'JosefinSans',
+                                      fontSize: 12,
+                                      color: AppColors.azul,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+
+                            // Referência de mercado
+                            if (temMercado)
+                              Row(
+                                children: [
+                                  Text(
+                                    'Mercado ${currency.format(mercadoCentavos / 100)}',
+                                    style: const TextStyle(
+                                      fontFamily: 'JosefinSans',
+                                      fontSize: 11,
+                                      color: AppColors.cinza500,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                                    decoration: BoxDecoration(
+                                      color: accentColor.withValues(alpha: 0.12),
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: Text(
+                                      diffLabel,
+                                      style: TextStyle(
+                                        fontFamily: 'JosefinSans',
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold,
+                                        color: accentColor,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ],
             ),
-          ],
+          ),
         ),
       ),
     );
@@ -409,89 +548,134 @@ class _MyOrderCard extends StatelessWidget {
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.cinza100,
+        color: AppColors.branco,
         borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.cinza200),
       ),
-      child: Column(
-        children: [
-          Row(
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              CircleAvatar(
-                radius: 24,
-                backgroundColor: AppColors.vermelho.withValues(alpha: 0.1),
-                backgroundImage: logoUrl != null ? NetworkImage(logoUrl!) : null,
-                child: logoUrl == null ? const Icon(Icons.arrow_upward, color: AppColors.vermelho, size: 22) : null,
-              ),
-              const SizedBox(width: 12),
+              Container(width: 5, color: AppColors.amarelo),
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      name,
-                      style: const TextStyle(
-                        fontFamily: 'JosefinSans',
-                        fontSize: 15,
-                        fontWeight: FontWeight.bold,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(14, 14, 14, 12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          CircleAvatar(
+                            radius: 22,
+                            backgroundColor: AppColors.amarelo.withValues(alpha: 0.15),
+                            backgroundImage: logoUrl != null ? NetworkImage(logoUrl!) : null,
+                            child: logoUrl == null
+                                ? const Icon(Icons.arrow_upward, color: AppColors.amarelo, size: 20)
+                                : null,
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  name,
+                                  style: const TextStyle(
+                                    fontFamily: 'JosefinSans',
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const SizedBox(height: 3),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.amarelo.withValues(alpha: 0.15),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: const Text(
+                                    'Em aberto',
+                                    style: TextStyle(
+                                      fontFamily: 'JosefinSans',
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppColors.amarelo,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              Text(
+                                currency.format(preco),
+                                style: const TextStyle(
+                                  fontFamily: 'JosefinSans',
+                                  fontSize: 17,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.azul,
+                                ),
+                              ),
+                              const Text(
+                                'por token',
+                                style: TextStyle(
+                                  fontFamily: 'JosefinSans',
+                                  fontSize: 10,
+                                  color: AppColors.cinza500,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
-                    ),
-                    const SizedBox(height: 4),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: AppColors.laranja.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(4),
+                      const SizedBox(height: 10),
+                      Container(height: 1, color: AppColors.cinza200),
+                      const SizedBox(height: 10),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: AppColors.azul.withValues(alpha: 0.08),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.toll_outlined, size: 13, color: AppColors.azul),
+                                const SizedBox(width: 4),
+                                Text(
+                                  '${NumberFormat('#,##0', 'pt_BR').format(amount)} tokens',
+                                  style: const TextStyle(
+                                    fontFamily: 'JosefinSans',
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.azul,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          _Stat(
+                            label: 'Total da ordem',
+                            value: currency.format(total),
+                            alignEnd: true,
+                          ),
+                        ],
                       ),
-                      child: const Text(
-                        'Em aberto',
-                        style: TextStyle(
-                          fontFamily: 'JosefinSans',
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.laranja,
-                        ),
-                      ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(
-                    currency.format(preco),
-                    style: const TextStyle(
-                      fontFamily: 'JosefinSans',
-                      fontSize: 15,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.azul,
-                    ),
-                  ),
-                  const Text(
-                    'por token',
-                    style: TextStyle(
-                      fontFamily: 'JosefinSans',
-                      fontSize: 11,
-                      color: AppColors.cinza500,
-                    ),
-                  ),
-                ],
-              ),
             ],
           ),
-          const SizedBox(height: 12),
-          Container(height: 1, color: AppColors.cinza300),
-          const SizedBox(height: 10),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              _Stat(label: 'Tokens ofertados', value: '$amount tokens'),
-              _Stat(label: 'Total da ordem', value: currency.format(total), alignEnd: true),
-            ],
-          ),
-        ],
+        ),
       ),
     );
   }
