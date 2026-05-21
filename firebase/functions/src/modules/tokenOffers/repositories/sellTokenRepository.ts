@@ -5,15 +5,14 @@ import {FieldValue} from "firebase-admin/firestore";
 import {HttpsError} from "firebase-functions/v2/https";
 import {db} from "../../../shared/firebase";
 import {
-  USERS, STARTUPS, TOKEN_OFFERS, USER_TOKENS,
+  USERS, STARTUPS, TOKEN_OFFERS, USER_TOKENS, PRICE_HISTORY,
 } from "../../../shared/collections";
+import {FATOR_IMPACTO} from "../../../shared/tokenPricing";
 import {
   CreateSellOfferParams,
   CreateSellOfferResult,
 } from "../types/tokenOfferTypes";
 
-// Fator de impacto no preço ao listar tokens para venda (oferta/demanda)
-const FATOR_IMPACTO = 0.5;
 
 /**
  * Creates a sell offer and locks the seller's tokens atomically.
@@ -88,12 +87,26 @@ export async function createSellOffer(
       createdAt: FieldValue.serverTimestamp(),
     });
 
-    // Atualiza o preço do token com base na oferta/demanda
+    // Oferta de venda aumenta a oferta disponível → pressão de baixa no preço
     const totalTokens = Number(startupData.totalTokens ?? 1000);
     const precoAtual = Number(startupData.precoToken ?? 100);
     const impacto = (quantity / totalTokens) * FATOR_IMPACTO;
     const novoPreco = Math.max(1, Math.round(precoAtual * (1 - impacto)));
-    transaction.update(startupRef, {precoToken: novoPreco});
+    transaction.update(startupRef, {
+      precoToken: novoPreco,
+      precoTokenAnterior: precoAtual,
+    });
+
+    const priceHistoryRef = db
+      .collection(STARTUPS).doc(startupId)
+      .collection(PRICE_HISTORY).doc();
+    transaction.set(priceHistoryRef, {
+      price: novoPreco,
+      type: "sell",
+      source: "sell_offer",
+      quantity,
+      createdAt: FieldValue.serverTimestamp(),
+    });
 
     return {
       offerId: offerRef.id,

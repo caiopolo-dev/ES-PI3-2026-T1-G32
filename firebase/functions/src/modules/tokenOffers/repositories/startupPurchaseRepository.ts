@@ -6,11 +6,13 @@ import {db} from "../../../shared/firebase";
 import {
   USERS,
   STARTUPS,
-  TOKEN_TRANSACTIONS,
+  TRANSACTIONS,
   WALLET,
   WALLET_SALDO,
   USER_TOKENS,
+  PRICE_HISTORY,
 } from "../../../shared/collections";
+import {FATOR_IMPACTO} from "../../../shared/tokenPricing";
 
 /**
  * @param {object} params Dados necessários para realizar a compra.
@@ -119,9 +121,26 @@ export async function buyStartupTokenDirectly(params: {
       {merge: true}
     );
 
+    const totalTokens = Number(startupData.totalTokens ?? 1000);
+    const impacto = (quantity / totalTokens) * FATOR_IMPACTO;
+    const novoPreco = Math.round(pricePerTokenCents * (1 + impacto));
+
     transaction.update(startupRef, {
       tokensDisponiveis: newAvailableTokens,
+      precoToken: novoPreco,
+      precoTokenAnterior: pricePerTokenCents,
       updatedAt: FieldValue.serverTimestamp(),
+    });
+
+    const priceHistoryRef = db
+      .collection(STARTUPS).doc(startupId)
+      .collection(PRICE_HISTORY).doc();
+    transaction.set(priceHistoryRef, {
+      price: novoPreco,
+      type: "buy",
+      source: "startup",
+      quantity,
+      createdAt: FieldValue.serverTimestamp(),
     });
 
     transaction.set(
@@ -139,7 +158,7 @@ export async function buyStartupTokenDirectly(params: {
     );
 
 
-    const transactionRef = db.collection(TOKEN_TRANSACTIONS).doc();
+    const transactionRef = db.collection(TRANSACTIONS).doc();
     transaction.set(transactionRef, {
       startupId,
       startupName,

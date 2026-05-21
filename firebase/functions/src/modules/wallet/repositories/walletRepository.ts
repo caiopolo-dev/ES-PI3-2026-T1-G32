@@ -5,7 +5,7 @@
 import {FieldValue} from "firebase-admin/firestore";
 import {db} from "../../../shared/firebase";
 import {
-  USERS, TOKEN_TRANSACTIONS, STARTUPS, WALLET, WALLET_SALDO, USER_TOKENS,
+  USERS, TRANSACTIONS, STARTUPS, WALLET, WALLET_SALDO, USER_TOKENS,
 } from "../../../shared/collections";
 
 /**
@@ -40,7 +40,7 @@ export async function getWalletDataByUserId(uid: string) {
  */
 export async function getTransactionHistoryByUserId(uid: string) {
   const buyerSnap = await db
-    .collection(TOKEN_TRANSACTIONS)
+    .collection(TRANSACTIONS)
     .where("buyerId", "==", uid)
     .orderBy("createdAt", "desc")
     .limit(50)
@@ -50,7 +50,7 @@ export async function getTransactionHistoryByUserId(uid: string) {
   let sellerSnap: FirebaseFirestore.QuerySnapshot | null = null;
   try {
     sellerSnap = await db
-      .collection(TOKEN_TRANSACTIONS)
+      .collection(TRANSACTIONS)
       .where("sellerId", "==", uid)
       .orderBy("createdAt", "desc")
       .limit(50)
@@ -154,7 +154,7 @@ export async function addBalanceToWallet(uid: string, amountCents: number) {
     .collection(WALLET)
     .doc(WALLET_SALDO);
 
-  const txRef = db.collection(TOKEN_TRANSACTIONS).doc();
+  const txRef = db.collection(TRANSACTIONS).doc();
 
   await db.runTransaction(async (transaction) => {
     const snap = await transaction.get(walletRef);

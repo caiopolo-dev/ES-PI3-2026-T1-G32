@@ -5,8 +5,10 @@ import {FieldValue} from "firebase-admin/firestore";
 import {db} from "../../../shared/firebase";
 import {HttpsError} from "firebase-functions/v2/https";
 import {
-  USERS, TOKEN_OFFERS, TOKEN_TRANSACTIONS, WALLET, WALLET_SALDO, USER_TOKENS,
+  USERS, STARTUPS, TOKEN_OFFERS, TRANSACTIONS,
+  WALLET, WALLET_SALDO, USER_TOKENS, PRICE_HISTORY,
 } from "../../../shared/collections";
+import {FATOR_IMPACTO} from "../../../shared/tokenPricing";
 
 import {
   BuyTokenOfferParams,
@@ -47,18 +49,36 @@ export async function listAllOffers(excludeSellerId?: string) {
   const offers = snapshot.docs
     .map((doc) => {
       const data = doc.data();
-
       return {
         offerId: doc.id,
-        startupId: data.startupId,
-        startupName: data.startupName ?? data.startupId,
-        sellerId: data.sellerId,
-        amount: data.amount,
-        valorUnitarioCentavos: data.valorUnitarioCentavos,
+        startupId: data.startupId as string | undefined,
+        startupName: (data.startupName ?? data.startupId) as string,
+        sellerId: data.sellerId as string,
+        amount: data.amount as number,
+        valorUnitarioCentavos: data.valorUnitarioCentavos as number,
       };
     })
     .filter((offer) => !excludeSellerId || offer.sellerId !== excludeSellerId);
-  return offers;
+
+  // Busca precoToken atual de cada startup para exibir preço de mercado.
+  const uniqueStartupIds = [...new Set(
+    offers.map((o) => o.startupId).filter(Boolean) as string[]
+  )];
+
+  const startupPrices: Record<string, number> = {};
+  await Promise.all(
+    uniqueStartupIds.map(async (id) => {
+      const snap = await db.collection(STARTUPS).doc(id).get();
+      if (snap.exists) {
+        startupPrices[id] = Number(snap.data()?.precoToken ?? 0);
+      }
+    })
+  );
+
+  return offers.map((o) => ({
+    ...o,
+    precoMercadoCentavos: o.startupId ? (startupPrices[o.startupId] ?? 0) : 0,
+  }));
 }
 
 
@@ -77,6 +97,7 @@ export async function buyTokenOffer(
   return db.runTransaction(async (transaction) => {
     const offerRef = db.collection(TOKEN_OFFERS).doc(offerId);
     const offerSnap = await transaction.get(offerRef);
+
 
     if (!offerSnap.exists) {
       throw new HttpsError(
@@ -107,6 +128,9 @@ export async function buyTokenOffer(
         "Oferta inválida"
       );
     }
+
+    const startupRef = db.collection(STARTUPS).doc(startupId);
+    const startupSnap = await transaction.get(startupRef);
 
     if (sellerId === buyerId) {
       throw new HttpsError(
@@ -229,8 +253,30 @@ export async function buyTokenOffer(
       {merge: true}
     );
 
-    // token_transactions é a fonte de verdade para histórico e portfólio.
-    const transactionRef = db.collection(TOKEN_TRANSACTIONS).doc();
+    const startupData = startupSnap.data();
+    if (startupData) {
+      const totalTokens = Number(startupData.totalTokens ?? 1000);
+      const precoAtual = Number(startupData.precoToken ?? pricePerTokenCents);
+      const impacto = (quantity / totalTokens) * FATOR_IMPACTO;
+      const novoPreco = Math.round(precoAtual * (1 + impacto));
+      transaction.update(startupRef, {
+        precoToken: novoPreco,
+        precoTokenAnterior: precoAtual,
+      });
+
+      const priceHistoryRef = db
+        .collection(STARTUPS).doc(startupId as string)
+        .collection(PRICE_HISTORY).doc();
+      transaction.set(priceHistoryRef, {
+        price: novoPreco,
+        type: "buy",
+        source: "offer",
+        quantity,
+        createdAt: FieldValue.serverTimestamp(),
+      });
+    }
+
+    const transactionRef = db.collection(TRANSACTIONS).doc();
 
     transaction.set(transactionRef, {
       offerId,
