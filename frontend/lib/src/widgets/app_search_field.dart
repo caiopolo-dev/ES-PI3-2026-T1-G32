@@ -9,12 +9,14 @@ class AppSearchField extends StatelessWidget {
   final TextEditingController controller;
   final String hintText;
   final ValueChanged<String>? onChanged;
+  final Color? fillColor;
 
   const AppSearchField({
     super.key,
     required this.controller,
     required this.hintText,
     this.onChanged,
+    this.fillColor,
   });
 
   @override
@@ -55,14 +57,22 @@ class AppSearchField extends StatelessWidget {
                   )
                 : null,
             filled: true,
-            fillColor: AppColors.cinza200,
+            fillColor: fillColor ?? AppColors.branco,
             contentPadding: const EdgeInsets.symmetric(
               vertical: 0,
               horizontal: 16,
             ),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide.none,
+              borderSide: const BorderSide(color: AppColors.cinza300),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: AppColors.cinza300),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: AppColors.azul),
             ),
           ),
         );

@@ -28,6 +28,10 @@ class AppFilterChip extends StatelessWidget {
         decoration: BoxDecoration(
           color: selected ? AppColors.azul : AppColors.cinza200,
           borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: AppColors.preto.withValues(alpha: 0.15),
+            width: 1,
+          ),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,

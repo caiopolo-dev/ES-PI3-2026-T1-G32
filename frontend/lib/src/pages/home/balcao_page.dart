@@ -173,7 +173,7 @@ class _BalcaoNegociacaoPageState extends State<BalcaoNegociacaoPage> {
     return DefaultTabController(
       length: 2,
       child: Scaffold(
-        backgroundColor: AppColors.branco,
+        backgroundColor: AppColors.cinza100,
         floatingActionButton: FloatingActionButton.extended(
           onPressed: _openUserTokensForSell,
           backgroundColor: AppColors.azul,
@@ -185,7 +185,7 @@ class _BalcaoNegociacaoPageState extends State<BalcaoNegociacaoPage> {
           ),
         ),
         appBar: AppBar(
-          backgroundColor: AppColors.branco,
+          backgroundColor: AppColors.cinza100,
           elevation: 0,
           automaticallyImplyLeading: false,
           actions: [
