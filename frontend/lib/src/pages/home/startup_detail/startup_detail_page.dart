@@ -391,7 +391,7 @@ class _StartupDetailPageState extends State<StartupDetailPage> {
                     side: BorderSide(color: AppColors.cinza400),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                   ),
-                  child: const Text('Baixar sumário executivo', style: TextStyle(color: AppColors.preto)),
+                  child: const Text('Acessar sumário executivo', style: TextStyle(color: AppColors.preto)),
                 ),
               );
             },

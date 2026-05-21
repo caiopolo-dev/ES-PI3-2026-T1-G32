@@ -58,41 +58,122 @@ class _TokenActionsContent extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 20),
-          Row(
-            children: [
-              CircleAvatar(
-                radius: 28,
-                backgroundColor: AppColors.azul.withValues(alpha: 0.1),
-                backgroundImage: logoUrl != null ? NetworkImage(logoUrl!) : null,
-                child: logoUrl == null
-                    ? const Icon(Icons.business, color: AppColors.azul, size: 26)
-                    : null,
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+          Container(
+            decoration: BoxDecoration(
+              color: AppColors.branco,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppColors.cinza200),
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: IntrinsicHeight(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Text(
-                      startupNome,
-                      style: const TextStyle(
-                        fontFamily: 'JosefinSans',
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    Text(
-                      '$quantidade tokens · ${fmt.format(valorAtual)}/un',
-                      style: const TextStyle(
-                        fontFamily: 'JosefinSans',
-                        fontSize: 13,
-                        color: AppColors.cinza500,
+                    Container(width: 5, color: AppColors.azul),
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 14,
+                        ),
+                        child: Row(
+                          children: [
+                            CircleAvatar(
+                              radius: 22,
+                              backgroundColor:
+                                  AppColors.azul.withValues(alpha: 0.1),
+                              backgroundImage: logoUrl != null
+                                  ? NetworkImage(logoUrl!)
+                                  : null,
+                              child: logoUrl == null
+                                  ? const Icon(
+                                      Icons.business,
+                                      color: AppColors.azul,
+                                      size: 20,
+                                    )
+                                  : null,
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    startupNome,
+                                    style: const TextStyle(
+                                      fontFamily: 'JosefinSans',
+                                      fontSize: 17,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 5),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 3,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.azul
+                                          .withValues(alpha: 0.08),
+                                      borderRadius: BorderRadius.circular(20),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        const Icon(
+                                          Icons.toll_outlined,
+                                          size: 13,
+                                          color: AppColors.azul,
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          '$quantidade tokens',
+                                          style: const TextStyle(
+                                            fontFamily: 'JosefinSans',
+                                            fontSize: 12,
+                                            color: AppColors.azul,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                Text(
+                                  fmt.format(valorAtual),
+                                  style: const TextStyle(
+                                    fontFamily: 'JosefinSans',
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.azul,
+                                  ),
+                                ),
+                                const Text(
+                                  'preço de mercado',
+                                  style: TextStyle(
+                                    fontFamily: 'JosefinSans',
+                                    fontSize: 11,
+                                    color: AppColors.cinza500,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ],
                 ),
               ),
-            ],
+            ),
           ),
           const SizedBox(height: 20),
           const Divider(),

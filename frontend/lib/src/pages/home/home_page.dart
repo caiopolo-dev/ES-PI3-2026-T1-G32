@@ -88,7 +88,7 @@ class _HomePageState extends State<HomePage> {
     final results = await Future.wait([
       WalletService.getWalletData(),
       WalletService.getUserTokens(),
-      StartupService.getStartups(),
+      StartupService.getStartups(includeDailyVariation: true),
     ]);
 
     if (!mounted) return;
@@ -114,6 +114,7 @@ class _HomePageState extends State<HomePage> {
       final lista = List<Map<String, dynamic>>.from(startups['data'] as List);
       _destaques = lista.take(3).toList();
     }
+
 
     setState(() => _isLoading = false);
     _loadLogoUrls();
@@ -354,78 +355,182 @@ class _HomePageState extends State<HomePage> {
                     );
                     if (comprou == true && mounted) _loadData();
                   },
-                  child: Container(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: AppColors.branco,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: AppColors.cinza300),
-                    ),
-                    child: Row(
-                      children: [
-                        CircleAvatar(
-                          radius: 24,
-                          backgroundColor: AppColors.azul.withValues(alpha: 0.1),
-                          backgroundImage: logoUrl != null ? NetworkImage(logoUrl) : null,
-                          child: logoUrl == null
-                              ? const Icon(Icons.business, color: AppColors.azul, size: 22)
-                              : null,
-                        ),
-                        const SizedBox(width: 14),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                data['nome'] as String? ?? '',
-                                style: const TextStyle(
-                                  fontFamily: 'JosefinSans',
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              Text(
-                                data['setor'] as String? ?? '',
-                                style: const TextStyle(
-                                  fontFamily: 'JosefinSans',
-                                  fontSize: 12,
-                                  color: AppColors.cinza500,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            Text(
-                              'R\$ ${NumberFormat('#,##0.00', 'pt_BR').format(((data['precoToken'] as num?)?.toDouble() ?? 0.0) / 100)}',
-                              style: const TextStyle(
-                                fontFamily: 'JosefinSans',
-                                fontSize: 14,
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.azul,
-                              ),
-                            ),
-                            const Text(
-                              '+0.00%',
-                              style: TextStyle(
-                                fontFamily: 'JosefinSans',
-                                fontSize: 12,
-                                color: AppColors.verde,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
+                  child: _StartupDestaque(
+                    data: data,
+                    logoUrl: logoUrl,
+                    currencyFormat: currencyFormat,
                   ),
                 );
               }),
 
             const SizedBox(height: 24),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _StartupDestaque extends StatelessWidget {
+  final Map<String, dynamic> data;
+  final String? logoUrl;
+  final NumberFormat currencyFormat;
+
+  const _StartupDestaque({
+    required this.data,
+    required this.logoUrl,
+    required this.currencyFormat,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final precoAtual = (data['precoToken'] as num?)?.toDouble() ?? 0.0;
+    final fechamento = (data['fechamentoOntemCentavos'] as num?)?.toDouble();
+    final temVariacao = fechamento != null && fechamento > 0;
+    final variacaoPct = temVariacao
+        ? (precoAtual - fechamento) / fechamento * 100
+        : 0.0;
+    final positivo = variacaoPct >= 0;
+    final accentColor = temVariacao
+        ? (positivo ? AppColors.verde : AppColors.vermelho)
+        : AppColors.azul;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: AppColors.branco,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.cinza200),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Container(width: 5, color: accentColor),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
+                  child: Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 22,
+                        backgroundColor: accentColor.withValues(alpha: 0.1),
+                        backgroundImage: logoUrl != null ? NetworkImage(logoUrl!) : null,
+                        child: logoUrl == null
+                            ? Icon(Icons.business, color: accentColor, size: 20)
+                            : null,
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              data['nome'] as String? ?? '',
+                              style: const TextStyle(
+                                fontFamily: 'JosefinSans',
+                                fontSize: 15,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            Text(
+                              data['setor'] as String? ?? '',
+                              style: const TextStyle(
+                                fontFamily: 'JosefinSans',
+                                fontSize: 12,
+                                color: AppColors.cinza500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            currencyFormat.format(precoAtual / 100),
+                            style: TextStyle(
+                              fontFamily: 'JosefinSans',
+                              fontSize: 15,
+                              fontWeight: FontWeight.bold,
+                              color: accentColor,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          if (temVariacao)
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.cinza200,
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: Text(
+                                    data['variacaoLabel'] as String? ?? 'hoje',
+                                    style: const TextStyle(
+                                      fontFamily: 'JosefinSans',
+                                      fontSize: 9,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppColors.cinza700,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 7, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: accentColor.withValues(alpha: 0.12),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        positivo
+                                            ? Icons.arrow_drop_up
+                                            : Icons.arrow_drop_down,
+                                        size: 14,
+                                        color: accentColor,
+                                      ),
+                                      Text(
+                                        '${variacaoPct.abs().toStringAsFixed(1)}%',
+                                        style: TextStyle(
+                                          fontFamily: 'JosefinSans',
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.bold,
+                                          color: accentColor,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            )
+                          else
+                            const Text(
+                              'sem dados hoje',
+                              style: TextStyle(
+                                fontFamily: 'JosefinSans',
+                                fontSize: 10,
+                                color: AppColors.cinza500,
+                              ),
+                            ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

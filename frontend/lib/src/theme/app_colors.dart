@@ -57,4 +57,7 @@ class AppColors {
 
   // Laranja — avisos
   static const Color laranja = Color(0xFFFF9800);
+
+  // Amarelo — ordens em aberto / pendentes
+  static const Color amarelo = Color(0xFFFFB300);
 }

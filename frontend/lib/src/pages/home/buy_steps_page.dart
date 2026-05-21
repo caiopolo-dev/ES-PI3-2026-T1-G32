@@ -40,6 +40,8 @@ class _BuyStepsPageState extends State<BuyStepsPage> {
   int _sellPriceCents = 0;
   final TextEditingController _quantityController = TextEditingController(text: '1');
   late final TextEditingController _priceController;
+  late final FocusNode _quantityFocus;
+  late final FocusNode _priceFocus;
 
   List<String> get _stepTitles => widget.isSellMode
       ? ['Venda de token', 'Confirmação de venda', 'Ordem criada']
@@ -157,6 +159,24 @@ class _BuyStepsPageState extends State<BuyStepsPage> {
     _priceController = TextEditingController(
       text: _CurrencyFormatter.formatCents(_sellPriceCents),
     );
+    _quantityFocus = FocusNode()
+      ..addListener(() {
+        if (!_quantityFocus.hasFocus && tokenAmount < 1) {
+          setState(() {
+            tokenAmount = 1;
+            _quantityController.text = '1';
+          });
+        }
+      });
+    _priceFocus = FocusNode()
+      ..addListener(() {
+        if (!_priceFocus.hasFocus && _sellPriceCents < 1) {
+          setState(() {
+            _sellPriceCents = 1;
+            _priceController.text = _CurrencyFormatter.formatCents(1);
+          });
+        }
+      });
     loadWalletBalance();
   }
 
@@ -164,6 +184,8 @@ class _BuyStepsPageState extends State<BuyStepsPage> {
   void dispose() {
     _quantityController.dispose();
     _priceController.dispose();
+    _quantityFocus.dispose();
+    _priceFocus.dispose();
     super.dispose();
   }
 
@@ -216,29 +238,92 @@ class _BuyStepsPageState extends State<BuyStepsPage> {
         return Column(
           mainAxisSize: MainAxisSize.max,
           children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              decoration: BoxDecoration(
+                color: AppColors.azul.withValues(alpha: 0.06),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: AppColors.azul.withValues(alpha: 0.2),
+                ),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    widget.isSellMode ? 'Você receberá:' : 'Saldo em conta:',
+                    style: const TextStyle(
+                      fontSize: 16,
+                      color: AppColors.cinza700,
+                    ),
+                  ),
+                  Text(
+                    widget.isSellMode
+                        ? formatMoney(totalCents)
+                        : formatMoney(walletBalance),
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.azul,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 12),
+
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  widget.isSellMode ? 'Você receberá:' : 'Saldo em conta:',
-                  style: const TextStyle(fontSize: 20),
+                  widget.isSellMode ? 'Seus tokens' : 'Disponível na oferta',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    color: AppColors.cinza700,
+                  ),
                 ),
-                Text(
-                  widget.isSellMode ? formatMoney(totalCents) : formatMoney(walletBalance),
-                  style: const TextStyle(fontSize: 20),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.azul.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.toll_outlined,
+                        size: 14,
+                        color: AppColors.azul,
+                      ),
+                      const SizedBox(width: 5),
+                      Text(
+                        '${widget.availableQuantity} tokens',
+                        style: const TextStyle(
+                          fontSize: 14,
+                          color: AppColors.azul,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
 
-            const SizedBox(height: 4),
+            const SizedBox(height: 12),
 
             const Divider(
-              height: 18,
+              height: 1,
               thickness: 1,
-              color: AppColors.cinza500,
+              color: AppColors.cinza200,
             ),
 
-            const SizedBox(height: 4),
+            const SizedBox(height: 12),
 
             widget.isSellMode
                 ? Row(
@@ -259,6 +344,7 @@ class _BuyStepsPageState extends State<BuyStepsPage> {
                               width: 120,
                               child: TextField(
                                 controller: _priceController,
+                                focusNode: _priceFocus,
                                 keyboardType: TextInputType.number,
                                 inputFormatters: [_CurrencyFormatter()],
                                 textAlign: TextAlign.right,
@@ -274,13 +360,15 @@ class _BuyStepsPageState extends State<BuyStepsPage> {
                                 ),
                                 onChanged: (value) {
                                   final digits = value.replaceAll(RegExp(r'[^0-9]'), '');
+                                  if (digits.isEmpty) {
+                                    setState(() => _sellPriceCents = 0);
+                                    return;
+                                  }
                                   final cents = int.tryParse(digits) ?? 0;
-                                  setState(() => _sellPriceCents = cents.clamp(1, 5000000));
+                                  setState(() => _sellPriceCents = cents.clamp(0, 5000000));
                                 },
                               ),
                             ),
-                            const SizedBox(width: 6),
-                            const Icon(Icons.edit, size: 14, color: AppColors.azul),
                           ],
                         ),
                       ),
@@ -323,6 +411,7 @@ class _BuyStepsPageState extends State<BuyStepsPage> {
                             width: 60,
                             child: TextField(
                               controller: _quantityController,
+                              focusNode: _quantityFocus,
                               keyboardType: TextInputType.number,
                               inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                               style: const TextStyle(
@@ -336,17 +425,12 @@ class _BuyStepsPageState extends State<BuyStepsPage> {
                                 isDense: true,
                               ),
                               onChanged: (value) {
-                                final parsed = int.tryParse(value);
-                                if (parsed == null || parsed < 1) {
-                                  setState(() => tokenAmount = 1);
-                                  WidgetsBinding.instance.addPostFrameCallback((_) {
-                                    if (mounted) {
-                                      _quantityController.text = '1';
-                                      _quantityController.selection =
-                                          const TextSelection.collapsed(offset: 1);
-                                    }
-                                  });
-                                } else if (parsed > widget.availableQuantity) {
+                                if (value.isEmpty) {
+                                  setState(() => tokenAmount = 0);
+                                  return;
+                                }
+                                final parsed = int.tryParse(value) ?? 0;
+                                if (parsed > widget.availableQuantity) {
                                   setState(() {
                                     tokenAmount = widget.availableQuantity;
                                     _quantityController.text = tokenAmount.toString();
@@ -360,8 +444,6 @@ class _BuyStepsPageState extends State<BuyStepsPage> {
                               },
                             ),
                           ),
-                          const SizedBox(width: 6),
-                          const Icon(Icons.edit, size: 14, color: AppColors.azul),
                         ],
                       ),
                     ),
@@ -755,7 +837,7 @@ class _CurrencyFormatter extends TextInputFormatter {
   static const int _maxCents = 5000000;
 
   static String formatCents(int cents) {
-    final c = cents.clamp(1, _maxCents);
+    final c = cents.clamp(0, _maxCents);
     final reais = c ~/ 100;
     final centavos = (c % 100).toString().padLeft(2, '0');
     final reaisStr = reais.toString();
@@ -775,13 +857,12 @@ class _CurrencyFormatter extends TextInputFormatter {
     final digits = newValue.text.replaceAll(RegExp(r'[^0-9]'), '');
     if (digits.isEmpty) {
       return newValue.copyWith(
-        text: '0,01',
-        selection: const TextSelection.collapsed(offset: 4),
+        text: '',
+        selection: const TextSelection.collapsed(offset: 0),
       );
     }
     int cents = int.tryParse(digits) ?? 0;
     if (cents > _maxCents) cents = _maxCents;
-    if (cents < 1) cents = 1;
     final formatted = formatCents(cents);
     return TextEditingValue(
       text: formatted,
