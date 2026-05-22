@@ -26,17 +26,32 @@ export async function listOffersBySeller(sellerId: string) {
     .where("sellerId", "==", sellerId)
     .get();
 
-  return snapshot.docs.map((doc) => {
+  const offers: Array<{
+    offerId: string;
+    startupId: string;
+    startupName: string;
+    amount: number;
+    valorUnitarioCentavos: number;
+    createdAt: string | null;
+  }> = [];
+
+  snapshot.docs.forEach((doc) => {
     const data = doc.data();
-    return {
+    const status = String(data.status ?? "open");
+    if (status !== "open") {
+      return;
+    }
+    offers.push({
       offerId: doc.id,
       startupId: data.startupId,
       startupName: data.startupName,
       amount: data.amount,
       valorUnitarioCentavos: data.valorUnitarioCentavos,
       createdAt: data.createdAt?.toDate?.()?.toISOString() ?? null,
-    };
+    });
   });
+
+  return offers;
 }
 
 /**
@@ -46,19 +61,34 @@ export async function listOffersBySeller(sellerId: string) {
  */
 export async function listAllOffers(excludeSellerId?: string) {
   const snapshot = await db.collection(TOKEN_OFFERS).get();
-  const offers = snapshot.docs
-    .map((doc) => {
-      const data = doc.data();
-      return {
-        offerId: doc.id,
-        startupId: data.startupId as string | undefined,
-        startupName: (data.startupName ?? data.startupId) as string,
-        sellerId: data.sellerId as string,
-        amount: data.amount as number,
-        valorUnitarioCentavos: data.valorUnitarioCentavos as number,
-      };
-    })
-    .filter((offer) => !excludeSellerId || offer.sellerId !== excludeSellerId);
+  const offers: Array<{
+    offerId: string;
+    startupId: string | undefined;
+    startupName: string;
+    sellerId: string;
+    amount: number;
+    valorUnitarioCentavos: number;
+  }> = [];
+
+  snapshot.docs.forEach((doc) => {
+    const data = doc.data();
+    const status = String(data.status ?? "open");
+    if (status !== "open") {
+      return;
+    }
+    const sellerId = data.sellerId as string;
+    if (excludeSellerId && sellerId === excludeSellerId) {
+      return;
+    }
+    offers.push({
+      offerId: doc.id,
+      startupId: data.startupId as string | undefined,
+      startupName: (data.startupName ?? data.startupId) as string,
+      sellerId,
+      amount: data.amount as number,
+      valorUnitarioCentavos: data.valorUnitarioCentavos as number,
+    });
+  });
 
   // Busca precoToken atual de cada startup para exibir preço de mercado.
   const uniqueStartupIds = [...new Set(
@@ -112,6 +142,14 @@ export async function buyTokenOffer(
       throw new HttpsError(
         "not-found",
         "Dados da oferta não encontrados"
+      );
+    }
+
+    const status = String(offerData.status ?? "open");
+    if (status !== "open") {
+      throw new HttpsError(
+        "failed-precondition",
+        "Oferta não está ativa"
       );
     }
 

@@ -167,6 +167,78 @@ class _BalcaoNegociacaoPageState extends State<BalcaoNegociacaoPage> {
     );
     if (vendeu == true && mounted) _loadAll();
   }
+  
+
+  Future<void> _confirmCancelOffer(Map<String, dynamic> offer) async {
+    final offerId = (offer['offerId'] ?? '').toString();
+
+    if (offerId.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('ID da oferta não encontrado')),
+      );
+      return;
+    }
+
+    final shouldCancel = await showDialog<bool>(
+      context: context,
+      
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.white,
+         title: Text(
+          'Cancelar oferta',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontFamily: 'JosefinSans',
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+
+        content: Text(
+          'Deseja cancelar a oferta?',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontFamily: 'JosefinSans',
+          ),
+        ),
+        actionsAlignment: MainAxisAlignment.center,
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Não', style: TextStyle(fontSize: 20, color: Colors.black)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Sim', style: TextStyle(fontSize: 20, color: Colors.black)),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldCancel != true) return;
+
+    final result = await WalletService.cancelOffer(offerId);
+
+    if (!mounted) return;
+
+    if (result['success'] == true) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Oferta cancelada com sucesso')),
+      );
+      _loadAll();
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            result['message']?.toString() ?? 'Erro ao cancelar oferta',
+          ),
+        ),
+      );
+    }
+  }
+
+
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -310,12 +382,13 @@ class _BalcaoNegociacaoPageState extends State<BalcaoNegociacaoPage> {
                       padding: const EdgeInsets.fromLTRB(20, 16, 20, 100),
                       itemCount: myOffers.length,
                       itemBuilder: (context, index) {
-                        final data = myOffers[index];
-                        final name = (data['startupName'] ?? data['startupId'] ?? '').toString();
+                        final offer = Map<String, dynamic>.from(myOffers[index] as Map);
+                        final name = (offer['startupName'] ?? offer['startupId'] ?? '').toString();
                         return _MyOrderCard(
-                          data: data,
+                          data: offer,
                           currency: _currency,
                           logoUrl: _logoUrls[name],
+                          onCancel: () => _confirmCancelOffer(offer),
                         );
                       },
                     ),
@@ -535,8 +608,14 @@ class _MyOrderCard extends StatelessWidget {
   final Map<String, dynamic> data;
   final NumberFormat currency;
   final String? logoUrl;
+  final VoidCallback onCancel;
 
-  const _MyOrderCard({required this.data, required this.currency, this.logoUrl});
+  const _MyOrderCard({
+    required this.data,
+    required this.currency,
+    required this.onCancel,
+    this.logoUrl,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -668,6 +747,22 @@ class _MyOrderCard extends StatelessWidget {
                             alignEnd: true,
                           ),
                         ],
+                      ),
+                      const SizedBox(height: 12),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: InkWell(
+                          onTap: onCancel,
+                          child: const Text(
+                            'Cancelar oferta',
+                            style: TextStyle(
+                              fontFamily: 'JosefinSans',
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.vermelho,
+                            ),
+                          ),
+                        ),
                       ),
                     ],
                   ),

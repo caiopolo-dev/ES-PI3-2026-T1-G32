@@ -3,7 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:mescla_invest/src/theme/app_colors.dart';
 import 'package:flutter/services.dart';
-import '../../services/tokenData_service.dart';
+import '../../services/token_data_service.dart';
 import '../../services/wallet_service.dart';
 
 class BuyStepsPage extends StatefulWidget {

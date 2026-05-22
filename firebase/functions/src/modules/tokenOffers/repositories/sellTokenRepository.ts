@@ -13,7 +13,6 @@ import {
   CreateSellOfferResult,
 } from "../types/tokenOfferTypes";
 
-
 /**
  * Creates a sell offer and locks the seller's tokens atomically.
  * @param {CreateSellOfferParams} params Offer parameters.
@@ -47,7 +46,10 @@ export async function createSellOffer(
 
     const startupName = String(startupData.nome ?? startupId);
 
-    const currentQty = Number(userTokenSnap.data()?.quantidade ?? 0);
+    const userTokenData = userTokenSnap.data();
+    const currentQty = Number(userTokenData?.quantidade ?? 0);
+    const precoMedio = Number(userTokenData?.precoMedio ?? 0);
+    const valorAtual = Number(userTokenData?.valorAtual ?? pricePerTokenCents);
 
     if (!userTokenSnap.exists || currentQty <= 0) {
       throw new HttpsError(
@@ -83,8 +85,14 @@ export async function createSellOffer(
       startupId,
       startupName,
       amount: quantity,
+      // ------------------------ modificação - caio
       valorUnitarioCentavos: pricePerTokenCents,
+      precoMedio,
+      valorAtual,
+      status: "open",
       createdAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
+      // -------------------------------------------
     });
 
     // Oferta de venda aumenta a oferta disponível → pressão de baixa no preço

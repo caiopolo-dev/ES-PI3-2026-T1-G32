@@ -5,3 +5,4 @@ export {listMyOffers} from "./handlers/listMyOffers";
 export {buyOffer} from "./handlers/buyOffer";
 export {buyStartupToken} from "./handlers/buyStartupToken";
 export {createSellOffer} from "./handlers/sellToken";
+export {cancelOffer} from "./handlers/cancelOffer";
