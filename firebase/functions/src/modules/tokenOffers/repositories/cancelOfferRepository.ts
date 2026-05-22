@@ -38,13 +38,7 @@ export async function cancelOffer(
         "Dados da oferta não encontrados"
       );
     }
-    const status = String(offerData.status ?? "open");
-    if (status !== "open") {
-      throw new HttpsError(
-        "failed-precondition",
-        "Oferta não está ativa"
-      );
-    }
+
     if (offerData.sellerId !== sellerId) {
       throw new HttpsError(
         "permission-denied",
@@ -96,11 +90,8 @@ export async function cancelOffer(
       {merge: true}
     );
 
-    transaction.update(offerRef, {
-      status: "cancelled",
-      updatedAt: FieldValue.serverTimestamp(),
-      cancelledAt: FieldValue.serverTimestamp(),
-    });
+    transaction.delete(offerRef);
+
     return {
       offerId,
       startupId,
