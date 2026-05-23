@@ -7,6 +7,7 @@ import 'package:mescla_invest/src/theme/app_colors.dart';
 import 'package:intl/intl.dart';
 import 'package:mescla_invest/src/services/storage_service.dart';
 import 'package:mescla_invest/src/services/startup_service.dart';
+import 'package:mescla_invest/src/services/wallet_service.dart';
 import 'package:mescla_invest/src/pages/home/startup_detail/startup_detail_page.dart';
 import 'package:mescla_invest/src/widgets/widgets.dart';
 
@@ -31,12 +32,14 @@ class _InitialCatalogPageState extends State<InitialCatalogPage> {
   int selectedFilter = 0;
   List<Map<String, dynamic>> startups = [];
   Map<String, String?> _bannerUrls = {};
+  Map<String, int> _userTokens = {};
   bool isLoading = true;
   String? error;
   int _requestId = 0;
 
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
+  bool _showOnlyInvested = false;
 
   final List<String> filters = ["Todas", "Novas", "Em operação", "Em expansão"];
   final List<String?> filterValues = [null, "nova", "em_operacao", "em_expansao"];
@@ -44,15 +47,12 @@ class _InitialCatalogPageState extends State<InitialCatalogPage> {
   @override
   void didUpdateWidget(InitialCatalogPage oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // Recarrega o catálogo ao voltar para esta aba,
-    // refletindo novas startups ou mudanças de estoque.
     if (widget.isActive && !oldWidget.isActive) fetchStartups();
   }
 
   @override
   void initState() {
     super.initState();
-    // Carrega o catálogo completo na primeira visita à aba.
     if (widget.isActive) fetchStartups();
   }
 
@@ -75,17 +75,32 @@ class _InitialCatalogPageState extends State<InitialCatalogPage> {
       error = null;
     });
 
-    final result = await StartupService.getStartups(
-      estagio: filterValues[selectedFilter],
-      includeDailyVariation: true,
-    );
+    final responses = await Future.wait([
+      StartupService.getStartups(
+        estagio: filterValues[selectedFilter],
+        includeDailyVariation: true,
+      ),
+      WalletService.getUserTokens(),
+    ]);
 
-    // Se outro filtro foi selecionado enquanto aguardávamos a resposta, aborta.
     if (requestId != _requestId) return;
     if (!mounted) return;
 
+    final result = responses[0];
+    final tokensResult = responses[1];
+
+    final Map<String, int> tokenMap = {};
+    if (tokensResult['success'] == true) {
+      for (final t in (tokensResult['tokens'] as List? ?? [])) {
+        final id = t['startupId'] as String? ?? '';
+        final qty = ((t['quantidade'] as num?)?.toInt() ?? 0);
+        if (id.isNotEmpty && qty > 0) tokenMap[id] = qty;
+      }
+    }
+
     setState(() {
       isLoading = false;
+      _userTokens = tokenMap;
       if (result['success'] as bool) {
         startups = List<Map<String, dynamic>>.from(result['data'] as List);
       } else {
@@ -111,11 +126,12 @@ class _InitialCatalogPageState extends State<InitialCatalogPage> {
   // Filtra a lista de startups pelo texto digitado na barra de busca.
   // A busca é feita localmente sobre os dados já carregados — sem nova chamada à API.
   List<Map<String, dynamic>> get _filteredStartups {
-    if (_searchQuery.isEmpty) return startups;
     return startups.where((s) {
+      final id = s['id'] as String? ?? '';
+      if (_showOnlyInvested && (_userTokens[id] ?? 0) <= 0) return false;
+      if (_searchQuery.isEmpty) return true;
       final nome = (s['nome'] as String? ?? '').toLowerCase();
       final setor = (s['setor'] as String? ?? '').toLowerCase();
-      // Retorna a startup se o nome ou o setor contiver o texto buscado.
       return nome.contains(_searchQuery) || setor.contains(_searchQuery);
     }).toList();
   }
@@ -171,7 +187,47 @@ class _InitialCatalogPageState extends State<InitialCatalogPage> {
                 ),
               ),
 
-              const SizedBox(height: 20),
+              const SizedBox(height: 10),
+
+              GestureDetector(
+                onTap: () => setState(() => _showOnlyInvested = !_showOnlyInvested),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                  decoration: BoxDecoration(
+                    color: _showOnlyInvested ? AppColors.azul : AppColors.cinza200,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: AppColors.preto.withValues(alpha: 0.15),
+                      width: 1,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        _showOnlyInvested
+                            ? Icons.check_circle
+                            : Icons.radio_button_unchecked,
+                        size: 13,
+                        color: _showOnlyInvested ? AppColors.branco : AppColors.cinza700,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Somente investidas',
+                        style: TextStyle(
+                          fontFamily: 'JosefinSans',
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: _showOnlyInvested ? AppColors.branco : AppColors.cinza700,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 16),
 
               // Lista de startups
               Expanded(
@@ -211,6 +267,7 @@ class _InitialCatalogPageState extends State<InitialCatalogPage> {
                                       totalTokens: (data['tokensDisponiveis'] as num?)?.toInt() ?? 0,
                                       fechamentoOntem: ((data['fechamentoOntemCentavos'] as num?)?.toDouble() ?? 0.0) / 100,
                                       logoUrl: bannerUrl,
+                                      quantidadeToken: _userTokens[id],
                                     ),
                                   );
                                 },
@@ -238,6 +295,7 @@ class StartupCard extends StatelessWidget {
   final double fechamentoOntem;
   final int totalTokens;
   final String? logoUrl;
+  final int? quantidadeToken;
 
   const StartupCard({
     super.key,
@@ -248,6 +306,7 @@ class StartupCard extends StatelessWidget {
     required this.fechamentoOntem,
     required this.totalTokens,
     this.logoUrl,
+    this.quantidadeToken,
   });
 
   @override
@@ -257,18 +316,32 @@ class StartupCard extends StatelessWidget {
     final Color precoColor;
     final String? variacaoStr;
     if (fechamentoOntem <= 0) {
-      precoColor = AppColors.azul;
+      precoColor = AppColors.verde;
       variacaoStr = null;
     } else {
       final pct = (precoToken - fechamentoOntem) / fechamentoOntem * 100;
       variacaoStr =
           '${pct >= 0 ? '+' : ''}${pct.toStringAsFixed(1)}% · hoje';
-      precoColor = pct > 0
-          ? AppColors.verde
-          : pct < 0
-              ? AppColors.vermelho
-              : AppColors.azul;
+      precoColor = pct >= 0 ? AppColors.verde : AppColors.vermelho;
     }
+
+    final estagioChip = Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: accentColor, width: 1),
+      ),
+      child: Text(
+        _estagioLabels[estagio] ?? estagio,
+        style: TextStyle(
+          fontFamily: 'JosefinSans',
+          fontSize: 11,
+          fontWeight: FontWeight.bold,
+          color: accentColor,
+        ),
+      ),
+    );
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -276,137 +349,172 @@ class StartupCard extends StatelessWidget {
         color: AppColors.branco,
         borderRadius: BorderRadius.circular(15),
         border: Border.all(color: AppColors.cinza300),
-        image: logoUrl != null
-            ? DecorationImage(
-                image: NetworkImage(logoUrl!),
-                fit: BoxFit.cover,
-                colorFilter: ColorFilter.mode(
-                  AppColors.branco.withValues(alpha: 0.82),
-                  BlendMode.srcOver,
-                ),
-              )
-            : null,
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(15),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              nome,
-              style: const TextStyle(
-                fontFamily: 'JosefinSans',
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              setor,
-              style: const TextStyle(
-                fontFamily: 'JosefinSans',
-                fontSize: 13,
-                color: AppColors.cinza700,
-              ),
-            ),
-            const SizedBox(height: 12),
-            Container(height: 1, color: AppColors.cinza300),
-            const SizedBox(height: 12),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            // Banner no topo
+            Stack(
               children: [
-                const Text(
-                  'Preço por token',
-                  style: TextStyle(
-                    fontFamily: 'JosefinSans',
-                    fontSize: 12,
-                    color: AppColors.cinza700,
-                  ),
+                SizedBox(
+                  height: 100,
+                  width: double.infinity,
+                  child: logoUrl != null
+                      ? Image.network(logoUrl!, fit: BoxFit.cover)
+                      : Container(color: accentColor.withValues(alpha: 0.08)),
                 ),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: Colors.transparent,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: precoColor, width: 1.5),
-                      ),
-                      child: Text(
-                        fmt.format(precoToken),
-                        style: TextStyle(
-                          fontFamily: 'JosefinSans',
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                          color: precoColor,
-                        ),
-                      ),
-                    ),
-                    if (variacaoStr != null) ...[
-                      const SizedBox(height: 3),
-                      Text(
-                        variacaoStr,
-                        style: TextStyle(
-                          fontFamily: 'JosefinSans',
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: precoColor,
-                        ),
-                      ),
-                    ],
-                  ],
+                Positioned(
+                  top: 10,
+                  right: 10,
+                  child: estagioChip,
                 ),
               ],
             ),
-            const SizedBox(height: 12),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: AppColors.azul.withValues(alpha: 0.08),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
+
+            // Área de conteúdo branca
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Icon(Icons.toll_outlined,
-                          size: 13, color: AppColors.azul),
-                      const SizedBox(width: 4),
-                      Text(
-                        '${NumberFormat('#,##0', 'pt_BR').format(totalTokens)} tokens',
-                        style: const TextStyle(
-                          fontFamily: 'JosefinSans',
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.azul,
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              nome,
+                              style: const TextStyle(
+                                fontFamily: 'JosefinSans',
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              setor,
+                              style: const TextStyle(
+                                fontFamily: 'JosefinSans',
+                                fontSize: 13,
+                                color: AppColors.cinza700,
+                              ),
+                            ),
+                          ],
                         ),
+                      ),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: Colors.transparent,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: precoColor, width: 1.5),
+                            ),
+                            child: Text(
+                              fmt.format(precoToken),
+                              style: TextStyle(
+                                fontFamily: 'JosefinSans',
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                                color: precoColor,
+                              ),
+                            ),
+                          ),
+                          if (variacaoStr != null) ...[
+                            const SizedBox(height: 3),
+                            Text(
+                              variacaoStr,
+                              style: TextStyle(
+                                fontFamily: 'JosefinSans',
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: precoColor,
+                              ),
+                            ),
+                          ] else ...[
+                            const SizedBox(height: 3),
+                            const Text(
+                              'por token',
+                              style: TextStyle(
+                                fontFamily: 'JosefinSans',
+                                fontSize: 11,
+                                color: AppColors.cinza500,
+                              ),
+                            ),
+                          ],
+                        ],
                       ),
                     ],
                   ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 7, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: accentColor.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(6),
+                  const SizedBox(height: 12),
+                  Container(height: 1, color: AppColors.cinza300),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: AppColors.azul.withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.toll_outlined,
+                                size: 13, color: AppColors.azul),
+                            const SizedBox(width: 4),
+                            Text(
+                              '${NumberFormat('#,##0', 'pt_BR').format(totalTokens)} tokens',
+                              style: const TextStyle(
+                                fontFamily: 'JosefinSans',
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.azul,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      if (quantidadeToken != null && quantidadeToken! > 0) ...[
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: AppColors.verde.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.check_circle_outline,
+                                  size: 13, color: AppColors.verde),
+                              const SizedBox(width: 4),
+                              Text(
+                                'Você tem $quantidadeToken',
+                                style: const TextStyle(
+                                  fontFamily: 'JosefinSans',
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.verde,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
-                  child: Text(
-                    _estagioLabels[estagio] ?? estagio,
-                    style: TextStyle(
-                      fontFamily: 'JosefinSans',
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                      color: accentColor,
-                    ),
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
           ],
         ),

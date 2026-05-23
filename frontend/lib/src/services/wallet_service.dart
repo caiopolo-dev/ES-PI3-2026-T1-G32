@@ -104,6 +104,7 @@ class WalletService {
             final m = Map<String, dynamic>.from(e as Map);
             m['precoMedio'] = ((m['precoMedio'] as num?) ?? 0) / 100.0;
             m['valorAtual'] = ((m['valorAtual'] as num?) ?? 0) / 100.0;
+            m['precoAnterior'] = ((m['precoAnterior'] as num?) ?? 0) / 100.0;
             return m;
           })
           .toList();

@@ -21,6 +21,7 @@ class StartupDetailPage extends StatefulWidget {
   final String startupNome;
   final Map<String, dynamic>? usuario;
   final void Function(int)? onTabSwitch;
+  final int activeTabIndex;
 
   const StartupDetailPage({
     super.key,
@@ -28,6 +29,7 @@ class StartupDetailPage extends StatefulWidget {
     required this.startupNome,
     this.usuario,
     this.onTabSwitch,
+    this.activeTabIndex = 2,
   });
 
   @override
@@ -308,6 +310,39 @@ class _StartupDetailPageState extends State<StartupDetailPage> {
               Navigator.pop(context);
               widget.onTabSwitch?.call(4);
             },
+          ),
+        ],
+      ),
+      bottomNavigationBar: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            children: List.generate(5, (i) => Expanded(
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                height: 2.5,
+                color: widget.activeTabIndex == i ? AppColors.azul : AppColors.cinza200,
+              ),
+            )),
+          ),
+          BottomNavigationBar(
+            type: BottomNavigationBarType.fixed,
+            backgroundColor: AppColors.branco,
+            elevation: 0,
+            currentIndex: widget.activeTabIndex,
+            selectedItemColor: AppColors.azul,
+            unselectedItemColor: AppColors.cinza500,
+            onTap: (index) {
+              Navigator.pop(context, _houvePurchase);
+              widget.onTabSwitch?.call(index);
+            },
+            items: const [
+              BottomNavigationBarItem(icon: Icon(Icons.home_outlined), label: 'Início'),
+              BottomNavigationBarItem(icon: Icon(Icons.store), label: 'Mercado'),
+              BottomNavigationBarItem(icon: Icon(Icons.list), label: 'Catálogo'),
+              BottomNavigationBarItem(icon: Icon(Icons.account_balance_wallet), label: 'Carteira'),
+              BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: 'Perfil'),
+            ],
           ),
         ],
       ),

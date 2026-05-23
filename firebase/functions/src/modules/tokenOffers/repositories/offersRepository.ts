@@ -122,6 +122,9 @@ export async function buyTokenOffer(
 ): Promise<BuyTokenOfferResult> {
   const {offerId, buyerId, quantity} = params;
 
+  // Created OUTSIDE runTransaction so retries reuse the same doc IDs
+  const transactionRef = db.collection(TRANSACTIONS).doc();
+
   // Toda a operação é atômica: débito do comprador, crédito do vendedor,
   // atualização da oferta e registro da transação acontecem juntos ou falham.
   return db.runTransaction(async (transaction) => {
@@ -294,7 +297,7 @@ export async function buyTokenOffer(
     const startupData = startupSnap.data();
     if (startupData) {
       const totalTokens = Number(startupData.totalTokens ?? 1000);
-      const precoAtual = Number(startupData.precoToken ?? pricePerTokenCents);
+      const precoAtual = Number(startupData.precoToken ?? 0);
       const impacto = (quantity / totalTokens) * FATOR_IMPACTO;
       const novoPreco = Math.round(precoAtual * (1 + impacto));
       transaction.update(startupRef, {
@@ -313,8 +316,6 @@ export async function buyTokenOffer(
         createdAt: FieldValue.serverTimestamp(),
       });
     }
-
-    const transactionRef = db.collection(TRANSACTIONS).doc();
 
     transaction.set(transactionRef, {
       offerId,
