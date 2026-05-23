@@ -34,9 +34,7 @@ class WalletTokenCard extends StatelessWidget {
         precoMedio > 0 ? (valorAtual - precoMedio) / precoMedio * 100 : 0.0;
     final variacaoLabel =
         '${variacaoPct >= 0 ? '+' : ''}${variacaoPct.toStringAsFixed(1)}%';
-    final accentColor = variacaoPct == 0
-        ? AppColors.azul
-        : (positivo ? AppColors.verde : AppColors.vermelho);
+    final accentColor = positivo ? AppColors.verde : AppColors.vermelho;
 
     return GestureDetector(
       onTap: onTap,
@@ -217,7 +215,7 @@ class WalletTransactionCard extends StatelessWidget {
     final String labelTipo;
     final IconData iconeTipo;
     if (isDeposit) {
-      accentColor = AppColors.azul;
+      accentColor = AppColors.verde;
       labelTipo = 'Depósito';
       iconeTipo = Icons.account_balance_wallet_outlined;
     } else if (isSell) {

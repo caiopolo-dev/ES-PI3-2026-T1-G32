@@ -36,6 +36,7 @@ class _BalcaoNegociacaoPageState extends State<BalcaoNegociacaoPage> {
   Map<String, String?> _logoUrls = {};
 
   _SortMode _sortMode = _SortMode.alphabetical;
+  _SortMode _mySortMode = _SortMode.alphabetical;
 
   @override
   void initState() {
@@ -106,6 +107,26 @@ class _BalcaoNegociacaoPageState extends State<BalcaoNegociacaoPage> {
         myOffersError = result['message']?.toString() ?? 'Erro ao carregar suas ordens';
       }
     });
+  }
+
+  List<dynamic> get filteredMyOffers {
+    final list = List<dynamic>.from(myOffers);
+    switch (_mySortMode) {
+      case _SortMode.alphabetical:
+        list.sort((a, b) =>
+            (a['startupName'] ?? a['startupId'] ?? '')
+                .toString()
+                .compareTo((b['startupName'] ?? b['startupId'] ?? '').toString()));
+      case _SortMode.priceAsc:
+        list.sort((a, b) =>
+            ((a['valorUnitarioCentavos'] as num?) ?? 0)
+                .compareTo((b['valorUnitarioCentavos'] as num?) ?? 0));
+      case _SortMode.priceDesc:
+        list.sort((a, b) =>
+            ((b['valorUnitarioCentavos'] as num?) ?? 0)
+                .compareTo((a['valorUnitarioCentavos'] as num?) ?? 0));
+    }
+    return list;
   }
 
   List<dynamic> get filteredOffers {
@@ -370,29 +391,65 @@ class _BalcaoNegociacaoPageState extends State<BalcaoNegociacaoPage> {
   }
 
   Widget _buildMinhasOrdens() {
-    return isLoadingMyOffers
-        ? const AppLoadingIndicator()
-        : myOffersError != null
-            ? Center(child: Text(myOffersError!, style: const TextStyle(fontFamily: 'JosefinSans', color: AppColors.cinza500)))
-            : myOffers.isEmpty
-                ? _emptyState('Você não possui ordens em aberto', Icons.receipt_long_outlined)
-                : RefreshIndicator(
-                    onRefresh: loadMyOffers,
-                    child: ListView.builder(
-                      padding: const EdgeInsets.fromLTRB(20, 16, 20, 100),
-                      itemCount: myOffers.length,
-                      itemBuilder: (context, index) {
-                        final offer = Map<String, dynamic>.from(myOffers[index] as Map);
-                        final name = (offer['startupName'] ?? offer['startupId'] ?? '').toString();
-                        return _MyOrderCard(
-                          data: offer,
-                          currency: _currency,
-                          logoUrl: _logoUrls[name],
-                          onCancel: () => _confirmCancelOffer(offer),
-                        );
-                      },
-                    ),
-                  );
+    if (isLoadingMyOffers) return const AppLoadingIndicator();
+    if (myOffersError != null) {
+      return Center(child: Text(myOffersError!, style: const TextStyle(fontFamily: 'JosefinSans', color: AppColors.cinza500)));
+    }
+
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                AppFilterChip(
+                  label: 'A-Z',
+                  selected: _mySortMode == _SortMode.alphabetical,
+                  onTap: () => setState(() => _mySortMode = _SortMode.alphabetical),
+                ),
+                const SizedBox(width: 8),
+                AppFilterChip(
+                  label: 'Menor preço',
+                  icon: Icons.arrow_downward,
+                  selected: _mySortMode == _SortMode.priceAsc,
+                  onTap: () => setState(() => _mySortMode = _SortMode.priceAsc),
+                ),
+                const SizedBox(width: 8),
+                AppFilterChip(
+                  label: 'Maior preço',
+                  icon: Icons.arrow_upward,
+                  selected: _mySortMode == _SortMode.priceDesc,
+                  onTap: () => setState(() => _mySortMode = _SortMode.priceDesc),
+                ),
+              ],
+            ),
+          ),
+        ),
+        myOffers.isEmpty
+            ? Expanded(child: _emptyState('Você não possui ordens em aberto', Icons.receipt_long_outlined))
+            : Expanded(
+                child: RefreshIndicator(
+                  onRefresh: loadMyOffers,
+                  child: ListView.builder(
+                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 100),
+                    itemCount: filteredMyOffers.length,
+                    itemBuilder: (context, index) {
+                      final offer = Map<String, dynamic>.from(filteredMyOffers[index] as Map);
+                      final name = (offer['startupName'] ?? offer['startupId'] ?? '').toString();
+                      return _MyOrderCard(
+                        data: offer,
+                        currency: _currency,
+                        logoUrl: _logoUrls[name],
+                        onCancel: () => _confirmCancelOffer(offer),
+                      );
+                    },
+                  ),
+                ),
+              ),
+      ],
+    );
   }
 
   Widget _emptyState(String message, IconData icon) {
@@ -434,18 +491,16 @@ class _OfferCard extends StatelessWidget {
     final abaixo = temMercado && centavos < mercadoCentavos;
     final acima = temMercado && centavos > mercadoCentavos;
 
-    final accentColor = abaixo
-        ? AppColors.verde
-        : acima
-            ? AppColors.vermelho
-            : AppColors.azul;
+    final accentColor = acima ? AppColors.vermelho : AppColors.verde;
 
     final double diffPct = temMercado && mercadoCentavos > 0
-        ? ((centavos - mercadoCentavos) / mercadoCentavos * 100)
+        ? ((centavos - mercadoCentavos) / mercadoCentavos * 100).abs()
         : 0;
-    final diffLabel = diffPct == 0
+    final diffLabel = !temMercado || diffPct == 0
         ? 'No mercado'
-        : '${diffPct > 0 ? '+' : ''}${diffPct.toStringAsFixed(1)}%';
+        : abaixo
+            ? '${diffPct.toStringAsFixed(1)}% abaixo'
+            : '${diffPct.toStringAsFixed(1)}% acima';
 
     return GestureDetector(
       onTap: onTap,
@@ -638,7 +693,7 @@ class _MyOrderCard extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Container(width: 5, color: AppColors.amarelo),
+              Container(width: 5, color: AppColors.verde),
               Expanded(
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(14, 14, 14, 12),
