@@ -8,9 +8,8 @@ import 'package:mescla_invest/src/theme/app_colors.dart';
 import 'package:mescla_invest/src/services/wallet_service.dart';
 import 'package:mescla_invest/src/services/storage_service.dart';
 import 'package:mescla_invest/src/widgets/widgets.dart';
-import 'package:mescla_invest/src/pages/home/startup_detail/startup_detail_page.dart';
-import 'package:mescla_invest/src/pages/home/buy_steps_page.dart';
 import 'package:mescla_invest/src/pages/home/wallet/wallet_cards.dart';
+import 'package:mescla_invest/src/pages/home/wallet/startup_portfolio_detail_page.dart';
 import 'package:intl/intl.dart';
 
 enum _TokenSort { alfa, precoAsc, precoDesc }
@@ -51,7 +50,10 @@ class _WalletPageState extends State<WalletPage>
   @override
   void didUpdateWidget(WalletPage oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.isActive && !oldWidget.isActive) _loadAll();
+    if (widget.isActive && !oldWidget.isActive) {
+      _loadVisibility();
+      _loadAll();
+    }
   }
 
   List<Map<String, dynamic>> get _filteredTokens {
@@ -197,52 +199,26 @@ class _WalletPageState extends State<WalletPage>
 
   Future<void> _openTokenActions(Map<String, dynamic> token) async {
     final startupId = token['startupId'] as String? ?? '';
-    final startupNome = token['startupNome'] as String? ?? '';
-    final quantidade = (token['quantidade'] as num?)?.toInt() ?? 0;
-    final valorAtual = (token['valorAtual'] as num?)?.toDouble() ?? 0.0;
-    final logoUrl = _logoUrls[token['startupId'] as String? ?? ''];
-    final pricePerTokenCents = (valorAtual * 100).round();
+    final purchases = _transactions
+        .where((tx) =>
+            tx['startupId'] == startupId && (tx['type'] as String?) == 'buy')
+        .toList();
 
-    if (!mounted) return;
-
-    final action = await showTokenActionsSheet(
+    final refreshNeeded = await Navigator.push<bool>(
       context,
-      startupNome: startupNome,
-      quantidade: quantidade,
-      valorAtual: valorAtual,
-      logoUrl: logoUrl,
+      MaterialPageRoute(
+        builder: (_) => StartupPortfolioDetailPage(
+          token: token,
+          purchases: purchases,
+          logoUrl: _logoUrls[startupId],
+          saldoVisivel: _saldoVisivel,
+          usuario: widget.usuario,
+          onTabSwitch: widget.onTabSwitch,
+        ),
+      ),
     );
 
-    if (!mounted || action == null) return;
-
-    if (action == 'buy') {
-      final comprou = await Navigator.push<bool>(
-        context,
-        MaterialPageRoute(
-          builder: (_) => StartupDetailPage(
-            startupId: startupId,
-            startupNome: startupNome,
-            usuario: widget.usuario,
-            onTabSwitch: widget.onTabSwitch,
-          ),
-        ),
-      );
-      if (comprou == true && mounted) _loadAll();
-    } else if (action == 'sell') {
-      final vendeu = await Navigator.push<bool>(
-        context,
-        MaterialPageRoute(
-          builder: (_) => BuyStepsPage(
-            startupName: startupNome,
-            startupId: startupId,
-            availableQuantity: quantidade,
-            pricePerTokenCents: pricePerTokenCents,
-            isSellMode: true,
-          ),
-        ),
-      );
-      if (vendeu == true && mounted) _loadAll();
-    }
+    if (refreshNeeded == true && mounted) _loadAll();
   }
 
   @override

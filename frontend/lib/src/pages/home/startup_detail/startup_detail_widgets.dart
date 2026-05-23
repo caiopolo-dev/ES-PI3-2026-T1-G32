@@ -135,10 +135,10 @@ class BottomActionBar extends StatelessWidget {
                       onPressed: onVender,
                       style: OutlinedButton.styleFrom(
                         padding: EdgeInsets.zero,
-                        side: const BorderSide(color: AppColors.vermelho),
+                        side: const BorderSide(color: AppColors.verde),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
                       ),
-                      child: const Text('Vender', style: TextStyle(color: AppColors.vermelho, fontSize: 15)),
+                      child: const Text('Vender', style: TextStyle(color: AppColors.verde, fontSize: 15)),
                     ),
                   ),
                 ),

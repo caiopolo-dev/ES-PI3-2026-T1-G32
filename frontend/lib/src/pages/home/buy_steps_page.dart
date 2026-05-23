@@ -38,29 +38,25 @@ class _BuyStepsPageState extends State<BuyStepsPage> {
   int tokenAmount = 1;
   int walletBalance = 0;
   int _sellPriceCents = 0;
-  final TextEditingController _quantityController = TextEditingController(text: '1');
+  final TextEditingController _quantityController =
+      TextEditingController(text: '1');
   late final TextEditingController _priceController;
   late final FocusNode _quantityFocus;
   late final FocusNode _priceFocus;
 
   List<String> get _stepTitles => widget.isSellMode
       ? ['Venda de token', 'Confirmação de venda', 'Ordem criada']
-      : ['Compra de token', 'Confirmação de valor', 'Agradecimento'];
+      : ['Compra de token', 'Confirmação de compra', 'Compra concluída'];
 
-  // Saldo armazenado em centavos para comparação direta com totalCents
-  // sem precisar converter unidades no momento da validação.
-  // Carrega no initState para que já esteja disponível quando o usuário tentar avançar.
   Future<void> loadWalletBalance() async {
     final balance = await TokenDataService.getWalletBalance();
-
     if (!mounted) return;
-
-    setState(() {
-      walletBalance = balance;
-    });
+    setState(() => walletBalance = balance);
   }
 
-  int get totalCents => tokenAmount * (widget.isSellMode ? _sellPriceCents : widget.pricePerTokenCents);
+  int get totalCents =>
+      tokenAmount *
+      (widget.isSellMode ? _sellPriceCents : widget.pricePerTokenCents);
 
   void tokenSum() {
     if (tokenAmount < widget.availableQuantity) {
@@ -81,71 +77,61 @@ class _BuyStepsPageState extends State<BuyStepsPage> {
   }
 
   Future<void> confirmPurchase() async {
-  setState(() {
-    isLoading = true;
-    errorText = '';
-  });
-
-  Map<String, dynamic> result;
-
-  if (widget.isSellMode) {
-    if (widget.startupId == null || widget.startupId!.isEmpty) {
-      setState(() {
-        isLoading = false;
-        errorText = 'ID da startup não informado.';
-      });
-      return;
-    }
-    result = await WalletService.createSellOffer(
-      startupId: widget.startupId!,
-      quantity: tokenAmount,
-      pricePerTokenCents: _sellPriceCents,
-    );
-  } else if (widget.isStartupFlow) {
-    if (widget.startupId == null || widget.startupId!.isEmpty) {
-      setState(() {
-        isLoading = false;
-        errorText = 'ID da startup não informado.';
-      });
-      return;
-    }
-
-    result = await TokenDataService.buyStartupToken(
-      startupId: widget.startupId!,
-      quantity: tokenAmount,
-    );
-  } else {
-    if (widget.offerId == null || widget.offerId!.isEmpty) {
-      setState(() {
-        isLoading = false;
-        errorText = 'ID da oferta não informado.';
-      });
-      return;
-    }
-
-    result = await TokenDataService.buyOffer(
-      offerId: widget.offerId!,
-      quantity: tokenAmount,
-    );
-  }
-
-  if (!mounted) return;
-
-  setState(() {
-    isLoading = false;
-  });
-
-  if (result['success'] == true) {
     setState(() {
-      currentStep = 2;
+      isLoading = true;
+      errorText = '';
     });
-  } else {
-    setState(() {
-      errorText = result['message'] ?? 'Erro ao confirmar compra';
-    });
-  }
-}
 
+    Map<String, dynamic> result;
+
+    if (widget.isSellMode) {
+      if (widget.startupId == null || widget.startupId!.isEmpty) {
+        setState(() {
+          isLoading = false;
+          errorText = 'ID da startup não informado.';
+        });
+        return;
+      }
+      result = await WalletService.createSellOffer(
+        startupId: widget.startupId!,
+        quantity: tokenAmount,
+        pricePerTokenCents: _sellPriceCents,
+      );
+    } else if (widget.isStartupFlow) {
+      if (widget.startupId == null || widget.startupId!.isEmpty) {
+        setState(() {
+          isLoading = false;
+          errorText = 'ID da startup não informado.';
+        });
+        return;
+      }
+      result = await TokenDataService.buyStartupToken(
+        startupId: widget.startupId!,
+        quantity: tokenAmount,
+      );
+    } else {
+      if (widget.offerId == null || widget.offerId!.isEmpty) {
+        setState(() {
+          isLoading = false;
+          errorText = 'ID da oferta não informado.';
+        });
+        return;
+      }
+      result = await TokenDataService.buyOffer(
+        offerId: widget.offerId!,
+        quantity: tokenAmount,
+      );
+    }
+
+    if (!mounted) return;
+    setState(() => isLoading = false);
+
+    if (result['success'] == true) {
+      setState(() => currentStep = 2);
+    } else {
+      setState(() => errorText = result['message'] ?? 'Erro ao confirmar');
+    }
+  }
 
   String formatMoney(int cents) {
     final value = (cents / 100).toStringAsFixed(2).replaceAll('.', ',');
@@ -155,7 +141,8 @@ class _BuyStepsPageState extends State<BuyStepsPage> {
   @override
   void initState() {
     super.initState();
-    _sellPriceCents = widget.pricePerTokenCents > 0 ? widget.pricePerTokenCents : 100;
+    _sellPriceCents =
+        widget.pricePerTokenCents > 0 ? widget.pricePerTokenCents : 100;
     _priceController = TextEditingController(
       text: _CurrencyFormatter.formatCents(_sellPriceCents),
     );
@@ -189,24 +176,23 @@ class _BuyStepsPageState extends State<BuyStepsPage> {
     super.dispose();
   }
 
-
-
-
   bool validateStep() {
     setState(() => errorText = '');
-
     switch (currentStep) {
       case 0:
         if (tokenAmount <= 0) {
-          setState(() => errorText = 'Selecione pelo menos 1 token para continuar.');
+          setState(
+              () => errorText = 'Selecione pelo menos 1 token para continuar.');
           return false;
         }
         if (tokenAmount > widget.availableQuantity) {
           setState(() => errorText = 'Quantidade maior que a disponível.');
           return false;
         }
-        if (widget.isSellMode && (_sellPriceCents < 1 || _sellPriceCents > 5000000)) {
-          setState(() => errorText = 'Preço inválido. Use entre R\$ 0,01 e R\$ 50.000,00.');
+        if (widget.isSellMode &&
+            (_sellPriceCents < 1 || _sellPriceCents > 5000000)) {
+          setState(() => errorText =
+              'Preço inválido. Use entre R\$ 0,01 e R\$ 50.000,00.');
           return false;
         }
         if (!widget.isSellMode && totalCents > walletBalance) {
@@ -214,624 +200,696 @@ class _BuyStepsPageState extends State<BuyStepsPage> {
           return false;
         }
         return true;
-
       case 1:
-        return true;
-
       case 2:
         return true;
-
       default:
         return false;
     }
   }
 
-
-
-
-
-
-
-  Widget buildStepContent() {
-    switch (currentStep) {
-      case 0:
-        return Column(
-          mainAxisSize: MainAxisSize.max,
-          children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-              decoration: BoxDecoration(
-                color: AppColors.azul.withValues(alpha: 0.06),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: AppColors.azul.withValues(alpha: 0.2),
-                ),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    widget.isSellMode ? 'Você receberá:' : 'Saldo em conta:',
-                    style: const TextStyle(
-                      fontSize: 16,
-                      color: AppColors.cinza700,
-                    ),
-                  ),
-                  Text(
-                    widget.isSellMode
-                        ? formatMoney(totalCents)
-                        : formatMoney(walletBalance),
-                    style: const TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.azul,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 12),
-
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  widget.isSellMode ? 'Seus tokens' : 'Disponível na oferta',
-                  style: const TextStyle(
-                    fontSize: 16,
-                    color: AppColors.cinza700,
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: AppColors.azul.withValues(alpha: 0.08),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(
-                        Icons.toll_outlined,
-                        size: 14,
-                        color: AppColors.azul,
-                      ),
-                      const SizedBox(width: 5),
-                      Text(
-                        '${widget.availableQuantity} tokens',
-                        style: const TextStyle(
-                          fontSize: 14,
-                          color: AppColors.azul,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 12),
-
-            const Divider(
-              height: 1,
-              thickness: 1,
-              color: AppColors.cinza200,
-            ),
-
-            const SizedBox(height: 12),
-
-            widget.isSellMode
-                ? Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text('Preço por token', style: TextStyle(fontSize: 20)),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: AppColors.azul.withValues(alpha: 0.06),
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: AppColors.azul.withValues(alpha: 0.4)),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            SizedBox(
-                              width: 120,
-                              child: TextField(
-                                controller: _priceController,
-                                focusNode: _priceFocus,
-                                keyboardType: TextInputType.number,
-                                inputFormatters: [_CurrencyFormatter()],
-                                textAlign: TextAlign.right,
-                                style: const TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  color: AppColors.azul,
-                                ),
-                                decoration: const InputDecoration(
-                                  border: InputBorder.none,
-                                  isDense: true,
-                                  contentPadding: EdgeInsets.zero,
-                                ),
-                                onChanged: (value) {
-                                  final digits = value.replaceAll(RegExp(r'[^0-9]'), '');
-                                  if (digits.isEmpty) {
-                                    setState(() => _sellPriceCents = 0);
-                                    return;
-                                  }
-                                  final cents = int.tryParse(digits) ?? 0;
-                                  setState(() => _sellPriceCents = cents.clamp(0, 5000000));
-                                },
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  )
-                : Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text('Valor do token', style: TextStyle(fontSize: 20)),
-                      Text(formatMoney(widget.pricePerTokenCents), style: const TextStyle(fontSize: 20)),
-                    ],
-                  ),
-
-            const Spacer(),
-
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const Text(
-                  'Quantidade',
-                  style: TextStyle(fontSize: 20),
-                ),
-
-                const SizedBox(height: 10),
-
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: AppColors.azul.withValues(alpha: 0.06),
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: AppColors.azul.withValues(alpha: 0.4)),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          SizedBox(
-                            width: 60,
-                            child: TextField(
-                              controller: _quantityController,
-                              focusNode: _quantityFocus,
-                              keyboardType: TextInputType.number,
-                              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                              style: const TextStyle(
-                                fontSize: 28,
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.azul,
-                              ),
-                              decoration: const InputDecoration(
-                                border: InputBorder.none,
-                                contentPadding: EdgeInsets.zero,
-                                isDense: true,
-                              ),
-                              onChanged: (value) {
-                                if (value.isEmpty) {
-                                  setState(() => tokenAmount = 0);
-                                  return;
-                                }
-                                final parsed = int.tryParse(value) ?? 0;
-                                if (parsed > widget.availableQuantity) {
-                                  setState(() {
-                                    tokenAmount = widget.availableQuantity;
-                                    _quantityController.text = tokenAmount.toString();
-                                    _quantityController.selection = TextSelection.collapsed(
-                                      offset: _quantityController.text.length,
-                                    );
-                                  });
-                                } else {
-                                  setState(() => tokenAmount = parsed);
-                                }
-                              },
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    Row(
-                      children: [
-                        OutlinedButton(
-                          onPressed: tokenSub,
-                          style: OutlinedButton.styleFrom(
-                            fixedSize: const Size(42, 42),
-                            padding: EdgeInsets.zero,
-                            foregroundColor: AppColors.preto,
-                            side: BorderSide(color: AppColors.cinza500),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                          child: const Text(
-                            '-',
-                            style: TextStyle(
-                              fontSize: 28,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-
-                        const SizedBox(width: 12),
-
-                        OutlinedButton(
-                          onPressed: tokenSum,
-                          style: OutlinedButton.styleFrom(
-                            fixedSize: const Size(42, 42),
-                            padding: EdgeInsets.zero,
-                            foregroundColor: AppColors.preto,
-                            side: BorderSide(color: AppColors.cinza500),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                          child: const Text(
-                            '+',
-                            style: TextStyle(
-                              fontSize: 28,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: 8),
-
-                const Divider(
-                  height: 18,
-                  thickness: 1,
-                  color: AppColors.cinza500,
-                ),
-
-                const SizedBox(height: 10),
-
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      'Total estimado:',
-                      style: TextStyle(fontSize: 18),
-                    ),
-                    Text(
-                      formatMoney(totalCents),
-                      style: const TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: 24),
-
-                ElevatedButton(
-                  onPressed: nextStep,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.azul,
-                    foregroundColor: AppColors.branco,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    elevation: 6,
-                    shadowColor: AppColors.azul.withValues(alpha: 0.4),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(24),
-                      side: const BorderSide(color: AppColors.azul800, width: 0.25),
-                    ),
-                  ),
-                  child: Text(
-                    widget.isSellMode ? 'Revisar ordem de venda' : 'Revisar ordem de compra',
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontFamily: 'JosefinSans',
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 20),
-              ],
-            ),
-          ],
-        );
-
-      case 1:
-        return Column(
-          mainAxisSize: MainAxisSize.max,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'Quantidade',
-                  style: TextStyle(fontSize: 20),
-                  
-                ),
-                Text(
-                  tokenAmount.toString(),
-                  style: const TextStyle(fontSize: 20),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 4),
-
-            const Divider(
-              height: 18,
-              thickness: 1,
-              color: AppColors.cinza500,
-            ),
-
-            const SizedBox(height: 4),
-
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'Valor unitário',
-                  style: TextStyle(fontSize: 20),
-                ),
-                Text(
-                  formatMoney(widget.isSellMode ? _sellPriceCents : widget.pricePerTokenCents),
-                  style: const TextStyle(fontSize: 20),
-                ),
-                
-              ],
-            ),
-            const SizedBox(height: 4),
-            const Divider(
-              height: 18,
-              thickness: 1,
-              color: AppColors.cinza500,
-            ),
-            const SizedBox(height: 4),
-
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                      'Total estimado:',
-                      style: TextStyle(fontSize: 18),
-                    ),
-                    Text(
-                      formatMoney(totalCents),
-                      style: const TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-              ],
-            ),
-
-            if (!widget.isSellMode) ...[
-              const SizedBox(height: 4),
-              const Divider(height: 18, thickness: 1, color: AppColors.cinza500),
-              const SizedBox(height: 4),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text('Saldo após compra:', style: TextStyle(fontSize: 16, color: AppColors.cinza500)),
-                  Text(
-                    formatMoney((walletBalance - totalCents).clamp(0, walletBalance)),
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: walletBalance - totalCents >= 0 ? AppColors.azul : AppColors.vermelho,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-
-            const Spacer(),
-
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-            const Divider(
-              height: 18,
-              thickness: 1,
-              color: AppColors.cinza500,
-            ),
-
-            const SizedBox(height: 24),
-
-            ElevatedButton(
-              onPressed: isLoading ? null : confirmPurchase,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.azul,
-                foregroundColor: AppColors.branco,
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                elevation: 6,
-                shadowColor: AppColors.azul.withValues(alpha: 0.4),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(24),
-                  side: const BorderSide(color: AppColors.azul800, width: 0.25),
-                ),
-              ),
-              child: isLoading
-                ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: AppColors.branco,
-                    ),
-                  )
-                : Text(
-                    widget.isSellMode ? 'Confirmar ordem de venda' : 'Confirmar ordem de compra',
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontFamily: 'JosefinSans',
-                    ),
-                  ),
-            ),
-
-            const SizedBox(height: 20),
-              ],
-            ),
-          ],
-        );
-        
-        
-
-
-      case 2:
-        return Column(
-          children: [
-            const SizedBox(height: 60),
-
-            Container(
-              width: 120,
-              height: 120,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: AppColors.azulNoite,
-                  width: 3,
-                ),
-              ),
-              child: const Icon(
-                Icons.currency_exchange,
-                size: 70,
-                color: AppColors.preto,
-              ),
-            ),
-
-            const SizedBox(height: 55),
-
-            Text(
-              widget.isSellMode ? 'Ordem de venda criada!' : 'Ordem de compra emitida!',
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 26,
-                fontWeight: FontWeight.w500,
-                fontFamily: 'JosefinSans',
-              ),
-            ),
-
-            const SizedBox(height: 12),
-
-            const Text(
-              'Seu futuro se transforma e a inovação\nacelera.',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 16,
-                fontFamily: 'JosefinSans',
-              ),
-            ),
-
-
-            
-          ],
-        );
-
-      default:
-        return const SizedBox.shrink();
-    }
-  }
-
   void nextStep() {
-    if (!validateStep()) {
-      return;
-    }
-
+    if (!validateStep()) return;
     if (currentStep < 2) {
       setState(() => currentStep++);
     } else {
-      // Retorna true para o chamador saber que uma compra foi concluída
-      // e que ele deve recarregar os dados (ofertas, carteira etc.).
       Navigator.pop(context, true);
     }
   }
 
+  // ─── UI ────────────────────────────────────────────────────────────────────
+
   @override
   Widget build(BuildContext context) {
+    final accentColor =
+        widget.isSellMode ? AppColors.verde : AppColors.azul;
+
     return Scaffold(
       backgroundColor: AppColors.branco,
-
       appBar: AppBar(
         backgroundColor: AppColors.branco,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppColors.preto),
+          icon: const Icon(Icons.arrow_back_ios_new,
+              size: 18, color: AppColors.preto),
           onPressed: () {
             if (currentStep == 0) {
-              // Sem compra: descarta sem sinalizar mudança.
               Navigator.pop(context);
             } else if (currentStep == 2) {
-              // Compra já confirmada: sinaliza true para o chamador recarregar.
               Navigator.pop(context, true);
             } else {
-              setState(() {
-                currentStep--;
-              });
+              setState(() => currentStep--);
             }
           },
         ),
+        title: Text(
+          widget.startupName,
+          style: const TextStyle(
+            fontFamily: 'JosefinSans',
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: AppColors.preto,
+          ),
+        ),
       ),
-
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Center(
-                child: SizedBox(
-                  child: Text(
-                    widget.startupName,
-                    style: const TextStyle(fontSize: 40),
+              // Indicador de etapas
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                child: Row(
+                  children: List.generate(
+                    3,
+                    (i) => Expanded(
+                      child: Container(
+                        margin: EdgeInsets.only(
+                          left: i > 0 ? 4 : 0,
+                          right: i < 2 ? 4 : 0,
+                        ),
+                        height: 3,
+                        decoration: BoxDecoration(
+                          color: i <= currentStep
+                              ? accentColor
+                              : AppColors.cinza200,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                    ),
                   ),
                 ),
               ),
-
-              const SizedBox(height: 5),
 
               Text(
                 _stepTitles[currentStep],
-                textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 16),
+                style: const TextStyle(
+                  fontFamily: 'JosefinSans',
+                  fontSize: 14,
+                  color: AppColors.cinza500,
+                ),
               ),
 
-              const SizedBox(height: 30),
+              const SizedBox(height: 20),
 
-              Expanded(child: buildStepContent()),
+              Expanded(child: _buildStepContent(accentColor)),
+
               if (errorText.isNotEmpty)
                 Padding(
-                  padding: const EdgeInsets.only(top: 12),
-                  child: Text(
-                    errorText,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(color: AppColors.vermelho),
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.warning_amber_rounded,
+                          size: 14, color: AppColors.vermelho),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          errorText,
+                          style: const TextStyle(
+                            fontFamily: 'JosefinSans',
+                            fontSize: 12,
+                            color: AppColors.vermelho,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-
             ],
           ),
         ),
       ),
     );
   }
+
+  Widget _buildStepContent(Color accentColor) {
+    switch (currentStep) {
+      case 0:
+        return _buildStep0(accentColor);
+      case 1:
+        return _buildStep1(accentColor);
+      case 2:
+        return _buildStep2(accentColor);
+      default:
+        return const SizedBox.shrink();
+    }
+  }
+
+  // ── Step 0: Seleção de quantidade ─────────────────────────────────────────
+  Widget _buildStep0(Color accentColor) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Card de informação: saldo / tokens + preço
+        Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: AppColors.branco,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: AppColors.cinza200),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      widget.isSellMode ? 'Seus tokens' : 'Saldo em conta',
+                      style: const TextStyle(
+                        fontFamily: 'JosefinSans',
+                        fontSize: 12,
+                        color: AppColors.cinza500,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      widget.isSellMode
+                          ? '${widget.availableQuantity} tokens'
+                          : formatMoney(walletBalance),
+                      style: TextStyle(
+                        fontFamily: 'JosefinSans',
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: accentColor,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(width: 1, height: 40, color: AppColors.cinza200),
+              const SizedBox(width: 14),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: AppColors.azul.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.toll_outlined,
+                        size: 13, color: AppColors.azul),
+                    const SizedBox(width: 4),
+                    Text(
+                      widget.isSellMode
+                          ? '${widget.availableQuantity} disponíveis'
+                          : '${formatMoney(widget.pricePerTokenCents)}/token',
+                      style: const TextStyle(
+                        fontFamily: 'JosefinSans',
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.azul,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        // Campo de preço editável (somente modo venda)
+        if (widget.isSellMode) ...[
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+            decoration: BoxDecoration(
+              color: AppColors.branco,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppColors.cinza200),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Preço por token',
+                  style: TextStyle(
+                    fontFamily: 'JosefinSans',
+                    fontSize: 14,
+                    color: AppColors.cinza700,
+                  ),
+                ),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: accentColor.withValues(alpha: 0.06),
+                    borderRadius: BorderRadius.circular(10),
+                    border:
+                        Border.all(color: accentColor.withValues(alpha: 0.4)),
+                  ),
+                  child: SizedBox(
+                    width: 120,
+                    child: TextField(
+                      controller: _priceController,
+                      focusNode: _priceFocus,
+                      keyboardType: TextInputType.number,
+                      inputFormatters: [_CurrencyFormatter()],
+                      textAlign: TextAlign.right,
+                      style: TextStyle(
+                        fontFamily: 'JosefinSans',
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: accentColor,
+                      ),
+                      decoration: const InputDecoration(
+                        border: InputBorder.none,
+                        isDense: true,
+                        contentPadding: EdgeInsets.zero,
+                      ),
+                      onChanged: (value) {
+                        final digits =
+                            value.replaceAll(RegExp(r'[^0-9]'), '');
+                        if (digits.isEmpty) {
+                          setState(() => _sellPriceCents = 0);
+                          return;
+                        }
+                        final cents = int.tryParse(digits) ?? 0;
+                        setState(
+                            () => _sellPriceCents = cents.clamp(0, 5000000));
+                      },
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+
+        const Spacer(),
+
+        // Seletor de quantidade
+        const Text(
+          'Quantidade de tokens',
+          style: TextStyle(
+            fontFamily: 'JosefinSans',
+            fontSize: 15,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 10),
+        Row(
+          children: [
+            Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+              decoration: BoxDecoration(
+                color: accentColor.withValues(alpha: 0.06),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: accentColor.withValues(alpha: 0.4)),
+              ),
+              child: SizedBox(
+                width: 60,
+                child: TextField(
+                  controller: _quantityController,
+                  focusNode: _quantityFocus,
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                  style: TextStyle(
+                    fontFamily: 'JosefinSans',
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                    color: accentColor,
+                  ),
+                  decoration: const InputDecoration(
+                    border: InputBorder.none,
+                    contentPadding: EdgeInsets.zero,
+                    isDense: true,
+                  ),
+                  onChanged: (value) {
+                    if (value.isEmpty) {
+                      setState(() => tokenAmount = 0);
+                      return;
+                    }
+                    final parsed = int.tryParse(value) ?? 0;
+                    if (parsed > widget.availableQuantity) {
+                      setState(() {
+                        tokenAmount = widget.availableQuantity;
+                        _quantityController.text = tokenAmount.toString();
+                        _quantityController.selection =
+                            TextSelection.collapsed(
+                                offset: _quantityController.text.length);
+                      });
+                    } else {
+                      setState(() => tokenAmount = parsed);
+                    }
+                  },
+                ),
+              ),
+            ),
+            const Spacer(),
+            _StepButton(label: '−', onPressed: tokenSub),
+            const SizedBox(width: 10),
+            _StepButton(label: '+', onPressed: tokenSum),
+          ],
+        ),
+
+        const SizedBox(height: 20),
+
+        // Total
+        Container(
+          padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+          decoration: BoxDecoration(
+            color: accentColor.withValues(alpha: 0.06),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: accentColor.withValues(alpha: 0.3)),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                widget.isSellMode ? 'Você receberá:' : 'Você pagará:',
+                style: TextStyle(
+                  fontFamily: 'JosefinSans',
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                  color: accentColor,
+                ),
+              ),
+              Text(
+                formatMoney(totalCents),
+                style: TextStyle(
+                  fontFamily: 'JosefinSans',
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: accentColor,
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        const SizedBox(height: 16),
+
+        SizedBox(
+          width: double.infinity,
+          child: ElevatedButton(
+            onPressed: nextStep,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: accentColor,
+              foregroundColor: AppColors.branco,
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(24)),
+            ),
+            child: Text(
+              widget.isSellMode
+                  ? 'Revisar ordem de venda'
+                  : 'Revisar ordem de compra',
+              style: const TextStyle(
+                fontFamily: 'JosefinSans',
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ── Step 1: Confirmação ───────────────────────────────────────────────────
+  Widget _buildStep1(Color accentColor) {
+    return Column(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: AppColors.branco,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppColors.cinza200),
+          ),
+          child: Column(
+            children: [
+              _ConfirmRow(label: 'Startup', value: widget.startupName),
+              _Divider(),
+              _ConfirmRowTokens(quantity: tokenAmount),
+              _Divider(),
+              _ConfirmRow(
+                label: 'Preço por token',
+                value: formatMoney(widget.isSellMode
+                    ? _sellPriceCents
+                    : widget.pricePerTokenCents),
+              ),
+              _Divider(),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    widget.isSellMode ? 'Você receberá' : 'Você pagará',
+                    style: TextStyle(
+                      fontFamily: 'JosefinSans',
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                      color: accentColor,
+                    ),
+                  ),
+                  Text(
+                    formatMoney(totalCents),
+                    style: TextStyle(
+                      fontFamily: 'JosefinSans',
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: accentColor,
+                    ),
+                  ),
+                ],
+              ),
+              if (!widget.isSellMode) ...[
+                _Divider(),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Saldo após compra',
+                      style: TextStyle(
+                        fontFamily: 'JosefinSans',
+                        fontSize: 13,
+                        color: AppColors.cinza500,
+                      ),
+                    ),
+                    Text(
+                      formatMoney(
+                          (walletBalance - totalCents).clamp(0, walletBalance)),
+                      style: TextStyle(
+                        fontFamily: 'JosefinSans',
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                        color: walletBalance - totalCents >= 0
+                            ? AppColors.azul
+                            : AppColors.vermelho,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ],
+          ),
+        ),
+
+        const Spacer(),
+
+        SizedBox(
+          width: double.infinity,
+          child: ElevatedButton(
+            onPressed: isLoading ? null : confirmPurchase,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: accentColor,
+              foregroundColor: AppColors.branco,
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(24)),
+            ),
+            child: isLoading
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                        strokeWidth: 2, color: AppColors.branco),
+                  )
+                : Text(
+                    widget.isSellMode
+                        ? 'Confirmar ordem de venda'
+                        : 'Confirmar compra',
+                    style: const TextStyle(
+                      fontFamily: 'JosefinSans',
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ── Step 2: Sucesso ───────────────────────────────────────────────────────
+  Widget _buildStep2(Color accentColor) {
+    return Column(
+      children: [
+        const Spacer(),
+        Container(
+          width: 120,
+          height: 120,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.all(color: AppColors.azulNoite, width: 3),
+          ),
+          child: const Icon(Icons.currency_exchange,
+              size: 70, color: AppColors.preto),
+        ),
+        const SizedBox(height: 24),
+        Text(
+          widget.isSellMode ? 'Ordem de venda criada!' : 'Compra realizada!',
+          textAlign: TextAlign.center,
+          style: const TextStyle(
+            fontFamily: 'JosefinSans',
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 10),
+        const Text(
+          'Seu futuro se transforma e a\ninovação acelera.',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontFamily: 'JosefinSans',
+            fontSize: 15,
+            color: AppColors.cinza500,
+          ),
+        ),
+        const Spacer(),
+        SizedBox(
+          width: double.infinity,
+          child: ElevatedButton(
+            onPressed: nextStep,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: accentColor,
+              foregroundColor: AppColors.branco,
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(24)),
+            ),
+            child: const Text(
+              'Concluir',
+              style: TextStyle(
+                fontFamily: 'JosefinSans',
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
 }
+
+// ─── Widgets auxiliares ──────────────────────────────────────────────────────
+
+class _StepButton extends StatelessWidget {
+  final String label;
+  final VoidCallback onPressed;
+  const _StepButton({required this.label, required this.onPressed});
+
+  @override
+  Widget build(BuildContext context) => OutlinedButton(
+        onPressed: onPressed,
+        style: OutlinedButton.styleFrom(
+          fixedSize: const Size(44, 44),
+          padding: EdgeInsets.zero,
+          foregroundColor: AppColors.preto,
+          side: const BorderSide(color: AppColors.cinza300),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+        child: Text(
+          label,
+          style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
+        ),
+      );
+}
+
+class _Divider extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) =>
+      Container(height: 1, color: AppColors.cinza200,
+          margin: const EdgeInsets.symmetric(vertical: 12));
+}
+
+class _ConfirmRow extends StatelessWidget {
+  final String label;
+  final String value;
+  const _ConfirmRow({required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) => Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label,
+              style: const TextStyle(
+                  fontFamily: 'JosefinSans',
+                  fontSize: 13,
+                  color: AppColors.cinza500)),
+          Text(value,
+              style: const TextStyle(
+                  fontFamily: 'JosefinSans',
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold)),
+        ],
+      );
+}
+
+class _ConfirmRowTokens extends StatelessWidget {
+  final int quantity;
+  const _ConfirmRowTokens({required this.quantity});
+
+  @override
+  Widget build(BuildContext context) => Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          const Text('Tokens',
+              style: TextStyle(
+                  fontFamily: 'JosefinSans',
+                  fontSize: 13,
+                  color: AppColors.cinza500)),
+          Container(
+            padding:
+                const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: AppColors.azul.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.toll_outlined,
+                    size: 13, color: AppColors.azul),
+                const SizedBox(width: 4),
+                Text(
+                  '$quantity tokens',
+                  style: const TextStyle(
+                    fontFamily: 'JosefinSans',
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.azul,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      );
+}
+
+// ─── Formatador de moeda ─────────────────────────────────────────────────────
 
 class _CurrencyFormatter extends TextInputFormatter {
   static const int _maxCents = 5000000;
@@ -857,9 +915,7 @@ class _CurrencyFormatter extends TextInputFormatter {
     final digits = newValue.text.replaceAll(RegExp(r'[^0-9]'), '');
     if (digits.isEmpty) {
       return newValue.copyWith(
-        text: '',
-        selection: const TextSelection.collapsed(offset: 0),
-      );
+          text: '', selection: const TextSelection.collapsed(offset: 0));
     }
     int cents = int.tryParse(digits) ?? 0;
     if (cents > _maxCents) cents = _maxCents;
