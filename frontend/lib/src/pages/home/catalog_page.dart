@@ -315,14 +315,21 @@ class StartupCard extends StatelessWidget {
     final accentColor = _estagioColors[estagio] ?? AppColors.azul;
     final Color precoColor;
     final String? variacaoStr;
+
     if (fechamentoOntem <= 0) {
-      precoColor = AppColors.verde;
+      precoColor = AppColors.cinza500;
       variacaoStr = null;
     } else {
       final pct = (precoToken - fechamentoOntem) / fechamentoOntem * 100;
+
       variacaoStr =
-          '${pct >= 0 ? '+' : ''}${pct.toStringAsFixed(1)}% · hoje';
-      precoColor = pct >= 0 ? AppColors.verde : AppColors.vermelho;
+          '${pct > 0 ? '+' : ''}${pct.toStringAsFixed(1)}% · hoje';
+
+      precoColor = pct > 0
+          ? AppColors.verde
+          : pct < 0
+              ? AppColors.vermelho
+              : AppColors.cinza500;
     }
 
     final estagioChip = Container(

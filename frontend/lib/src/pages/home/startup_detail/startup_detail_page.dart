@@ -13,7 +13,8 @@ import 'package:mescla_invest/src/pages/home/buy_steps_page.dart';
 import 'package:mescla_invest/src/services/wallet_service.dart';
 import 'package:mescla_invest/src/services/storage_service.dart';
 import 'package:url_launcher/url_launcher.dart';
-
+import 'package:fl_chart/fl_chart.dart';
+import 'package:mescla_invest/src/widgets/graficos.dart';
 
 
 class StartupDetailPage extends StatefulWidget {
@@ -53,6 +54,8 @@ class _StartupDetailPageState extends State<StartupDetailPage> {
 
   bool _priceHistoryLoading = false;
   double _valorizacaoPercentual = 0.0;
+  List<Map<String, dynamic>> _priceHistory = [];
+
 
   final List<String> _periods = ['Diário', 'Semanal', 'Mensal', '6 meses', 'YTD'];
   final List<String> _faqFilters = ['Todas', 'Públicas', 'Privadas'];
@@ -129,10 +132,15 @@ class _StartupDetailPageState extends State<StartupDetailPage> {
         return dateA.compareTo(dateB);
       });
 
+
+
       setState(() {
-        _valorizacaoPercentual = _calcularValorizacao(history);
-        _priceHistoryLoading = false;
-      });
+      _priceHistory = history;
+      _valorizacaoPercentual = _calcularValorizacao(history);
+      _priceHistoryLoading = false;
+    });
+
+
     } else {
       setState(() {
         _valorizacaoPercentual = 0.0;
@@ -143,16 +151,152 @@ class _StartupDetailPageState extends State<StartupDetailPage> {
 
 
 
-  double _calcularValorizacao(List<Map<String, dynamic>> history) {
-    if (history.length < 2) return 0.0;
 
-    final precoInicial = (history.first['price'] as num?)?.toDouble() ?? 0.0;
+
+  double _calcularValorizacao(List<Map<String, dynamic>> history) {
+    if (history.isEmpty) return 0.0;
+
+    final agora = DateTime.now();
+
+    final inicioDoDia = DateTime(
+      agora.year,
+      agora.month,
+      agora.day,
+    );
+
+    final registrosHoje = history.where((item) {
+      final data = _converterDataHistorico(item['createdAt']?.toString());
+      if (data == null) return false;
+
+      final dataLocal = data;
+
+      return dataLocal.isAfter(inicioDoDia) ||
+          dataLocal.isAtSameMomentAs(inicioDoDia);
+    }).toList();
+
+    if (registrosHoje.isEmpty) {
+      return 0.0;
+    }
+
+    Map<String, dynamic>? ultimoRegistroAntesDeHoje;
+
+    for (final item in history) {
+      final data = _converterDataHistorico(item['createdAt']?.toString());
+      if (data == null) continue;
+
+      if (data.isBefore(inicioDoDia)) {
+        ultimoRegistroAntesDeHoje = item;
+      }
+    }
+
+    final precoBase = ultimoRegistroAntesDeHoje != null
+        ? (ultimoRegistroAntesDeHoje['price'] as num?)?.toDouble() ?? 0.0
+        : (registrosHoje.first['price'] as num?)?.toDouble() ?? 0.0;
+
     final precoAtual = (history.last['price'] as num?)?.toDouble() ?? 0.0;
 
-    if (precoInicial <= 0) return 0.0;
+    if (precoBase <= 0) return 0.0;
 
-    return ((precoAtual - precoInicial) / precoInicial) * 100;
+    return ((precoAtual - precoBase) / precoBase) * 100;
   }
+
+
+  DateTime? _converterDataHistorico(String? dataTexto) {
+    if (dataTexto == null || dataTexto.isEmpty) return null;
+
+    final data = DateTime.tryParse(dataTexto);
+    if (data == null) return null;
+
+    // Firestore vem em UTC. Brasil = UTC-3.
+    return data.toUtc().subtract(const Duration(hours: 3));
+  }
+
+
+
+
+  List<Map<String, dynamic>> _historicoFiltradoPorPeriodo() {
+    if (_priceHistory.isEmpty) return [];
+
+    final agora = DateTime.now();
+    DateTime dataInicial;
+
+    switch (_selectedPeriod) {
+      case 0: 
+        dataInicial = DateTime(agora.year, agora.month, agora.day);
+        break;
+      case 1: 
+        dataInicial = agora.subtract(const Duration(days: 7));
+        break;
+      case 2: 
+        dataInicial = agora.subtract(const Duration(days: 30));
+        break;
+      case 3: 
+        dataInicial = DateTime(agora.year, agora.month - 6, agora.day);
+        break;
+      case 4:
+        dataInicial = DateTime(agora.year, 1, 1);
+        break;
+      default:
+        dataInicial = agora.subtract(const Duration(days: 30));
+    }
+
+    return _priceHistory.where((item) {
+      final data = _converterDataHistorico(item['createdAt']?.toString());
+      if (data == null) return false;
+
+      return data.isAfter(dataInicial);
+    }).toList();
+  }
+
+  List<FlSpot> _pontosGraficoStartup() {
+    final historico = _historicoFiltradoPorPeriodo();
+
+    return List.generate(historico.length, (index) {
+      final precoCentavos = (historico[index]['price'] as num?)?.toDouble() ?? 0.0;
+      final precoReais = precoCentavos / 100;
+
+      return FlSpot(index.toDouble(), precoReais);
+    });
+  }
+
+  List<String> _labelsGraficoStartup() {
+    final historico = _historicoFiltradoPorPeriodo();
+
+    const meses = [
+      'Jan',
+      'Fev',
+      'Mar',
+      'Abr',
+      'Mai',
+      'Jun',
+      'Jul',
+      'Ago',
+      'Set',
+      'Out',
+      'Nov',
+      'Dez',
+    ];
+
+    return historico.map((item) {
+      final dataLocal = _converterDataHistorico(item['createdAt']?.toString());
+      if (dataLocal == null) return '';
+
+      if (_selectedPeriod == 0) {
+        return '${dataLocal.hour.toString().padLeft(2, '0')}:${dataLocal.minute.toString().padLeft(2, '0')}';
+      }
+
+      if (_selectedPeriod == 3 || _selectedPeriod == 4) {
+        return meses[dataLocal.month - 1];
+      }
+
+      return '${dataLocal.day}/${dataLocal.month}';
+    }).toList();
+}
+
+
+
+
+
 
   Future<void> _loadUserTokens() async {
     final result = await WalletService.getUserTokens();
@@ -192,6 +336,7 @@ class _StartupDetailPageState extends State<StartupDetailPage> {
       _loadUserTokens();
       _loadFaqs();
       _fetchDetail();
+      _loadPriceHistory();
     }
   }
 
@@ -281,6 +426,7 @@ class _StartupDetailPageState extends State<StartupDetailPage> {
       _loadUserTokens();
       _loadFaqs();
       _fetchDetail();
+      _loadPriceHistory();
     }
   }
 
@@ -406,17 +552,28 @@ class _StartupDetailPageState extends State<StartupDetailPage> {
           ),
           const SizedBox(height: 20),
 
-          Container(
-            height: 180,
-            decoration: BoxDecoration(
-              border: Border.all(color: AppColors.cinza200),
-              borderRadius: BorderRadius.circular(8),
+
+
+         _priceHistoryLoading
+          ? Container(
+              height: 180,
+              decoration: BoxDecoration(
+                border: Border.all(color: AppColors.cinza200),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Center(
+                child: AppLoadingIndicator(),
+              ),
+            )
+          : GraficoLinha(
+              pontos: _pontosGraficoStartup(),
+              labelsInferiores: _labelsGraficoStartup(),
+              formatarValorEsquerda: (valor) => 'R\$ ${valor.toStringAsFixed(2)}',
             ),
-            child: Center(
-              child: Text('Histórico de preços em breve',
-                  style: TextStyle(color: AppColors.cinza400, fontSize: 14)),
-            ),
-          ),
+
+
+
+
           const SizedBox(height: 14),
 
           SingleChildScrollView(

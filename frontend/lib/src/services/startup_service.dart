@@ -80,6 +80,7 @@ class StartupService {
 
       final result = await callable.call({
         'startupId': startupId,
+        'limit': 200,
       });
 
       return {

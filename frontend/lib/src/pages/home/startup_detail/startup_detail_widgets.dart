@@ -61,7 +61,7 @@ class PriceRow extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  Text('Valorização', style: TextStyle(fontSize: 14, color: AppColors.cinza700)),
+                  Text('Variação do dia', style: TextStyle(fontSize: 14, color: AppColors.cinza700)),
                   const SizedBox(height: 4),
                   if (valorizacaoLoading)
                     SizedBox(
@@ -78,9 +78,11 @@ class PriceRow extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 22,
                         fontWeight: FontWeight.bold,
-                        color: valorizacaoPercentual >= 0
-                            ? AppColors.verde
-                            : AppColors.vermelho,
+                        color: valorizacaoPercentual > 0
+                          ? AppColors.verde
+                          : valorizacaoPercentual < 0
+                              ? AppColors.vermelho
+                              : AppColors.cinza500,
                       ),
                     ),
                 ],
