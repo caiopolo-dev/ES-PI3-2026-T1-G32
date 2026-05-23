@@ -72,4 +72,33 @@ class StartupService {
       };
     }
   }
+  
+  static Future<Map<String, dynamic>> getPriceHistory(String startupId) async {
+    try {
+      final callable = FirebaseFunctions.instance
+          .httpsCallable('getPriceHistory');
+
+      final result = await callable.call({
+        'startupId': startupId,
+      });
+
+      return {
+        'success': true,
+        'data': (jsonDecode(jsonEncode(result.data['data'])) as List)
+            .cast<Map<String, dynamic>>(),
+      };
+    } on FirebaseFunctionsException catch (e) {
+      return {
+        'success': false,
+        'error': e.code,
+        'message': e.message ?? 'Erro ao buscar histórico de preços',
+      };
+    } catch (e) {
+      return {
+        'success': false,
+        'error': 'Erro inesperado',
+        'message': e.toString(),
+      };
+    }
+  }
 }

@@ -25,9 +25,19 @@ class SectionTitle extends StatelessWidget {
       );
 }
 
+
+
 class PriceRow extends StatelessWidget {
   final double precoToken;
-  const PriceRow({super.key, required this.precoToken});
+  final double valorizacaoPercentual;
+  final bool valorizacaoLoading;
+
+  const PriceRow({
+    super.key,
+    required this.precoToken,
+    required this.valorizacaoPercentual,
+    this.valorizacaoLoading = false,
+  });
 
   @override
   Widget build(BuildContext context) => IntrinsicHeight(
@@ -51,9 +61,28 @@ class PriceRow extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  Text('Variação Hoje', style: TextStyle(fontSize: 14, color: AppColors.cinza700)),
+                  Text('Valorização', style: TextStyle(fontSize: 14, color: AppColors.cinza700)),
                   const SizedBox(height: 4),
-                  Text('—', style: TextStyle(fontSize: 22, color: AppColors.cinza400)),
+                  if (valorizacaoLoading)
+                    SizedBox(
+                      width: 22,
+                      height: 22,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: AppColors.cinza400,
+                      ),
+                    )
+                  else
+                    Text(
+                      '${valorizacaoPercentual >= 0 ? '+' : ''}${NumberFormat('#,##0.00', 'pt_BR').format(valorizacaoPercentual)}%',
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        color: valorizacaoPercentual >= 0
+                            ? AppColors.verde
+                            : AppColors.vermelho,
+                      ),
+                    ),
                 ],
               ),
             ),
@@ -61,6 +90,8 @@ class PriceRow extends StatelessWidget {
         ),
       );
 }
+
+
 
 class TokensInfo extends StatelessWidget {
   final int totalTokens;

@@ -114,7 +114,6 @@ class WalletService {
       return {'success': false, 'message': e.toString()};
     }
   }
-  //-------------------- modificacao - caio
   static Future<Map<String, dynamic>> cancelOffer(String offerId) async {
     try {
       await FirebaseFunctions.instance
@@ -131,5 +130,4 @@ class WalletService {
       return {'success': false, 'message': e.toString()};
     }
   }
-  //-------------------- modificacao - caio
 }

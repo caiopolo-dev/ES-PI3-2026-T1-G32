@@ -35,6 +35,7 @@ class StartupDetailPage extends StatefulWidget {
 }
 
 class _StartupDetailPageState extends State<StartupDetailPage> {
+
   Map<String, dynamic>? startup;
   bool isLoading = true;
   String? error;
@@ -48,6 +49,9 @@ class _StartupDetailPageState extends State<StartupDetailPage> {
   bool _faqsLoading = false;
   int _faqFilter = 0; // 0=Todas 1=Públicas 2=Privadas
 
+  bool _priceHistoryLoading = false;
+  double _valorizacaoPercentual = 0.0;
+
   final List<String> _periods = ['Diário', 'Semanal', 'Mensal', '6 meses', 'YTD'];
   final List<String> _faqFilters = ['Todas', 'Públicas', 'Privadas'];
 
@@ -56,6 +60,7 @@ class _StartupDetailPageState extends State<StartupDetailPage> {
     super.initState();
     _initPage();
     _loadFaqs();
+    _loadPriceHistory();
   }
 
   Future<void> _initPage() async {
@@ -98,6 +103,53 @@ class _StartupDetailPageState extends State<StartupDetailPage> {
       _videoUrl = results[0];
       _summaryUrl = results[1];
     });
+  }
+
+
+
+
+  Future<void> _loadPriceHistory() async {
+    setState(() => _priceHistoryLoading = true);
+
+    final result = await StartupService.getPriceHistory(widget.startupId);
+
+    if (!mounted) return;
+
+    if (result['success'] == true) {
+      final history = List<Map<String, dynamic>>.from(result['data'] ?? []);
+
+      history.sort((a, b) {
+        final dateA = DateTime.tryParse(a['createdAt']?.toString() ?? '') ??
+            DateTime.fromMillisecondsSinceEpoch(0);
+        final dateB = DateTime.tryParse(b['createdAt']?.toString() ?? '') ??
+            DateTime.fromMillisecondsSinceEpoch(0);
+
+        return dateA.compareTo(dateB);
+      });
+
+      setState(() {
+        _valorizacaoPercentual = _calcularValorizacao(history);
+        _priceHistoryLoading = false;
+      });
+    } else {
+      setState(() {
+        _valorizacaoPercentual = 0.0;
+        _priceHistoryLoading = false;
+      });
+    }
+  }
+
+
+
+  double _calcularValorizacao(List<Map<String, dynamic>> history) {
+    if (history.length < 2) return 0.0;
+
+    final precoInicial = (history.first['price'] as num?)?.toDouble() ?? 0.0;
+    final precoAtual = (history.last['price'] as num?)?.toDouble() ?? 0.0;
+
+    if (precoInicial <= 0) return 0.0;
+
+    return ((precoAtual - precoInicial) / precoInicial) * 100;
   }
 
   Future<void> _loadUserTokens() async {
@@ -297,7 +349,11 @@ class _StartupDetailPageState extends State<StartupDetailPage> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           const SizedBox(height: 20),
-          PriceRow(precoToken: precoToken),
+          PriceRow(
+            precoToken: precoToken,
+            valorizacaoPercentual: _valorizacaoPercentual,
+            valorizacaoLoading: _priceHistoryLoading,
+          ),
           const SizedBox(height: 16),
           const Divider(),
           const SizedBox(height: 12),
