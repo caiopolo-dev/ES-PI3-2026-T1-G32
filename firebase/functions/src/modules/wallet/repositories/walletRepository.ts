@@ -2,10 +2,11 @@
 // Data: 08/05/2026
 // Descrição: Repository da carteira do usuário
 
-import {FieldValue} from "firebase-admin/firestore";
+import {FieldValue, Timestamp} from "firebase-admin/firestore";
 import {db} from "../../../shared/firebase";
 import {
   USERS, TRANSACTIONS, STARTUPS, WALLET, WALLET_SALDO, USER_TOKENS,
+  PRICE_HISTORY,
 } from "../../../shared/collections";
 
 /**
@@ -125,16 +126,47 @@ export async function getUserTokensByUserId(uid: string) {
     }
   });
 
+  // Last price before today — same logic as startupRepository.
+  const startOfDay = Timestamp.fromDate(new Date(Date.UTC(
+    new Date().getUTCFullYear(),
+    new Date().getUTCMonth(),
+    new Date().getUTCDate()
+  )));
+  const fechamentoMap: Record<string, number> = {};
+  await Promise.all(
+    startupIds.map(async (id) => {
+      const snap = await db
+        .collection(STARTUPS).doc(id)
+        .collection(PRICE_HISTORY)
+        .where("createdAt", "<", startOfDay)
+        .orderBy("createdAt", "desc")
+        .limit(1)
+        .get();
+      if (!snap.empty) {
+        fechamentoMap[id] = Number(snap.docs[0].data().price);
+      }
+    })
+  );
+
   const tokens = tokenSnap.docs.map((doc) => {
     const d = doc.data();
     const startup = startupMap[doc.id] ?? {};
+    const precoAtual = Number(startup.precoToken ?? d.valorAtual ?? 0);
+    // Prefer daily closing price from history; fall back to last transaction.
+    const rawAnterior = fechamentoMap[doc.id] ??
+      Number(startup.precoTokenAnterior ?? 0);
+    const ratio = precoAtual > 0 && rawAnterior > 0 ?
+      rawAnterior / precoAtual : 1;
+    const precoAnterior =
+      ratio > 20 || ratio < 0.05 ? precoAtual : rawAnterior;
     return {
       startupId: doc.id,
       startupNome: startup.nome ?? "—",
       startupLogo: startup.logoUrl ?? null,
       quantidade: Number(d.quantidade ?? 0),
       precoMedio: Number(d.precoMedio ?? 0),
-      valorAtual: Number(startup.precoToken ?? d.valorAtual ?? 0),
+      valorAtual: precoAtual,
+      precoAnterior,
     };
   });
 

@@ -26,15 +26,22 @@ class WalletTokenCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final precoMedio = (token['precoMedio'] as num?)?.toDouble() ?? 0.0;
     final valorAtual = (token['valorAtual'] as num?)?.toDouble() ?? 0.0;
+    final precoAnterior =
+        (token['precoAnterior'] as num?)?.toDouble() ?? valorAtual;
     final quantidade = (token['quantidade'] as num?)?.toInt() ?? 0;
     final totalAtual = valorAtual * quantidade;
     final totalInvestido = precoMedio * quantidade;
-    final positivo = valorAtual >= precoMedio;
-    final variacaoPct =
-        precoMedio > 0 ? (valorAtual - precoMedio) / precoMedio * 100 : 0.0;
+    final variacaoPct = precoAnterior > 0
+        ? (valorAtual - precoAnterior) / precoAnterior * 100
+        : 0.0;
     final variacaoLabel =
-        '${variacaoPct >= 0 ? '+' : ''}${variacaoPct.toStringAsFixed(1)}%';
-    final accentColor = positivo ? AppColors.verde : AppColors.vermelho;
+        'Hoje ${variacaoPct >= 0 ? '+' : ''}${variacaoPct.toStringAsFixed(1)}%';
+    // Card color driven by portfolio performance (invested vs current value)
+    final cardColor =
+        totalAtual >= totalInvestido ? AppColors.verde : AppColors.vermelho;
+    // Chip color driven by daily market variation only
+    final variacaoColor =
+        valorAtual >= precoAnterior ? AppColors.verde : AppColors.vermelho;
 
     return GestureDetector(
       onTap: onTap,
@@ -51,7 +58,7 @@ class WalletTokenCard extends StatelessWidget {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Container(width: 5, color: accentColor),
+                Container(width: 5, color: cardColor),
                 Expanded(
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(14, 14, 14, 12),
@@ -63,13 +70,13 @@ class WalletTokenCard extends StatelessWidget {
                             CircleAvatar(
                               radius: 22,
                               backgroundColor:
-                                  accentColor.withValues(alpha: 0.1),
+                                  cardColor.withValues(alpha: 0.1),
                               backgroundImage: logoUrl != null
                                   ? NetworkImage(logoUrl!)
                                   : null,
                               child: logoUrl == null
                                   ? Icon(Icons.business,
-                                      color: accentColor, size: 20)
+                                      color: cardColor, size: 20)
                                   : null,
                             ),
                             const SizedBox(width: 12),
@@ -92,14 +99,14 @@ class WalletTokenCard extends StatelessWidget {
                                     fontFamily: 'JosefinSans',
                                     fontSize: 15,
                                     fontWeight: FontWeight.bold,
-                                    color: accentColor,
+                                    color: variacaoColor,
                                   ),
                                 ),
                                 Container(
                                   padding: const EdgeInsets.symmetric(
                                       horizontal: 7, vertical: 2),
                                   decoration: BoxDecoration(
-                                    color: accentColor.withValues(alpha: 0.12),
+                                    color: variacaoColor.withValues(alpha: 0.12),
                                     borderRadius: BorderRadius.circular(6),
                                   ),
                                   child: Text(
@@ -108,7 +115,7 @@ class WalletTokenCard extends StatelessWidget {
                                       fontFamily: 'JosefinSans',
                                       fontSize: 11,
                                       fontWeight: FontWeight.bold,
-                                      color: accentColor,
+                                      color: variacaoColor,
                                     ),
                                   ),
                                 ),
@@ -161,7 +168,7 @@ class WalletTokenCard extends StatelessWidget {
                                   value: saldoVisivel
                                       ? currencyFormat.format(totalAtual)
                                       : '••••',
-                                  valueColor: accentColor,
+                                  valueColor: cardColor,
                                   alignEnd: true,
                                 ),
                               ],
@@ -200,6 +207,7 @@ class WalletTransactionCard extends StatelessWidget {
     final tipo = tx['type'] as String? ?? 'buy';
     final isDeposit = tipo == 'deposit';
     final isSell = tipo == 'sell';
+    final isReturn = tipo == 'return';
     final valor = ((tx['totalCents'] as num?) ?? 0).toDouble() / 100;
     final dataStr = tx['createdAt'] != null
         ? DateFormat('dd/MM/yy · HH:mm')
@@ -222,6 +230,10 @@ class WalletTransactionCard extends StatelessWidget {
       accentColor = AppColors.verde;
       labelTipo = 'Venda';
       iconeTipo = Icons.arrow_upward;
+    } else if (isReturn) {
+      accentColor = AppColors.vermelho;
+      labelTipo = 'Ordem Cancelada';
+      iconeTipo = Icons.cancel_outlined;
     } else {
       accentColor = AppColors.vermelho;
       labelTipo = 'Compra';
@@ -312,9 +324,11 @@ class WalletTransactionCard extends StatelessWidget {
                             ),
                           ),
                           Text(
-                            saldoVisivel
-                                ? '${isSell || isDeposit ? '+' : '-'} ${currencyFormat.format(valor)}'
-                                : '••••••',
+                            isReturn
+                                ? '—'
+                                : saldoVisivel
+                                    ? '${isSell || isDeposit ? '+' : '-'} ${currencyFormat.format(valor)}'
+                                    : '••••••',
                             style: TextStyle(
                               fontFamily: 'JosefinSans',
                               fontSize: 15,

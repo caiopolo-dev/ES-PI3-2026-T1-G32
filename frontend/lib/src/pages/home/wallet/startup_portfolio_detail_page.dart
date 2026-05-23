@@ -36,6 +36,49 @@ class _StartupPortfolioDetailPageState
   final _fmt = NumberFormat.currency(locale: 'pt_BR', symbol: 'R\$');
   final _fmtQty = NumberFormat('#,##0', 'pt_BR');
 
+  // LIFO: most recent purchases are what remain in the wallet.
+  // Returns only the lots (or partial lots) that represent current holdings,
+  // newest first.
+  List<Map<String, dynamic>> get _holdingSlots {
+    final totalHeld =
+        (widget.token['quantidade'] as num?)?.toInt() ?? 0;
+    if (totalHeld <= 0) return [];
+
+    final sorted = [...widget.purchases]..sort((a, b) {
+        final aDate = DateTime.tryParse(a['createdAt'] as String? ?? '');
+        final bDate = DateTime.tryParse(b['createdAt'] as String? ?? '');
+        if (aDate == null && bDate == null) return 0;
+        if (aDate == null) return 1;
+        if (bDate == null) return -1;
+        return bDate.compareTo(aDate); // newest first
+      });
+
+    int remaining = totalHeld;
+    final result = <Map<String, dynamic>>[];
+
+    for (final purchase in sorted) {
+      if (remaining <= 0) break;
+      final qty = (purchase['quantity'] as num?)?.toInt() ?? 0;
+      if (qty <= 0) continue;
+
+      final effectiveQty = qty <= remaining ? qty : remaining;
+      if (effectiveQty == qty) {
+        result.add(purchase);
+      } else {
+        final pricePerToken =
+            (purchase['pricePerTokenCents'] as num?)?.toInt() ?? 0;
+        result.add({
+          ...purchase,
+          'quantity': effectiveQty,
+          'totalCents': pricePerToken * effectiveQty,
+        });
+      }
+      remaining -= effectiveQty;
+    }
+
+    return result; // already newest-first
+  }
+
   Future<void> _handleBuy() async {
     final startupId = widget.token['startupId'] as String? ?? '';
     final startupNome = widget.token['startupNome'] as String? ?? '';
@@ -82,14 +125,23 @@ class _StartupPortfolioDetailPageState
     final valorAtual = (widget.token['valorAtual'] as num?)?.toDouble() ?? 0.0;
     final quantidade = (widget.token['quantidade'] as num?)?.toInt() ?? 0;
 
+    final precoAnterior =
+        (widget.token['precoAnterior'] as num?)?.toDouble() ?? valorAtual;
     final totalAtual = valorAtual * quantidade;
     final totalInvestido = precoMedio * quantidade;
     final positivo = valorAtual >= precoMedio;
     final variacaoPct =
         precoMedio > 0 ? (valorAtual - precoMedio) / precoMedio * 100 : 0.0;
     final variacaoLabel =
-        '${variacaoPct >= 0 ? '+' : ''}${variacaoPct.toStringAsFixed(1)}%';
+        'Retorno ${variacaoPct >= 0 ? '+' : ''}${variacaoPct.toStringAsFixed(1)}%';
     final accentColor = positivo ? AppColors.verde : AppColors.vermelho;
+    final diariaPct = precoAnterior > 0
+        ? (valorAtual - precoAnterior) / precoAnterior * 100
+        : 0.0;
+    final diariaLabel =
+        'Hoje ${diariaPct >= 0 ? '+' : ''}${diariaPct.toStringAsFixed(1)}%';
+    final diariaColor =
+        valorAtual >= precoAnterior ? AppColors.verde : AppColors.vermelho;
 
     return Scaffold(
       backgroundColor: AppColors.cinza100,
@@ -276,10 +328,52 @@ class _StartupPortfolioDetailPageState
                   const SizedBox(height: 12),
                   Row(
                     children: [
-                      _PortfolioStat(
-                        label: 'Preço atual (mercado)',
-                        value: _fmt.format(valorAtual),
-                        valueColor: accentColor,
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Preço de mercado',
+                              style: TextStyle(
+                                fontFamily: 'JosefinSans',
+                                fontSize: 11,
+                                color: AppColors.cinza500,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Row(
+                              children: [
+                                Text(
+                                  _fmt.format(valorAtual),
+                                  style: TextStyle(
+                                    fontFamily: 'JosefinSans',
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.bold,
+                                    color: diariaColor,
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: diariaColor.withValues(alpha: 0.12),
+                                    borderRadius: BorderRadius.circular(5),
+                                  ),
+                                  child: Text(
+                                    diariaLabel,
+                                    style: TextStyle(
+                                      fontFamily: 'JosefinSans',
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                      color: diariaColor,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
                       ),
                       Container(
                           width: 1, height: 36, color: AppColors.cinza200),
@@ -300,7 +394,7 @@ class _StartupPortfolioDetailPageState
             child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 20, 16, 12),
               child: Text(
-                'Compras realizadas (${widget.purchases.length})',
+                'Lotes em carteira (${_holdingSlots.length})',
                 style: const TextStyle(
                   fontFamily: 'JosefinSans',
                   fontSize: 16,
@@ -310,13 +404,13 @@ class _StartupPortfolioDetailPageState
             ),
           ),
 
-          widget.purchases.isEmpty
+          _holdingSlots.isEmpty
               ? const SliverToBoxAdapter(
                   child: Padding(
                     padding: EdgeInsets.all(32),
                     child: Center(
                       child: Text(
-                        'Nenhuma compra registrada',
+                        'Nenhum lote em carteira',
                         style: TextStyle(
                           fontFamily: 'JosefinSans',
                           color: AppColors.cinza500,
@@ -328,12 +422,12 @@ class _StartupPortfolioDetailPageState
               : SliverList(
                   delegate: SliverChildBuilderDelegate(
                     (context, index) => _PurchaseCard(
-                      tx: widget.purchases[index],
+                      tx: _holdingSlots[index],
                       saldoVisivel: widget.saldoVisivel,
                       fmt: _fmt,
                       fmtQty: _fmtQty,
                     ),
-                    childCount: widget.purchases.length,
+                    childCount: _holdingSlots.length,
                   ),
                 ),
 
@@ -368,6 +462,7 @@ class _PurchaseCard extends StatelessWidget {
         ? DateFormat('dd/MM/yyyy · HH:mm')
             .format(DateTime.parse(tx['createdAt'] as String))
         : '—';
+    final isReturn = (tx['type'] as String?) == 'return';
 
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
@@ -383,13 +478,37 @@ class _PurchaseCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                dataStr,
-                style: const TextStyle(
-                  fontFamily: 'JosefinSans',
-                  fontSize: 12,
-                  color: AppColors.cinza500,
-                ),
+              Row(
+                children: [
+                  Text(
+                    dataStr,
+                    style: const TextStyle(
+                      fontFamily: 'JosefinSans',
+                      fontSize: 12,
+                      color: AppColors.cinza500,
+                    ),
+                  ),
+                  if (isReturn) ...[
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 7, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: AppColors.cinza200,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: const Text(
+                        'Retorno',
+                        style: TextStyle(
+                          fontFamily: 'JosefinSans',
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.cinza500,
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
               ),
               Container(
                 padding:
@@ -424,13 +543,13 @@ class _PurchaseCard extends StatelessWidget {
           Row(
             children: [
               _PortfolioStat(
-                label: 'Gasto nesta compra',
+                label: isReturn ? 'Custo base' : 'Gasto nesta compra',
                 value: saldoVisivel ? fmt.format(txTotal) : '••••••',
               ),
               Container(width: 1, height: 36, color: AppColors.cinza200),
               _PortfolioStat(
                 label: 'Preço por token',
-                value: fmt.format(txPreco),
+                value: txPreco > 0 ? fmt.format(txPreco) : '—',
                 alignEnd: true,
               ),
             ],

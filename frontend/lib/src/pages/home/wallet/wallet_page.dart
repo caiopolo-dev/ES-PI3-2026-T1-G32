@@ -14,7 +14,7 @@ import 'package:intl/intl.dart';
 
 enum _TokenSort { alfa, precoAsc, precoDesc }
 
-enum _TxFilter { todos, deposito, compra, venda }
+enum _TxFilter { todos, deposito, compra, venda, cancelamento }
 
 class WalletPage extends StatefulWidget {
   final Map<String, dynamic>? usuario;
@@ -43,6 +43,8 @@ class _WalletPageState extends State<WalletPage>
 
   _TokenSort _tokenSort = _TokenSort.alfa;
   _TxFilter _txFilter = _TxFilter.todos;
+  int _selectedChartIdx = -1;
+  String _selectedPeriod = '1A';
 
   final currencyFormat =
       NumberFormat.currency(locale: 'pt_BR', symbol: 'R\$');
@@ -80,6 +82,7 @@ class _WalletPageState extends State<WalletPage>
         _TxFilter.deposito => tipo == 'deposit',
         _TxFilter.compra => tipo == 'buy',
         _TxFilter.venda => tipo == 'sell',
+        _TxFilter.cancelamento => tipo == 'return',
       };
     }).toList();
   }
@@ -87,7 +90,7 @@ class _WalletPageState extends State<WalletPage>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 3, vsync: this);
     _loadVisibility();
     if (widget.isActive) _loadAll();
   }
@@ -201,7 +204,9 @@ class _WalletPageState extends State<WalletPage>
     final startupId = token['startupId'] as String? ?? '';
     final purchases = _transactions
         .where((tx) =>
-            tx['startupId'] == startupId && (tx['type'] as String?) == 'buy')
+            tx['startupId'] == startupId &&
+            ((tx['type'] as String?) == 'buy' ||
+                (tx['type'] as String?) == 'return'))
         .toList();
 
     final refreshNeeded = await Navigator.push<bool>(
@@ -254,6 +259,7 @@ class _WalletPageState extends State<WalletPage>
                       controller: _tabController,
                       children: [
                         _buildTokensTab(),
+                        _buildChartsTab(),
                         _buildHistoryTab(),
                       ],
                     ),
@@ -403,6 +409,7 @@ class _WalletPageState extends State<WalletPage>
             ),
             tabs: const [
               Tab(text: 'Meus Tokens'),
+              Tab(text: 'Gráficos'),
               Tab(text: 'Histórico'),
             ],
           ),
@@ -476,6 +483,261 @@ class _WalletPageState extends State<WalletPage>
     );
   }
 
+  Widget _buildChartsTab() {
+    if (_tokens.isEmpty) {
+      return const Center(
+        child: Text(
+          'Nenhum token em carteira',
+          style: TextStyle(
+            fontFamily: 'JosefinSans',
+            color: AppColors.cinza500,
+          ),
+        ),
+      );
+    }
+
+    final isPortfolio = _selectedChartIdx == -1;
+    final idx = isPortfolio ? 0 : _selectedChartIdx.clamp(0, _tokens.length - 1);
+
+    final token = _tokens[idx];
+    final startupId = token['startupId'] as String? ?? '';
+    final nome = isPortfolio ? 'Portfólio' : (token['startupNome'] as String? ?? '—');
+    final logoUrl = isPortfolio ? null : _logoUrls[startupId];
+    final valorAtual = isPortfolio
+        ? _valorAtualPortfolio
+        : (token['valorAtual'] as num?)?.toDouble() ?? 0.0;
+
+    // Portfolio chip: all-time return vs invested. Individual: today's daily variation.
+    final double chipPct;
+    final String chipLabel;
+    if (isPortfolio) {
+      chipPct = _totalInvestido > 0
+          ? (_valorAtualPortfolio - _totalInvestido) / _totalInvestido * 100
+          : 0.0;
+      chipLabel = 'Retorno ${chipPct >= 0 ? '+' : ''}${chipPct.toStringAsFixed(1)}%';
+    } else {
+      final precoAnterior =
+          (token['precoAnterior'] as num?)?.toDouble() ?? valorAtual;
+      chipPct = precoAnterior > 0
+          ? (valorAtual - precoAnterior) / precoAnterior * 100
+          : 0.0;
+      chipLabel = 'Hoje ${chipPct >= 0 ? '+' : ''}${chipPct.toStringAsFixed(1)}%';
+    }
+    final diariaColor =
+        chipPct >= 0 ? AppColors.verde : AppColors.vermelho;
+
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  // Chip "Portfólio"
+                  GestureDetector(
+                    onTap: () => setState(() => _selectedChartIdx = -1),
+                    child: Container(
+                      margin: const EdgeInsets.only(right: 8),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 7),
+                      decoration: BoxDecoration(
+                        color: isPortfolio ? AppColors.azul : AppColors.branco,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: isPortfolio
+                              ? AppColors.azul
+                              : AppColors.cinza200,
+                        ),
+                      ),
+                      child: Text(
+                        'Portfólio',
+                        style: TextStyle(
+                          fontFamily: 'JosefinSans',
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          color: isPortfolio
+                              ? AppColors.branco
+                              : AppColors.cinza500,
+                        ),
+                      ),
+                    ),
+                  ),
+                  ...List.generate(_tokens.length, (i) {
+                    final t = _tokens[i];
+                    final selected = !isPortfolio && i == idx;
+                    return GestureDetector(
+                      onTap: () => setState(() => _selectedChartIdx = i),
+                      child: Container(
+                        margin: const EdgeInsets.only(right: 8),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 14, vertical: 7),
+                        decoration: BoxDecoration(
+                          color: selected ? AppColors.azul : AppColors.branco,
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: selected
+                                ? AppColors.azul
+                                : AppColors.cinza200,
+                          ),
+                        ),
+                        child: Text(
+                          t['startupNome'] as String? ?? '—',
+                          style: TextStyle(
+                            fontFamily: 'JosefinSans',
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color:
+                                selected ? AppColors.branco : AppColors.cinza500,
+                          ),
+                        ),
+                      ),
+                    );
+                  }),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Container(
+            margin: const EdgeInsets.symmetric(horizontal: 16),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppColors.branco,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: AppColors.cinza200),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 22,
+                      backgroundColor: diariaColor.withValues(alpha: 0.1),
+                      backgroundImage:
+                          logoUrl != null ? NetworkImage(logoUrl) : null,
+                      child: logoUrl == null
+                          ? Icon(
+                              isPortfolio
+                                  ? Icons.pie_chart_outline_rounded
+                                  : Icons.business,
+                              color: diariaColor,
+                              size: 20,
+                            )
+                          : null,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            nome,
+                            style: const TextStyle(
+                              fontFamily: 'JosefinSans',
+                              fontSize: 15,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            currencyFormat.format(valorAtual),
+                            style: TextStyle(
+                              fontFamily: 'JosefinSans',
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                              color: diariaColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: diariaColor.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        chipLabel,
+                        style: TextStyle(
+                          fontFamily: 'JosefinSans',
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: diariaColor,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: ['7D', '1M', '3M', '6M', '1A'].map((p) {
+                    final sel = p == _selectedPeriod;
+                    return GestureDetector(
+                      onTap: () => setState(() => _selectedPeriod = p),
+                      child: Container(
+                        margin: const EdgeInsets.only(right: 6),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: sel
+                              ? diariaColor.withValues(alpha: 0.12)
+                              : Colors.transparent,
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          p,
+                          style: TextStyle(
+                            fontFamily: 'JosefinSans',
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: sel ? diariaColor : AppColors.cinza500,
+                          ),
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 12),
+                Container(
+                  height: 130,
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: AppColors.cinza200.withValues(alpha: 0.4),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: AppColors.cinza200),
+                  ),
+                  child: const Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.show_chart_rounded,
+                          size: 32, color: AppColors.cinza500),
+                      SizedBox(height: 8),
+                      Text(
+                        'Gráfico em desenvolvimento',
+                        style: TextStyle(
+                          fontFamily: 'JosefinSans',
+                          fontSize: 13,
+                          color: AppColors.cinza500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+        ],
+      ),
+    );
+  }
+
   Widget _buildHistoryTab() {
     return Column(
       children: [
@@ -508,6 +770,13 @@ class _WalletPageState extends State<WalletPage>
                   label: 'Venda',
                   selected: _txFilter == _TxFilter.venda,
                   onTap: () => setState(() => _txFilter = _TxFilter.venda),
+                ),
+                const SizedBox(width: 8),
+                AppFilterChip(
+                  label: 'Cancelamento',
+                  selected: _txFilter == _TxFilter.cancelamento,
+                  onTap: () =>
+                      setState(() => _txFilter = _TxFilter.cancelamento),
                 ),
               ],
             ),
@@ -583,3 +852,4 @@ class _CardStat extends StatelessWidget {
     );
   }
 }
+

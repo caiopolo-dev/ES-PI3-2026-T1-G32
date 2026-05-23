@@ -376,6 +376,17 @@ class _BuyStepsPageState extends State<BuyStepsPage> {
                         color: accentColor,
                       ),
                     ),
+                    if (!widget.isSellMode) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        '${formatMoney(widget.pricePerTokenCents)} / token',
+                        style: const TextStyle(
+                          fontFamily: 'JosefinSans',
+                          fontSize: 11,
+                          color: AppColors.cinza500,
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -395,9 +406,7 @@ class _BuyStepsPageState extends State<BuyStepsPage> {
                         size: 13, color: AppColors.azul),
                     const SizedBox(width: 4),
                     Text(
-                      widget.isSellMode
-                          ? '${widget.availableQuantity} disponíveis'
-                          : '${formatMoney(widget.pricePerTokenCents)}/token',
+                      '${widget.availableQuantity} disponíveis',
                       style: const TextStyle(
                         fontFamily: 'JosefinSans',
                         fontSize: 12,
