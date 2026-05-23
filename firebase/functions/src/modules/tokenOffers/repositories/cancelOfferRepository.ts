@@ -5,12 +5,13 @@ import {FieldValue} from "firebase-admin/firestore";
 import {HttpsError} from "firebase-functions/v2/https";
 import {db} from "../../../shared/firebase";
 import {
-  USERS, TOKEN_OFFERS, USER_TOKENS,
+  USERS, TOKEN_OFFERS, USER_TOKENS, STARTUPS, PRICE_HISTORY, TRANSACTIONS,
 } from "../../../shared/collections";
 import {
   CancelSellOfferParams,
   CancelSellOfferResult,
 } from "../types/tokenOfferTypes";
+import {FATOR_IMPACTO} from "../../../shared/tokenPricing";
 
 /**
  * @param {CancelSellOfferParams} params
@@ -20,6 +21,9 @@ export async function cancelOffer(
   params: CancelSellOfferParams
 ): Promise<CancelSellOfferResult> {
   const {offerId, sellerId} = params;
+
+  // Created OUTSIDE runTransaction so retries reuse the same doc IDs
+  const transactionRef = db.collection(TRANSACTIONS).doc();
 
   return db.runTransaction(async (transaction) => {
     const offerRef = db.collection(TOKEN_OFFERS).doc(offerId);
@@ -56,9 +60,6 @@ export async function cancelOffer(
     }
 
     const precoMedio = Number(offerData.precoMedio ?? 0);
-    const valorAtual = Number(
-      offerData.valorAtual ?? offerData.valorUnitarioCentavos ?? 0
-    );
 
     if (!Number.isInteger(amount) || amount <= 0) {
       throw new HttpsError(
@@ -67,28 +68,71 @@ export async function cancelOffer(
       );
     }
 
+    const startupRef = db.collection(STARTUPS).doc(startupId);
     const userTokenRef = db
       .collection(USERS)
       .doc(sellerId)
       .collection(USER_TOKENS)
       .doc(startupId);
 
-    const userTokenSnap = await transaction.get(userTokenRef);
+    const [startupSnap, userTokenSnap] = await Promise.all([
+      transaction.get(startupRef),
+      transaction.get(userTokenRef),
+    ]);
+
     const currentQty = Number(userTokenSnap.data()?.quantidade ?? 0);
     const newQty = currentQty + amount;
+    const startupName = String(offerData.startupName ?? startupId);
 
-
+    // Always increment quantidade; never overwrite precoMedio/valorAtual
     transaction.set(
       userTokenRef,
       {
         startupId,
         quantidade: newQty,
-        precoMedio,
-        valorAtual,
+        ...(userTokenSnap.exists ? {} : {precoMedio}),
         updatedAt: FieldValue.serverTimestamp(),
       },
       {merge: true}
     );
+
+    // Record the return in transaction history (creates a new lot in portfolio)
+    transaction.set(transactionRef, {
+      type: "return",
+      buyerId: sellerId,
+      startupId,
+      startupName,
+      quantity: amount,
+      pricePerTokenCents: precoMedio,
+      totalCents: amount * precoMedio,
+      createdAt: FieldValue.serverTimestamp(),
+    });
+
+    // Revert the price impact that was applied when the offer was created
+    const startupData = startupSnap.exists ? startupSnap.data() : null;
+    if (startupData) {
+      const totalTokens = Number(startupData.totalTokens ?? 1000);
+      const precoAtual = Number(startupData.precoToken ?? 0);
+      const impacto = (amount / totalTokens) * FATOR_IMPACTO;
+      const precoRevertido = Math.round(precoAtual * (1 + impacto));
+
+      transaction.update(startupRef, {
+        precoToken: precoRevertido,
+        precoTokenAnterior: precoAtual,
+        updatedAt: FieldValue.serverTimestamp(),
+      });
+
+      const priceHistoryRef = db
+        .collection(STARTUPS).doc(startupId)
+        .collection(PRICE_HISTORY).doc();
+      transaction.set(priceHistoryRef, {
+        price: precoRevertido,
+        type: "cancel_offer",
+        source: "sell_offer",
+        quantity: amount,
+        createdAt: FieldValue.serverTimestamp(),
+      });
+    }
 
     transaction.delete(offerRef);
 

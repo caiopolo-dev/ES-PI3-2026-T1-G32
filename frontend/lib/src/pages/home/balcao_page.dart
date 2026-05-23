@@ -9,6 +9,8 @@ import 'package:mescla_invest/src/services/wallet_service.dart';
 import 'package:mescla_invest/src/services/storage_service.dart';
 import 'package:mescla_invest/src/widgets/widgets.dart';
 import 'buy_steps_page.dart';
+import 'wallet/startup_portfolio_detail_page.dart';
+import 'wallet/wallet_cards.dart';
 
 class BalcaoNegociacaoPage extends StatefulWidget {
   final Map<String, dynamic>? usuario;
@@ -36,6 +38,7 @@ class _BalcaoNegociacaoPageState extends State<BalcaoNegociacaoPage> {
   Map<String, String?> _logoUrls = {};
 
   _SortMode _sortMode = _SortMode.alphabetical;
+  _SortMode _mySortMode = _SortMode.alphabetical;
 
   @override
   void initState() {
@@ -108,6 +111,26 @@ class _BalcaoNegociacaoPageState extends State<BalcaoNegociacaoPage> {
     });
   }
 
+  List<dynamic> get filteredMyOffers {
+    final list = List<dynamic>.from(myOffers);
+    switch (_mySortMode) {
+      case _SortMode.alphabetical:
+        list.sort((a, b) =>
+            (a['startupName'] ?? a['startupId'] ?? '')
+                .toString()
+                .compareTo((b['startupName'] ?? b['startupId'] ?? '').toString()));
+      case _SortMode.priceAsc:
+        list.sort((a, b) =>
+            ((a['valorUnitarioCentavos'] as num?) ?? 0)
+                .compareTo((b['valorUnitarioCentavos'] as num?) ?? 0));
+      case _SortMode.priceDesc:
+        list.sort((a, b) =>
+            ((b['valorUnitarioCentavos'] as num?) ?? 0)
+                .compareTo((a['valorUnitarioCentavos'] as num?) ?? 0));
+    }
+    return list;
+  }
+
   List<dynamic> get filteredOffers {
     final q = _search.trim().toLowerCase();
     var list = q.isEmpty
@@ -150,18 +173,39 @@ class _BalcaoNegociacaoPageState extends State<BalcaoNegociacaoPage> {
 
     if (selectedToken == null || !mounted) return;
 
-    final pricePerTokenCents =
-        (((selectedToken['valorAtual'] as num?)?.toDouble() ?? 0.0) * 100).round();
+    final startupId = selectedToken['startupId'] as String? ?? '';
+    final nome = selectedToken['startupNome'] as String? ?? '';
+
+    final results = await Future.wait([
+      WalletService.getTransactionHistory(),
+      StorageService.getStartupAsset(nome, 'logoPhoto.jpeg'),
+    ]);
+    if (!mounted) return;
+
+    final historyResult = results[0] as Map<String, dynamic>;
+    final logoUrl = results[1] as String?;
+
+    final purchases = historyResult['success'] == true
+        ? List<Map<String, dynamic>>.from(
+            (historyResult['transactions'] as List? ?? [])
+                .where((tx) =>
+                    (tx as Map)['startupId'] == startupId &&
+                    ((tx['type'] as String?) == 'buy' ||
+                        (tx['type'] as String?) == 'return'))
+                .map((tx) => Map<String, dynamic>.from(tx as Map)),
+          )
+        : <Map<String, dynamic>>[];
 
     final vendeu = await Navigator.push<bool>(
       context,
       MaterialPageRoute(
-        builder: (_) => BuyStepsPage(
-          startupName: selectedToken['startupNome'] as String? ?? '',
-          startupId: selectedToken['startupId'] as String? ?? '',
-          availableQuantity: (selectedToken['quantidade'] as num?)?.toInt() ?? 0,
-          pricePerTokenCents: pricePerTokenCents,
-          isSellMode: true,
+        builder: (_) => StartupPortfolioDetailPage(
+          token: selectedToken,
+          purchases: purchases,
+          logoUrl: logoUrl,
+          saldoVisivel: true,
+          usuario: widget.usuario,
+          onTabSwitch: widget.onTabSwitch,
         ),
       ),
     );
@@ -169,62 +213,197 @@ class _BalcaoNegociacaoPageState extends State<BalcaoNegociacaoPage> {
   }
   
 
-  Future<void> _confirmCancelOffer(Map<String, dynamic> offer) async {
+  Future<bool> _confirmCancelOffer(Map<String, dynamic> offer) async {
     final offerId = (offer['offerId'] ?? '').toString();
 
     if (offerId.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('ID da oferta não encontrado')),
       );
-      return;
+      return false;
     }
+
+    final name = (offer['startupName'] ?? offer['startupId'] ?? '—').toString();
+    final amount = (offer['amount'] as num?)?.toInt() ?? 0;
+    final centavos = (offer['valorUnitarioCentavos'] as num?)?.toDouble() ?? 0;
+    final preco = centavos / 100;
 
     final shouldCancel = await showDialog<bool>(
       context: context,
-      
-      builder: (context) => AlertDialog(
-        backgroundColor: Colors.white,
-         title: Text(
-          'Cancelar oferta',
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            fontFamily: 'JosefinSans',
-            fontWeight: FontWeight.bold,
+      builder: (dialogContext) => Dialog(
+        insetPadding: const EdgeInsets.symmetric(horizontal: 24),
+        backgroundColor: AppColors.branco,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: AppColors.vermelho.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.remove_circle_outline,
+                    color: AppColors.vermelho, size: 36),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Cancelar oferta',
+                style: TextStyle(
+                  fontFamily: 'JosefinSans',
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: AppColors.cinza100,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppColors.cinza200),
+                ),
+                child: Column(
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('Startup',
+                            style: TextStyle(
+                                fontFamily: 'JosefinSans',
+                                fontSize: 12,
+                                color: AppColors.cinza500)),
+                        Text(name,
+                            style: const TextStyle(
+                                fontFamily: 'JosefinSans',
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold)),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('Tokens',
+                            style: TextStyle(
+                                fontFamily: 'JosefinSans',
+                                fontSize: 12,
+                                color: AppColors.cinza500)),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: AppColors.azul.withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.toll_outlined,
+                                  size: 12, color: AppColors.azul),
+                              const SizedBox(width: 4),
+                              Text('$amount tokens',
+                                  style: const TextStyle(
+                                      fontFamily: 'JosefinSans',
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppColors.azul)),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('Preço/token',
+                            style: TextStyle(
+                                fontFamily: 'JosefinSans',
+                                fontSize: 12,
+                                color: AppColors.cinza500)),
+                        Text(_currency.format(preco),
+                            style: const TextStyle(
+                                fontFamily: 'JosefinSans',
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold)),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 24),
+              Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () => Navigator.pop(dialogContext, false),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.cinza200,
+                        foregroundColor: AppColors.preto,
+                        elevation: 0,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(24)),
+                      ),
+                      child: const Text('Cancelar',
+                          style: TextStyle(
+                              fontFamily: 'JosefinSans', fontSize: 15)),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () => Navigator.pop(dialogContext, true),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.vermelho,
+                        foregroundColor: AppColors.branco,
+                        elevation: 0,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(24)),
+                      ),
+                      child: const Text('Confirmar',
+                          style: TextStyle(
+                              fontFamily: 'JosefinSans', fontSize: 15)),
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
         ),
-
-        content: Text(
-          'Deseja cancelar a oferta?',
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            fontFamily: 'JosefinSans',
-          ),
-        ),
-        actionsAlignment: MainAxisAlignment.center,
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Não', style: TextStyle(fontSize: 20, color: Colors.black)),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Sim', style: TextStyle(fontSize: 20, color: Colors.black)),
-          ),
-        ],
       ),
     );
 
-    if (shouldCancel != true) return;
+    if (shouldCancel != true) return false;
+
+    if (!mounted) return false;
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const PopScope(
+        canPop: false,
+        child: Center(
+          child: CircularProgressIndicator(color: AppColors.azul),
+        ),
+      ),
+    );
 
     final result = await WalletService.cancelOffer(offerId);
 
-    if (!mounted) return;
+    if (!mounted) return false;
+    Navigator.of(context).pop();
 
     if (result['success'] == true) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Oferta cancelada com sucesso')),
       );
       _loadAll();
+      return true;
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -233,6 +412,7 @@ class _BalcaoNegociacaoPageState extends State<BalcaoNegociacaoPage> {
           ),
         ),
       );
+      return false;
     }
   }
 
@@ -370,29 +550,96 @@ class _BalcaoNegociacaoPageState extends State<BalcaoNegociacaoPage> {
   }
 
   Widget _buildMinhasOrdens() {
-    return isLoadingMyOffers
-        ? const AppLoadingIndicator()
-        : myOffersError != null
-            ? Center(child: Text(myOffersError!, style: const TextStyle(fontFamily: 'JosefinSans', color: AppColors.cinza500)))
-            : myOffers.isEmpty
-                ? _emptyState('Você não possui ordens em aberto', Icons.receipt_long_outlined)
-                : RefreshIndicator(
-                    onRefresh: loadMyOffers,
-                    child: ListView.builder(
-                      padding: const EdgeInsets.fromLTRB(20, 16, 20, 100),
-                      itemCount: myOffers.length,
-                      itemBuilder: (context, index) {
-                        final offer = Map<String, dynamic>.from(myOffers[index] as Map);
-                        final name = (offer['startupName'] ?? offer['startupId'] ?? '').toString();
-                        return _MyOrderCard(
+    if (isLoadingMyOffers) return const AppLoadingIndicator();
+    if (myOffersError != null) {
+      return Center(child: Text(myOffersError!, style: const TextStyle(fontFamily: 'JosefinSans', color: AppColors.cinza500)));
+    }
+
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                AppFilterChip(
+                  label: 'A-Z',
+                  selected: _mySortMode == _SortMode.alphabetical,
+                  onTap: () => setState(() => _mySortMode = _SortMode.alphabetical),
+                ),
+                const SizedBox(width: 8),
+                AppFilterChip(
+                  label: 'Menor preço',
+                  icon: Icons.arrow_downward,
+                  selected: _mySortMode == _SortMode.priceAsc,
+                  onTap: () => setState(() => _mySortMode = _SortMode.priceAsc),
+                ),
+                const SizedBox(width: 8),
+                AppFilterChip(
+                  label: 'Maior preço',
+                  icon: Icons.arrow_upward,
+                  selected: _mySortMode == _SortMode.priceDesc,
+                  onTap: () => setState(() => _mySortMode = _SortMode.priceDesc),
+                ),
+              ],
+            ),
+          ),
+        ),
+        myOffers.isEmpty
+            ? Expanded(child: _emptyState('Você não possui ordens em aberto', Icons.receipt_long_outlined))
+            : Expanded(
+                child: RefreshIndicator(
+                  onRefresh: loadMyOffers,
+                  child: ListView.builder(
+                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 100),
+                    itemCount: filteredMyOffers.length,
+                    itemBuilder: (context, index) {
+                      final offer = Map<String, dynamic>.from(filteredMyOffers[index] as Map);
+                      final name = (offer['startupName'] ?? offer['startupId'] ?? '').toString();
+                      return Dismissible(
+                        key: Key((offer['offerId'] ?? index).toString()),
+                        direction: DismissDirection.endToStart,
+                        confirmDismiss: (_) => _confirmCancelOffer(offer),
+                        secondaryBackground: Container(
+                          margin: const EdgeInsets.only(bottom: 12),
+                          decoration: BoxDecoration(
+                            color: AppColors.vermelho,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          alignment: Alignment.centerRight,
+                          padding: const EdgeInsets.only(right: 24),
+                          child: const Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.delete_outline,
+                                  color: AppColors.branco, size: 26),
+                              SizedBox(height: 4),
+                              Text(
+                                'Cancelar',
+                                style: TextStyle(
+                                  fontFamily: 'JosefinSans',
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.branco,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        background: const SizedBox.shrink(),
+                        child: _MyOrderCard(
                           data: offer,
                           currency: _currency,
                           logoUrl: _logoUrls[name],
-                          onCancel: () => _confirmCancelOffer(offer),
-                        );
-                      },
-                    ),
-                  );
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ),
+      ],
+    );
   }
 
   Widget _emptyState(String message, IconData icon) {
@@ -434,18 +681,16 @@ class _OfferCard extends StatelessWidget {
     final abaixo = temMercado && centavos < mercadoCentavos;
     final acima = temMercado && centavos > mercadoCentavos;
 
-    final accentColor = abaixo
-        ? AppColors.verde
-        : acima
-            ? AppColors.vermelho
-            : AppColors.azul;
+    final accentColor = acima ? AppColors.vermelho : AppColors.verde;
 
     final double diffPct = temMercado && mercadoCentavos > 0
-        ? ((centavos - mercadoCentavos) / mercadoCentavos * 100)
+        ? ((centavos - mercadoCentavos) / mercadoCentavos * 100).abs()
         : 0;
-    final diffLabel = diffPct == 0
+    final diffLabel = !temMercado || diffPct == 0
         ? 'No mercado'
-        : '${diffPct > 0 ? '+' : ''}${diffPct.toStringAsFixed(1)}%';
+        : abaixo
+            ? '${diffPct.toStringAsFixed(1)}% abaixo'
+            : '${diffPct.toStringAsFixed(1)}% acima';
 
     return GestureDetector(
       onTap: onTap,
@@ -608,12 +853,10 @@ class _MyOrderCard extends StatelessWidget {
   final Map<String, dynamic> data;
   final NumberFormat currency;
   final String? logoUrl;
-  final VoidCallback onCancel;
 
   const _MyOrderCard({
     required this.data,
     required this.currency,
-    required this.onCancel,
     this.logoUrl,
   });
 
@@ -638,7 +881,7 @@ class _MyOrderCard extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Container(width: 5, color: AppColors.amarelo),
+              Container(width: 5, color: AppColors.verde),
               Expanded(
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(14, 14, 14, 12),
@@ -747,22 +990,6 @@ class _MyOrderCard extends StatelessWidget {
                             alignEnd: true,
                           ),
                         ],
-                      ),
-                      const SizedBox(height: 12),
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: InkWell(
-                          onTap: onCancel,
-                          child: const Text(
-                            'Cancelar oferta',
-                            style: TextStyle(
-                              fontFamily: 'JosefinSans',
-                              fontSize: 13,
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.vermelho,
-                            ),
-                          ),
-                        ),
                       ),
                     ],
                   ),
@@ -887,65 +1114,15 @@ class _UserTokensSheetState extends State<_UserTokensSheet> {
                         itemCount: _tokens.length,
                         itemBuilder: (context, index) {
                           final token = _tokens[index];
-                          final logoUrl = _logoUrls[token['startupNome'] as String? ?? ''];
-                          final quantidade = (token['quantidade'] as num?)?.toInt() ?? 0;
-                          final valorAtual = (token['valorAtual'] as num?)?.toDouble() ?? 0.0;
-
-                          return GestureDetector(
+                          final logoUrl = _logoUrls[
+                              token['startupNome'] as String? ?? ''];
+                          return WalletTokenCard(
+                            token: token,
+                            logoUrl: logoUrl,
+                            saldoVisivel: true,
                             onTap: () => Navigator.pop(context, token),
-                            child: Container(
-                              margin: const EdgeInsets.only(bottom: 12),
-                              padding: const EdgeInsets.all(16),
-                              decoration: BoxDecoration(
-                                color: AppColors.cinza100,
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: AppColors.cinza300),
-                              ),
-                              child: Row(
-                                children: [
-                                  CircleAvatar(
-                                    radius: 22,
-                                    backgroundColor: AppColors.azul.withValues(alpha: 0.1),
-                                    backgroundImage: logoUrl != null ? NetworkImage(logoUrl) : null,
-                                    child: logoUrl == null
-                                        ? const Icon(Icons.business, color: AppColors.azul, size: 20)
-                                        : null,
-                                  ),
-                                  const SizedBox(width: 14),
-                                  Expanded(
-                                    child: Text(
-                                      token['startupNome'] as String? ?? '—',
-                                      style: const TextStyle(
-                                        fontFamily: 'JosefinSans',
-                                        fontSize: 15,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ),
-                                  Column(
-                                    crossAxisAlignment: CrossAxisAlignment.end,
-                                    children: [
-                                      Text(
-                                        '$quantidade tokens',
-                                        style: const TextStyle(
-                                          fontFamily: 'JosefinSans',
-                                          fontSize: 13,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                      Text(
-                                        'R\$ ${valorAtual.toStringAsFixed(2).replaceAll('.', ',')}/un',
-                                        style: const TextStyle(
-                                          fontFamily: 'JosefinSans',
-                                          fontSize: 11,
-                                          color: AppColors.cinza500,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                            ),
+                            currencyFormat: NumberFormat.currency(
+                                locale: 'pt_BR', symbol: 'R\$'),
                           );
                         },
                       ),

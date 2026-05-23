@@ -28,6 +28,12 @@ export async function buyStartupTokenDirectly(params: {
 }) {
   const {startupId, buyerId, quantity} = params;
 
+  // Created OUTSIDE runTransaction so retries reuse the same doc ID
+  const transactionRef = db.collection(TRANSACTIONS).doc();
+  const priceHistoryRef = db
+    .collection(STARTUPS).doc(startupId)
+    .collection(PRICE_HISTORY).doc();
+
   return db.runTransaction(async (transaction) => {
     const startupRef = db.collection(STARTUPS).doc(startupId);
     const buyerWalletRef = db
@@ -105,7 +111,8 @@ export async function buyStartupTokenDirectly(params: {
 
     let newPrecoMedio: number;
 
-    if (existingQty === 0) {
+    if (existingQty === 0 || existingPreco === 0) {
+      // existingPreco === 0: missing/corrupted data — reset to current price
       newPrecoMedio = pricePerTokenCents;
     } else {
       newPrecoMedio = Math.round(
@@ -132,9 +139,6 @@ export async function buyStartupTokenDirectly(params: {
       updatedAt: FieldValue.serverTimestamp(),
     });
 
-    const priceHistoryRef = db
-      .collection(STARTUPS).doc(startupId)
-      .collection(PRICE_HISTORY).doc();
     transaction.set(priceHistoryRef, {
       price: novoPreco,
       type: "buy",
@@ -158,7 +162,6 @@ export async function buyStartupTokenDirectly(params: {
     );
 
 
-    const transactionRef = db.collection(TRANSACTIONS).doc();
     transaction.set(transactionRef, {
       startupId,
       startupName,

@@ -127,15 +127,23 @@ class _RegisterPageState extends State<RegisterPage> {
             ValueListenableBuilder<TextEditingValue>(
               valueListenable: passwordController,
               builder: (context, value, _) {
-                final valid = RegExp(r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$').hasMatch(value.text);
-                if (valid) return const SizedBox.shrink();
-                return const Text(
-                  'A senha deve conter 8+ caracteres, uma maiúscula e uma minúscula',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: AppColors.cinza500,
-                    fontFamily: 'JosefinSans',
+                final pwd = value.text;
+                final hasLength = pwd.length >= 8;
+                final hasUpper = pwd.contains(RegExp(r'[A-Z]'));
+                final hasLower = pwd.contains(RegExp(r'[a-z]'));
+                final hasDigit = pwd.contains(RegExp(r'\d'));
+                final allMet = hasLength && hasUpper && hasLower && hasDigit;
+                if (allMet) return const SizedBox.shrink();
+                return Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _PasswordRequirement('8 ou mais caracteres', hasLength),
+                      _PasswordRequirement('Uma letra maiúscula', hasUpper),
+                      _PasswordRequirement('Uma letra minúscula', hasLower),
+                      _PasswordRequirement('Um número', hasDigit),
+                    ],
                   ),
                 );
               },
@@ -206,17 +214,62 @@ class _RegisterPageState extends State<RegisterPage> {
     if (!mounted) return;
 
     if (result['success']) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Cadastro realizado! Verifique seu e-mail para ativar a conta.',
+      await showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (dialogContext) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          contentPadding: const EdgeInsets.fromLTRB(24, 28, 24, 20),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: AppColors.verde.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.mark_email_read_outlined, color: AppColors.verde, size: 40),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Conta criada!',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontFamily: 'JosefinSans',
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                'Enviamos um e-mail de verificação para ${emailController.text}. Confirme seu e-mail para ativar sua conta.',
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontFamily: 'JosefinSans',
+                  fontSize: 14,
+                  color: AppColors.cinza700,
+                ),
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.pop(dialogContext),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.azul,
+                    foregroundColor: AppColors.branco,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                  child: const Text('OK', style: TextStyle(fontFamily: 'JosefinSans', fontSize: 16)),
+                ),
+              ),
+            ],
           ),
-          backgroundColor: AppColors.verde,
-          // 15 segundos para o usuário ter tempo de ler a instrução de verificar o e-mail.
-          duration: Duration(seconds: 15),
         ),
       );
-      Navigator.pop(context);
+      if (mounted) Navigator.pop(context);
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(result['message'] ?? 'Erro ao registrar')),
@@ -379,6 +432,40 @@ class _PhoneFormatter extends TextInputFormatter {
     return TextEditingValue(
       text: text,
       selection: TextSelection.collapsed(offset: text.length),
+    );
+  }
+}
+
+class _PasswordRequirement extends StatelessWidget {
+  final String label;
+  final bool met;
+
+  const _PasswordRequirement(this.label, this.met);
+
+  @override
+  Widget build(BuildContext context) {
+    final color = met ? AppColors.verde : AppColors.vermelho;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Row(
+        children: [
+          Icon(
+            met ? Icons.check_circle_outline : Icons.cancel_outlined,
+            size: 15,
+            color: color,
+          ),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: TextStyle(
+              fontFamily: 'JosefinSans',
+              fontSize: 13,
+              color: color,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

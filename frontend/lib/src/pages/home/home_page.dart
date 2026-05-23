@@ -29,7 +29,8 @@ class _HomePageState extends State<HomePage> {
   double _saldo = 0;
   double _valorPortfolio = 0;
   int _totalTokens = 0;
-  List<Map<String, dynamic>> _destaques = [];
+  List<Map<String, dynamic>> _meusInvestimentos = [];
+  Map<String, int> _tokenMap = {};
   Map<String, String?> _logoUrls = {};
 
   final currencyFormat = NumberFormat.currency(locale: 'pt_BR', symbol: 'R\$');
@@ -100,6 +101,7 @@ class _HomePageState extends State<HomePage> {
     }
 
     final tokens = results[1];
+    final Map<String, int> tokenMap = {};
     if (tokens['success'] == true) {
       final lista = List<Map<String, dynamic>>.from(tokens['tokens'] ?? []);
       _valorPortfolio = lista.fold(0.0, (sum, t) {
@@ -107,14 +109,21 @@ class _HomePageState extends State<HomePage> {
         final quantidade = (t['quantidade'] as num?)?.toInt() ?? 0;
         return sum + valorAtual * quantidade;
       });
+      for (final t in lista) {
+        final id = t['startupId'] as String? ?? '';
+        final qty = (t['quantidade'] as num?)?.toInt() ?? 0;
+        if (id.isNotEmpty && qty > 0) tokenMap[id] = qty;
+      }
     }
 
     final startups = results[2];
     if (startups['success'] == true) {
       final lista = List<Map<String, dynamic>>.from(startups['data'] as List);
-      _destaques = lista.take(3).toList();
+      _meusInvestimentos = lista
+          .where((s) => tokenMap.containsKey(s['id'] as String? ?? ''))
+          .toList();
+      _tokenMap = tokenMap;
     }
-
 
     setState(() => _isLoading = false);
     _loadLogoUrls();
@@ -122,7 +131,7 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _loadLogoUrls() async {
     final entries = await Future.wait(
-      _destaques.map((data) async {
+      _meusInvestimentos.map((data) async {
         final id = data['id'] as String? ?? '';
         final url = await StorageService.getStartupAsset(
           data['nome'] as String? ?? '', 'logoPhoto.jpeg');
@@ -316,9 +325,9 @@ class _HomePageState extends State<HomePage> {
 
             const SizedBox(height: 28),
 
-            // Startups em destaque
+            // Meus investimentos
             const Text(
-              'Startups em destaque',
+              'Meus investimentos',
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
@@ -330,34 +339,55 @@ class _HomePageState extends State<HomePage> {
 
             if (_isLoading)
               const AppLoadingIndicator()
-            else if (_destaques.isEmpty)
-              const Text(
-                'Nenhuma startup disponível',
-                style: TextStyle(color: AppColors.cinza500, fontFamily: 'JosefinSans'),
+            else if (_meusInvestimentos.isEmpty)
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: AppColors.branco,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppColors.cinza200),
+                ),
+                child: const Center(
+                  child: Column(
+                    children: [
+                      Icon(Icons.business_center_outlined, size: 32, color: AppColors.cinza300),
+                      SizedBox(height: 8),
+                      Text(
+                        'Você ainda não investiu em nenhuma startup',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontFamily: 'JosefinSans',
+                          fontSize: 13,
+                          color: AppColors.cinza500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               )
             else
-              ..._destaques.map((data) {
+              ..._meusInvestimentos.map((data) {
                 final id = data['id'] as String? ?? '';
-                final logoUrl = _logoUrls[id];
-
                 return GestureDetector(
                   onTap: () async {
                     final comprou = await Navigator.push<bool>(
                       context,
                       MaterialPageRoute(
                         builder: (_) => StartupDetailPage(
-                          startupId: data['id'] as String? ?? '',
+                          startupId: id,
                           startupNome: data['nome'] as String? ?? '',
                           usuario: widget.usuario,
                           onTabSwitch: widget.onTabSwitch,
+                          activeTabIndex: 0,
                         ),
                       ),
                     );
                     if (comprou == true && mounted) _loadData();
                   },
-                  child: _StartupDestaque(
+                  child: _InvestimentoCard(
                     data: data,
-                    logoUrl: logoUrl,
+                    logoUrl: _logoUrls[id],
+                    tokenQuantity: _tokenMap[id] ?? 0,
                     currencyFormat: currencyFormat,
                   ),
                 );
@@ -371,14 +401,16 @@ class _HomePageState extends State<HomePage> {
   }
 }
 
-class _StartupDestaque extends StatelessWidget {
+class _InvestimentoCard extends StatelessWidget {
   final Map<String, dynamic> data;
   final String? logoUrl;
+  final int tokenQuantity;
   final NumberFormat currencyFormat;
 
-  const _StartupDestaque({
+  const _InvestimentoCard({
     required this.data,
     required this.logoUrl,
+    required this.tokenQuantity,
     required this.currencyFormat,
   });
 
@@ -387,12 +419,9 @@ class _StartupDestaque extends StatelessWidget {
     final precoAtual = (data['precoToken'] as num?)?.toDouble() ?? 0.0;
     final fechamento = (data['fechamentoOntemCentavos'] as num?)?.toDouble();
     final temVariacao = fechamento != null && fechamento > 0;
-    final variacaoPct = temVariacao
-        ? (precoAtual - fechamento) / fechamento * 100
-        : 0.0;
-    final positivo = variacaoPct >= 0;
+    final variacaoPct = temVariacao ? (precoAtual - fechamento) / fechamento * 100 : 0.0;
     final accentColor = temVariacao
-        ? (positivo ? AppColors.verde : AppColors.vermelho)
+        ? (variacaoPct >= 0 ? AppColors.verde : AppColors.vermelho)
         : AppColors.azul;
 
     return Container(
@@ -443,6 +472,30 @@ class _StartupDestaque extends StatelessWidget {
                                 color: AppColors.cinza500,
                               ),
                             ),
+                            const SizedBox(height: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: AppColors.verde.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(Icons.toll_outlined, size: 12, color: AppColors.verde),
+                                  const SizedBox(width: 3),
+                                  Text(
+                                    '$tokenQuantity tokens',
+                                    style: const TextStyle(
+                                      fontFamily: 'JosefinSans',
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppColors.verde,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
                           ],
                         ),
                       ),
@@ -466,15 +519,14 @@ class _StartupDestaque extends StatelessWidget {
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 6, vertical: 2),
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                   decoration: BoxDecoration(
                                     color: AppColors.cinza200,
                                     borderRadius: BorderRadius.circular(4),
                                   ),
-                                  child: Text(
-                                    data['variacaoLabel'] as String? ?? 'hoje',
-                                    style: const TextStyle(
+                                  child: const Text(
+                                    'hoje',
+                                    style: TextStyle(
                                       fontFamily: 'JosefinSans',
                                       fontSize: 9,
                                       fontWeight: FontWeight.bold,
@@ -484,8 +536,7 @@ class _StartupDestaque extends StatelessWidget {
                                 ),
                                 const SizedBox(width: 4),
                                 Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 7, vertical: 2),
+                                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                                   decoration: BoxDecoration(
                                     color: accentColor.withValues(alpha: 0.12),
                                     borderRadius: BorderRadius.circular(4),
@@ -494,9 +545,7 @@ class _StartupDestaque extends StatelessWidget {
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
                                       Icon(
-                                        positivo
-                                            ? Icons.arrow_drop_up
-                                            : Icons.arrow_drop_down,
+                                        variacaoPct >= 0 ? Icons.arrow_drop_up : Icons.arrow_drop_down,
                                         size: 14,
                                         color: accentColor,
                                       ),
@@ -513,15 +562,6 @@ class _StartupDestaque extends StatelessWidget {
                                   ),
                                 ),
                               ],
-                            )
-                          else
-                            const Text(
-                              'sem dados hoje',
-                              style: TextStyle(
-                                fontFamily: 'JosefinSans',
-                                fontSize: 10,
-                                color: AppColors.cinza500,
-                              ),
                             ),
                         ],
                       ),

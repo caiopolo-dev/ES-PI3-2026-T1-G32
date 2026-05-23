@@ -15,11 +15,11 @@ export const addBalance = onCall(async (request) => {
     throw new HttpsError("invalid-argument", "Valor inválido");
   }
 
-  // Limite de R$ 10.000 por depósito
-  if (amountCents > 1_000_000) {
+  // Limite de R$ 50.000 por depósito
+  if (amountCents > 5_000_000) {
     throw new HttpsError(
       "invalid-argument",
-      "Valor máximo por depósito é R$ 10.000"
+      "Valor máximo por depósito é R$ 50.000"
     );
   }
 
