@@ -86,6 +86,8 @@ class _StartupDetailPageState extends State<StartupDetailPage> {
       isLoading = false;
       if (startupResult['success'] as bool) {
         startup = startupResult['data'] as Map<String, dynamic>;
+        _valorizacaoPercentual =
+          (startup?['variacaoHojePercentual'] as num?)?.toDouble() ?? 0.0;
       } else {
         error = startupResult['message'] as String?;
       }
@@ -134,14 +136,12 @@ class _StartupDetailPageState extends State<StartupDetailPage> {
 
       setState(() {
       _priceHistory = history;
-      _valorizacaoPercentual = _calcularValorizacao(history);
       _priceHistoryLoading = false;
     });
 
 
     } else {
       setState(() {
-        _valorizacaoPercentual = 0.0;
         _priceHistoryLoading = false;
       });
     }
@@ -150,52 +150,6 @@ class _StartupDetailPageState extends State<StartupDetailPage> {
 
 
 
-
-  double _calcularValorizacao(List<Map<String, dynamic>> history) {
-    final data = startup;
-
-    final precoAtual = (data?['precoToken'] as num?)?.toDouble() ??
-        (history.isNotEmpty
-            ? (history.last['price'] as num?)?.toDouble() ?? 0.0
-            : 0.0);
-
-    if (precoAtual <= 0) return 0.0;
-
-    final agoraUtc = DateTime.now().toUtc();
-
-    final inicioDoDiaUtc = DateTime.utc(
-      agoraUtc.year,
-      agoraUtc.month,
-      agoraUtc.day,
-    );
-
-    Map<String, dynamic>? ultimoRegistroAntesDeHoje;
-
-    for (final item in history) {
-      final dataHistorico = DateTime.tryParse(
-        item['createdAt']?.toString() ?? '',
-      );
-
-      if (dataHistorico == null) continue;
-
-      final dataUtc = dataHistorico.toUtc();
-
-      if (dataUtc.isBefore(inicioDoDiaUtc)) {
-        ultimoRegistroAntesDeHoje = item;
-      }
-    }
-
-    final precoTokenAnterior =
-        (data?['precoTokenAnterior'] as num?)?.toDouble() ?? 0.0;
-
-    final precoBase = ultimoRegistroAntesDeHoje != null
-        ? (ultimoRegistroAntesDeHoje['price'] as num?)?.toDouble() ?? 0.0
-        : precoTokenAnterior;
-
-    if (precoBase <= 0) return 0.0;
-
-    return ((precoAtual - precoBase) / precoBase) * 100;
-}
 
   DateTime? _converterDataHistorico(String? dataTexto) {
     if (dataTexto == null || dataTexto.isEmpty) return null;
@@ -371,6 +325,8 @@ class _StartupDetailPageState extends State<StartupDetailPage> {
       isLoading = false;
       if (result['success'] as bool) {
         startup = result['data'] as Map<String, dynamic>;
+        _valorizacaoPercentual =
+          (startup?['variacaoHojePercentual'] as num?)?.toDouble() ?? 0.0;
       } else {
         error = result['message'] as String?;
       }

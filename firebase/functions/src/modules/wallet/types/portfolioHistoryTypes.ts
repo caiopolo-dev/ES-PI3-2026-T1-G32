@@ -4,6 +4,7 @@ export type PortfolioTransaction = {
   startupId?: string;
   quantity?: number;
   pricePerTokenCents?: number;
+  marketPriceAfterCents?: number;
   totalCents?: number;
   createdAt?: FirebaseFirestore.Timestamp;
 };

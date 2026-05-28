@@ -163,18 +163,6 @@ class _HomePageState extends State<HomePage> {
 
 
 
-
-  List<FlSpot> _pontosGraficoPortfolio() {
-    if (_portfolioHistory.isEmpty) return [];
-
-    return List.generate(_portfolioHistory.length, (index) {
-      final valorCentavos =
-          (_portfolioHistory[index]['valueCents'] as num?)?.toDouble() ?? 0.0;
-
-      return FlSpot(index.toDouble(), valorCentavos / 100);
-    });
-  }
-
   List<String> _labelsGraficoPortfolio() {
     return _portfolioHistory.map((item) {
       final date = DateTime.tryParse(item['date']?.toString() ?? '');

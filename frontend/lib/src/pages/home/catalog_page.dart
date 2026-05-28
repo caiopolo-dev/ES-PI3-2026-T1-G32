@@ -323,7 +323,7 @@ class StartupCard extends StatelessWidget {
       final pct = (precoToken - fechamentoOntem) / fechamentoOntem * 100;
 
       variacaoStr =
-          '${pct > 0 ? '+' : ''}${pct.toStringAsFixed(1)}% · hoje';
+          '${pct > 0 ? '+' : ''}${pct.toStringAsFixed(2)}% · hoje';
 
       precoColor = pct > 0
           ? AppColors.verde
