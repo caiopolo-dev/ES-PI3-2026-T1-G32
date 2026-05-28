@@ -28,6 +28,7 @@ class _HomePageState extends State<HomePage> {
   bool _saldoVisivel = false;
   double _saldo = 0;
   double _valorPortfolio = 0;
+  double _totalInvestido = 0;
   int _totalTokens = 0;
   List<Map<String, dynamic>> _meusInvestimentos = [];
   Map<String, int> _tokenMap = {};
@@ -108,6 +109,11 @@ class _HomePageState extends State<HomePage> {
         final valorAtual = (t['valorAtual'] as num?)?.toDouble() ?? 0.0;
         final quantidade = (t['quantidade'] as num?)?.toInt() ?? 0;
         return sum + valorAtual * quantidade;
+      });
+      _totalInvestido = lista.fold(0.0, (sum, t) {
+        final precoMedio = (t['precoMedio'] as num?)?.toDouble() ?? 0.0;
+        final quantidade = (t['quantidade'] as num?)?.toInt() ?? 0;
+        return sum + precoMedio * quantidade;
       });
       for (final t in lista) {
         final id = t['startupId'] as String? ?? '';
@@ -261,8 +267,78 @@ class _HomePageState extends State<HomePage> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            _StatItem(label: 'Portfólio', value: _saldoVisivel ? currencyFormat.format(_valorPortfolio) : '••••••'),
-                            _StatItem(label: 'Tokens', value: '$_totalTokens'),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text('Portfólio', style: TextStyle(color: AppColors.branco, fontFamily: 'JosefinSans', fontSize: 11)),
+                                const SizedBox(height: 2),
+                                Row(
+                                  crossAxisAlignment: CrossAxisAlignment.center,
+                                  children: [
+                                    Text(
+                                      _saldoVisivel ? currencyFormat.format(_valorPortfolio) : '••••••',
+                                      style: const TextStyle(color: AppColors.branco, fontFamily: 'JosefinSans', fontSize: 16, fontWeight: FontWeight.bold),
+                                    ),
+                                    if (_totalInvestido > 0) ...[
+                                      const SizedBox(width: 8),
+                                      Builder(builder: (_) {
+                                        final pct = (_valorPortfolio - _totalInvestido) / _totalInvestido * 100;
+                                        final isPositive = pct > 0.05;
+                                        final isNegative = pct < -0.05;
+                                        final chipColor = isPositive ? AppColors.verde : isNegative ? AppColors.vermelho : AppColors.cinza400;
+                                        final label = '${isPositive ? '+' : ''}${pct.toStringAsFixed(1)}%';
+                                        return Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                          decoration: BoxDecoration(
+                                            color: chipColor.withValues(alpha: isPositive || isNegative ? 0.15 : 0.1),
+                                            borderRadius: BorderRadius.circular(6),
+                                          ),
+                                          child: Text(
+                                            label,
+                                            style: TextStyle(
+                                              fontFamily: 'JosefinSans',
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.bold,
+                                              color: chipColor,
+                                            ),
+                                          ),
+                                        );
+                                      }),
+                                    ],
+                                  ],
+                                ),
+                              ],
+                            ),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                const Text('Tokens', style: TextStyle(color: AppColors.branco, fontFamily: 'JosefinSans', fontSize: 11)),
+                                const SizedBox(height: 4),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.branco.withValues(alpha: 0.15),
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(Icons.toll_outlined, size: 13, color: AppColors.branco),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        NumberFormat('#,##0', 'pt_BR').format(_totalTokens),
+                                        style: const TextStyle(
+                                          fontFamily: 'JosefinSans',
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.bold,
+                                          color: AppColors.branco,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
                           ],
                         ),
                       ],
@@ -573,24 +649,6 @@ class _InvestimentoCard extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
-}
-
-class _StatItem extends StatelessWidget {
-  final String label;
-  final String value;
-
-  const _StatItem({required this.label, required this.value});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label, style: const TextStyle(color: AppColors.branco, fontFamily: 'JosefinSans', fontSize: 11)),
-        Text(value, style: const TextStyle(color: AppColors.branco, fontFamily: 'JosefinSans', fontSize: 16, fontWeight: FontWeight.bold)),
-      ],
     );
   }
 }

@@ -335,9 +335,8 @@ class StartupCard extends StatelessWidget {
     final estagioChip = Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: Colors.transparent,
+        color: accentColor.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: accentColor, width: 1),
       ),
       child: Text(
         _estagioLabels[estagio] ?? estagio,
@@ -420,9 +419,8 @@ class StartupCard extends StatelessWidget {
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 10, vertical: 4),
                             decoration: BoxDecoration(
-                              color: Colors.transparent,
+                              color: precoColor.withValues(alpha: 0.12),
                               borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: precoColor, width: 1.5),
                             ),
                             child: Text(
                               fmt.format(precoToken),

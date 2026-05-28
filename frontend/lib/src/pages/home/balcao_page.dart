@@ -9,7 +9,6 @@ import 'package:mescla_invest/src/services/wallet_service.dart';
 import 'package:mescla_invest/src/services/storage_service.dart';
 import 'package:mescla_invest/src/widgets/widgets.dart';
 import 'buy_steps_page.dart';
-import 'wallet/startup_portfolio_detail_page.dart';
 import 'wallet/wallet_cards.dart';
 
 class BalcaoNegociacaoPage extends StatefulWidget {
@@ -173,39 +172,18 @@ class _BalcaoNegociacaoPageState extends State<BalcaoNegociacaoPage> {
 
     if (selectedToken == null || !mounted) return;
 
-    final startupId = selectedToken['startupId'] as String? ?? '';
-    final nome = selectedToken['startupNome'] as String? ?? '';
-
-    final results = await Future.wait([
-      WalletService.getTransactionHistory(),
-      StorageService.getStartupAsset(nome, 'logoPhoto.jpeg'),
-    ]);
-    if (!mounted) return;
-
-    final historyResult = results[0] as Map<String, dynamic>;
-    final logoUrl = results[1] as String?;
-
-    final purchases = historyResult['success'] == true
-        ? List<Map<String, dynamic>>.from(
-            (historyResult['transactions'] as List? ?? [])
-                .where((tx) =>
-                    (tx as Map)['startupId'] == startupId &&
-                    ((tx['type'] as String?) == 'buy' ||
-                        (tx['type'] as String?) == 'return'))
-                .map((tx) => Map<String, dynamic>.from(tx as Map)),
-          )
-        : <Map<String, dynamic>>[];
+    final quantidade = (selectedToken['quantidade'] as num?)?.toInt() ?? 0;
+    final valorAtual = (selectedToken['valorAtual'] as num?)?.toDouble() ?? 0.0;
 
     final vendeu = await Navigator.push<bool>(
       context,
       MaterialPageRoute(
-        builder: (_) => StartupPortfolioDetailPage(
-          token: selectedToken,
-          purchases: purchases,
-          logoUrl: logoUrl,
-          saldoVisivel: true,
-          usuario: widget.usuario,
-          onTabSwitch: widget.onTabSwitch,
+        builder: (_) => BuyStepsPage(
+          startupName: selectedToken['startupNome'] as String? ?? '',
+          startupId: selectedToken['startupId'] as String? ?? '',
+          availableQuantity: quantidade,
+          pricePerTokenCents: (valorAtual * 100).round(),
+          isSellMode: true,
         ),
       ),
     );
@@ -345,7 +323,8 @@ class _BalcaoNegociacaoPageState extends State<BalcaoNegociacaoPage> {
                         backgroundColor: AppColors.cinza200,
                         foregroundColor: AppColors.preto,
                         elevation: 0,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        side: const BorderSide(color: AppColors.cinza400),
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(24)),
                       ),
@@ -362,7 +341,7 @@ class _BalcaoNegociacaoPageState extends State<BalcaoNegociacaoPage> {
                         backgroundColor: AppColors.vermelho,
                         foregroundColor: AppColors.branco,
                         elevation: 0,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        padding: const EdgeInsets.symmetric(vertical: 10),
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(24)),
                       ),
@@ -632,6 +611,7 @@ class _BalcaoNegociacaoPageState extends State<BalcaoNegociacaoPage> {
                           data: offer,
                           currency: _currency,
                           logoUrl: _logoUrls[name],
+                          onCancel: () => _confirmCancelOffer(offer),
                         ),
                       );
                     },
@@ -796,6 +776,7 @@ class _OfferCard extends StatelessWidget {
                                     style: TextStyle(
                                       fontFamily: 'JosefinSans',
                                       fontSize: 12,
+                                      fontWeight: FontWeight.bold,
                                       color: AppColors.azul,
                                     ),
                                   ),
@@ -853,11 +834,13 @@ class _MyOrderCard extends StatelessWidget {
   final Map<String, dynamic> data;
   final NumberFormat currency;
   final String? logoUrl;
+  final VoidCallback? onCancel;
 
   const _MyOrderCard({
     required this.data,
     required this.currency,
     this.logoUrl,
+    this.onCancel,
   });
 
   @override
@@ -866,7 +849,6 @@ class _MyOrderCard extends StatelessWidget {
     final amount = (data['amount'] as num?)?.toInt() ?? 0;
     final centavos = (data['valorUnitarioCentavos'] as num?)?.toDouble() ?? 0;
     final preco = centavos / 100;
-    final total = preco * amount;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -984,10 +966,59 @@ class _MyOrderCard extends StatelessWidget {
                               ],
                             ),
                           ),
-                          _Stat(
-                            label: 'Total da ordem',
-                            value: currency.format(total),
-                            alignEnd: true,
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: [
+                                  const Text(
+                                    'Total da oferta',
+                                    style: TextStyle(
+                                      fontFamily: 'JosefinSans',
+                                      fontSize: 10,
+                                      color: AppColors.cinza500,
+                                    ),
+                                  ),
+                                  Text(
+                                    currency.format(preco * amount),
+                                    style: const TextStyle(
+                                      fontFamily: 'JosefinSans',
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(width: 10),
+                              GestureDetector(
+                                onTap: onCancel,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.vermelho.withValues(alpha: 0.08),
+                                    borderRadius: BorderRadius.circular(20),
+                                    border: Border.all(color: AppColors.vermelho.withValues(alpha: 0.3)),
+                                  ),
+                                  child: const Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(Icons.delete_outline, size: 13, color: AppColors.vermelho),
+                                      SizedBox(width: 4),
+                                      Text(
+                                        'Cancelar oferta',
+                                        style: TextStyle(
+                                          fontFamily: 'JosefinSans',
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.bold,
+                                          color: AppColors.vermelho,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),
@@ -999,25 +1030,6 @@ class _MyOrderCard extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
-}
-
-class _Stat extends StatelessWidget {
-  final String label;
-  final String value;
-  final bool alignEnd;
-
-  const _Stat({required this.label, required this.value, this.alignEnd = false});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: alignEnd ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-      children: [
-        Text(label, style: const TextStyle(fontFamily: 'JosefinSans', fontSize: 11, color: AppColors.cinza500)),
-        Text(value, style: const TextStyle(fontFamily: 'JosefinSans', fontSize: 13, fontWeight: FontWeight.bold)),
-      ],
     );
   }
 }

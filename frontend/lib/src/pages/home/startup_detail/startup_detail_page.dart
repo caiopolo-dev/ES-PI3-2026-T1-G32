@@ -42,11 +42,10 @@ class _StartupDetailPageState extends State<StartupDetailPage> {
   Map<String, dynamic>? startup;
   bool isLoading = true;
   String? error;
-  bool _houvePurchase = false;
+  bool _houvePurchase = false; // retornado no pop para o pai recarregar dados
   int _userTokenQuantity = 0;
   String? _videoUrl;
   String? _summaryUrl;
-  int _selectedTab = 0;
   int _selectedPeriod = 3;
   List<Map<String, dynamic>> _faqs = [];
   bool _faqsLoading = false;
@@ -543,13 +542,6 @@ class _StartupDetailPageState extends State<StartupDetailPage> {
           const Divider(),
           const SizedBox(height: 16),
 
-          Row(
-            children: [
-              _buildTab('Dados do token', 0),
-              const SizedBox(width: 24),
-              _buildTab('Ofertas do balcão', 1),
-            ],
-          ),
           const SizedBox(height: 20),
 
 
@@ -759,33 +751,6 @@ class _StartupDetailPageState extends State<StartupDetailPage> {
             }),
 
           const SizedBox(height: 32),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTab(String label, int index) {
-    final isSelected = _selectedTab == index;
-    return GestureDetector(
-      onTap: () => setState(() => _selectedTab = index),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 14,
-              color: isSelected ? AppColors.azul : AppColors.cinza500,
-              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-            ),
-          ),
-          const SizedBox(height: 4),
-          AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            height: 2,
-            width: isSelected ? 90 : 0,
-            color: AppColors.azul,
-          ),
         ],
       ),
     );

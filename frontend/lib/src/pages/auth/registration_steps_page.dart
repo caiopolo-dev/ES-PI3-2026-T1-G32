@@ -296,48 +296,91 @@ class _RegisterPageState extends State<RegisterPage> {
         ),
       ),
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 40),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Center(
-                child: SizedBox(
-                  width: 100,
-                  height: 100,
-                  child: Image.asset('assets/MesclaLogoPequena.png'),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Barras de progresso no topo
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
+              child: Row(
+                children: List.generate(3, (i) => Expanded(
+                  child: Container(
+                    margin: EdgeInsets.only(
+                      left: i > 0 ? 4 : 0,
+                      right: i < 2 ? 4 : 0,
+                    ),
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: i <= currentStep
+                          ? AppColors.azul
+                          : AppColors.cinza200,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                )),
+              ),
+            ),
+
+            // Conteúdo centralizado verticalmente
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 32),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    SizedBox(
+                      width: 80,
+                      height: 80,
+                      child: Image.asset('assets/MesclaLogoPequena.png'),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      _stepTitles[currentStep],
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        fontSize: 26,
+                        fontWeight: FontWeight.bold,
+                        fontFamily: 'JosefinSans',
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Passo ${currentStep + 1} de 3',
+                      style: const TextStyle(
+                        fontSize: 18,
+                        color: AppColors.cinza500,
+                        fontFamily: 'JosefinSans',
+                      ),
+                    ),
+                    const SizedBox(height: 36),
+                    buildStepContent(),
+                    const SizedBox(height: 12),
+                    if (errorText.isNotEmpty)
+                      Row(
+                        children: [
+                          const Icon(Icons.warning_amber_rounded,
+                              size: 14, color: AppColors.vermelho),
+                          const SizedBox(width: 6),
+                          Flexible(
+                            child: Text(
+                              errorText,
+                              style: const TextStyle(
+                                color: AppColors.vermelho,
+                                fontFamily: 'JosefinSans',
+                                fontSize: 13,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                  ],
                 ),
               ),
+            ),
 
-              const SizedBox(height: 32),
-
-              Text(
-                _stepTitles[currentStep],
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  fontFamily: 'JosefinSans',
-                ),
-              ),
-
-              Text(
-                'Passo ${currentStep + 1} de 3',
-                style: TextStyle(fontSize: 20, color: AppColors.cinza500, fontFamily: 'JosefinSans'),
-              ),
-
-              const SizedBox(height: 30),
-
-              buildStepContent(),
-
-              const SizedBox(height: 20),
-
-              if (errorText.isNotEmpty)
-                Text(errorText, style: const TextStyle(color: AppColors.vermelho)),
-
-              const SizedBox(height: 40),
-
-              SizedBox(
+            // Botão fixo na parte inferior
+            Center(
+              child: SizedBox(
                 width: 260,
                 child: ElevatedButton(
                   onPressed: isLoading ? null : nextStep,
@@ -347,7 +390,8 @@ class _RegisterPageState extends State<RegisterPage> {
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(24),
-                      side: const BorderSide(color: AppColors.azul800, width: 0.25),
+                      side: const BorderSide(
+                          color: AppColors.azul800, width: 0.25),
                     ),
                     elevation: 6,
                     shadowColor: AppColors.azul.withValues(alpha: 0.4),
@@ -356,16 +400,19 @@ class _RegisterPageState extends State<RegisterPage> {
                       ? const SizedBox(
                           height: 20,
                           width: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.branco),
+                          child: CircularProgressIndicator(
+                              strokeWidth: 2, color: AppColors.branco),
                         )
                       : Text(
                           currentStep == 2 ? 'Finalizar' : 'Continuar',
-                          style: const TextStyle(fontFamily: 'JosefinSans', fontSize: 22),
+                          style: const TextStyle(
+                              fontFamily: 'JosefinSans', fontSize: 22),
                         ),
                 ),
               ),
-            ],
-          ),
+            ),
+            const SizedBox(height: 126),
+          ],
         ),
       ),
     );

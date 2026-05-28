@@ -164,14 +164,17 @@ class BottomActionBar extends StatelessWidget {
                 Expanded(
                   child: SizedBox(
                     height: double.infinity,
-                    child: OutlinedButton(
+                    child: ElevatedButton(
                       onPressed: onVender,
-                      style: OutlinedButton.styleFrom(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.cinza200,
+                        foregroundColor: AppColors.preto,
+                        elevation: 0,
                         padding: EdgeInsets.zero,
-                        side: const BorderSide(color: AppColors.verde),
+                        side: const BorderSide(color: AppColors.cinza400),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
                       ),
-                      child: const Text('Vender', style: TextStyle(color: AppColors.verde, fontSize: 15)),
+                      child: const Text('Vender', style: TextStyle(fontSize: 15)),
                     ),
                   ),
                 ),

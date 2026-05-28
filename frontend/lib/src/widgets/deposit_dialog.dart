@@ -148,9 +148,10 @@ class _DepositDialogState extends State<DepositDialog> {
                   backgroundColor: AppColors.cinza200,
                   foregroundColor: AppColors.preto,
                   elevation: 0,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  side: const BorderSide(color: AppColors.cinza400),
                   shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10)),
+                      borderRadius: BorderRadius.circular(24)),
                 ),
                 child: const Text(
                   'Cancelar',
@@ -166,9 +167,9 @@ class _DepositDialogState extends State<DepositDialog> {
                   backgroundColor: AppColors.azul,
                   foregroundColor: AppColors.branco,
                   elevation: 0,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  padding: const EdgeInsets.symmetric(vertical: 10),
                   shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10)),
+                      borderRadius: BorderRadius.circular(24)),
                 ),
                 child: const Text(
                   'Continuar',
@@ -236,9 +237,10 @@ class _DepositDialogState extends State<DepositDialog> {
                   backgroundColor: AppColors.cinza200,
                   foregroundColor: AppColors.preto,
                   elevation: 0,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  side: const BorderSide(color: AppColors.cinza400),
                   shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10)),
+                      borderRadius: BorderRadius.circular(24)),
                 ),
                 child: const Text(
                   'Voltar',
@@ -254,9 +256,9 @@ class _DepositDialogState extends State<DepositDialog> {
                   backgroundColor: AppColors.verde,
                   foregroundColor: AppColors.branco,
                   elevation: 0,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  padding: const EdgeInsets.symmetric(vertical: 10),
                   shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10)),
+                      borderRadius: BorderRadius.circular(24)),
                 ),
                 child: const Text(
                   'Confirmar',

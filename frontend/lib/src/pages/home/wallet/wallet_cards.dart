@@ -29,19 +29,13 @@ class WalletTokenCard extends StatelessWidget {
     final precoAnterior =
         (token['precoAnterior'] as num?)?.toDouble() ?? valorAtual;
     final quantidade = (token['quantidade'] as num?)?.toInt() ?? 0;
-    final totalAtual = valorAtual * quantidade;
-    final totalInvestido = precoMedio * quantidade;
     final variacaoPct = precoAnterior > 0
         ? (valorAtual - precoAnterior) / precoAnterior * 100
         : 0.0;
     final variacaoLabel =
         'Hoje ${variacaoPct >= 0 ? '+' : ''}${variacaoPct.toStringAsFixed(1)}%';
-    // Card color driven by portfolio performance (invested vs current value)
-    final cardColor =
-        totalAtual >= totalInvestido ? AppColors.verde : AppColors.vermelho;
-    // Chip color driven by daily market variation only
-    final variacaoColor =
-        valorAtual >= precoAnterior ? AppColors.verde : AppColors.vermelho;
+    final variacaoColor = variacaoPct > 0 ? AppColors.verde : variacaoPct < 0 ? AppColors.vermelho : AppColors.cinza400;
+    final cardColor = variacaoColor;
 
     return GestureDetector(
       onTap: onTap,
@@ -154,24 +148,12 @@ class WalletTokenCard extends StatelessWidget {
                                 ],
                               ),
                             ),
-                            Row(
-                              children: [
-                                _WalletStat(
-                                  label: 'Investido',
-                                  value: saldoVisivel
-                                      ? currencyFormat.format(totalInvestido)
-                                      : '••••',
-                                ),
-                                const SizedBox(width: 16),
-                                _WalletStat(
-                                  label: 'Atual',
-                                  value: saldoVisivel
-                                      ? currencyFormat.format(totalAtual)
-                                      : '••••',
-                                  valueColor: cardColor,
-                                  alignEnd: true,
-                                ),
-                              ],
+                            _WalletStat(
+                              label: 'Preço médio pago',
+                              value: saldoVisivel
+                                  ? currencyFormat.format(precoMedio)
+                                  : '••••',
+                              alignEnd: true,
                             ),
                           ],
                         ),
@@ -395,13 +377,11 @@ class WalletTransactionCard extends StatelessWidget {
 class _WalletStat extends StatelessWidget {
   final String label;
   final String value;
-  final Color? valueColor;
   final bool alignEnd;
 
   const _WalletStat({
     required this.label,
     required this.value,
-    this.valueColor,
     this.alignEnd = false,
   });
 
@@ -421,11 +401,10 @@ class _WalletStat extends StatelessWidget {
         ),
         Text(
           value,
-          style: TextStyle(
+          style: const TextStyle(
             fontFamily: 'JosefinSans',
             fontSize: 13,
             fontWeight: FontWeight.bold,
-            color: valueColor,
           ),
         ),
       ],
