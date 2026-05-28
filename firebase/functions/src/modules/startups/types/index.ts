@@ -53,5 +53,6 @@ export interface Startup {
   createdAt?: FirebaseFirestore.Timestamp;
   updatedAt?: FirebaseFirestore.Timestamp;
   fechamentoOntemCentavos?: number;
+  variacaoHojePercentual?: number;
   variacaoLabel?: string;
 }

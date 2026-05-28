@@ -12,5 +12,6 @@ export {getStartups, getStartupById, createFaq, getFaqs, getPriceHistory}
 export {listOffers, listMyOffers, buyOffer, buyStartupToken, createSellOffer,
   cancelOffer}
   from "./modules/tokenOffers";
-export {getWalletInfo, getTransactionHistory, getUserTokens, addBalance}
+export {getWalletInfo, getTransactionHistory, getUserTokens, addBalance,
+  getPortfolioHistory}
   from "./modules/wallet";

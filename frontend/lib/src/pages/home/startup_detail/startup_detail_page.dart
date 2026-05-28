@@ -85,6 +85,8 @@ class _StartupDetailPageState extends State<StartupDetailPage> {
       isLoading = false;
       if (startupResult['success'] as bool) {
         startup = startupResult['data'] as Map<String, dynamic>;
+        _valorizacaoPercentual =
+          (startup?['variacaoHojePercentual'] as num?)?.toDouble() ?? 0.0;
       } else {
         error = startupResult['message'] as String?;
       }
@@ -131,18 +133,14 @@ class _StartupDetailPageState extends State<StartupDetailPage> {
         return dateA.compareTo(dateB);
       });
 
-
-
       setState(() {
       _priceHistory = history;
-      _valorizacaoPercentual = _calcularValorizacao(history);
       _priceHistoryLoading = false;
     });
 
 
     } else {
       setState(() {
-        _valorizacaoPercentual = 0.0;
         _priceHistoryLoading = false;
       });
     }
@@ -150,54 +148,6 @@ class _StartupDetailPageState extends State<StartupDetailPage> {
 
 
 
-
-
-  double _calcularValorizacao(List<Map<String, dynamic>> history) {
-    if (history.isEmpty) return 0.0;
-
-    final agora = DateTime.now();
-
-    final inicioDoDia = DateTime(
-      agora.year,
-      agora.month,
-      agora.day,
-    );
-
-    final registrosHoje = history.where((item) {
-      final data = _converterDataHistorico(item['createdAt']?.toString());
-      if (data == null) return false;
-
-      final dataLocal = data;
-
-      return dataLocal.isAfter(inicioDoDia) ||
-          dataLocal.isAtSameMomentAs(inicioDoDia);
-    }).toList();
-
-    if (registrosHoje.isEmpty) {
-      return 0.0;
-    }
-
-    Map<String, dynamic>? ultimoRegistroAntesDeHoje;
-
-    for (final item in history) {
-      final data = _converterDataHistorico(item['createdAt']?.toString());
-      if (data == null) continue;
-
-      if (data.isBefore(inicioDoDia)) {
-        ultimoRegistroAntesDeHoje = item;
-      }
-    }
-
-    final precoBase = ultimoRegistroAntesDeHoje != null
-        ? (ultimoRegistroAntesDeHoje['price'] as num?)?.toDouble() ?? 0.0
-        : (registrosHoje.first['price'] as num?)?.toDouble() ?? 0.0;
-
-    final precoAtual = (history.last['price'] as num?)?.toDouble() ?? 0.0;
-
-    if (precoBase <= 0) return 0.0;
-
-    return ((precoAtual - precoBase) / precoBase) * 100;
-  }
 
 
   DateTime? _converterDataHistorico(String? dataTexto) {
@@ -374,6 +324,8 @@ class _StartupDetailPageState extends State<StartupDetailPage> {
       isLoading = false;
       if (result['success'] as bool) {
         startup = result['data'] as Map<String, dynamic>;
+        _valorizacaoPercentual =
+          (startup?['variacaoHojePercentual'] as num?)?.toDouble() ?? 0.0;
       } else {
         error = result['message'] as String?;
       }

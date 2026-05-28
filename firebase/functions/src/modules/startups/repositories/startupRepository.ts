@@ -7,6 +7,48 @@ import {Startup, EstagioStartup} from "../types";
 import {db} from "../../../shared/firebase";
 import {STARTUPS, PRICE_HISTORY} from "../../../shared/collections";
 
+
+/**
+ * Retorna o início do dia no horário do Brasil (UTC-3).
+ * @return {Timestamp} Início do dia brasileiro convertido para UTC.
+ */
+function getStartOfBrazilDayTimestamp(): Timestamp {
+  const now = new Date();
+
+  const brazilNow = new Date(
+    now.getTime() - 3 * 60 * 60 * 1000
+  );
+
+  const startOfBrazilDayUtc = new Date(Date.UTC(
+    brazilNow.getUTCFullYear(),
+    brazilNow.getUTCMonth(),
+    brazilNow.getUTCDate(),
+    3,
+    0,
+    0,
+    0
+  ));
+
+  return Timestamp.fromDate(startOfBrazilDayUtc);
+}
+
+
+/**
+ * Calcula a variação percentual entre o preço atual e o fechamento.
+ * @param {number} precoAtual Preço atual em centavos.
+ * @param {number} fechamento Preço base em centavos.
+ * @return {number} Variação percentual.
+ */
+function calculateVariationPercent(
+  precoAtual: number,
+  fechamento: number
+): number {
+  if (precoAtual <= 0 || fechamento <= 0) return 0;
+
+  return ((precoAtual - fechamento) / fechamento) * 100;
+}
+
+
 export const startupRepository = {
   async findAll(
     estagio?: EstagioStartup,
@@ -26,12 +68,9 @@ export const startupRepository = {
 
     if (!includeDailyVariation) return startups;
 
-    // Início do dia UTC — referência para "fechamento de ontem"
-    const now = new Date();
-    const startOfDay = new Date(
-      Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())
-    );
-    const startOfDayTs = Timestamp.fromDate(startOfDay);
+
+    // Início do dia no horário do Brasil (UTC-3)
+    const startOfDayTs = getStartOfBrazilDayTimestamp();
 
     await Promise.all(
       startups.map(async (startup) => {
@@ -45,17 +84,30 @@ export const startupRepository = {
           .get();
 
         if (!snap.empty) {
-          startup.fechamentoOntemCentavos =
-            snap.docs[0].data().price as number;
+          const fechamento = snap.docs[0].data().price as number;
+          const precoAtual = Number(startup.precoToken ?? 0);
+
+          startup.fechamentoOntemCentavos = fechamento;
+          startup.variacaoHojePercentual = calculateVariationPercent(
+            precoAtual,
+            fechamento
+          );
           startup.variacaoLabel = "hoje";
           return;
         }
+
 
         // Fallback: precoTokenAnterior do doc (última transação)
         const s = startup as unknown as Record<string, unknown>;
         const anterior = s.precoTokenAnterior;
         if (typeof anterior === "number" && anterior > 0) {
+          const precoAtual = Number(startup.precoToken ?? 0);
+
           startup.fechamentoOntemCentavos = anterior;
+          startup.variacaoHojePercentual = calculateVariationPercent(
+            precoAtual,
+            anterior
+          );
           startup.variacaoLabel = "última transação";
         }
       })
@@ -65,12 +117,55 @@ export const startupRepository = {
   },
 
   // Busca uma startup específica pelo ID do documento
-  async findById(id: string): Promise<Startup | null> {
+  async findById(
+    id: string,
+    includeDailyVariation = false
+  ): Promise<Startup | null> {
     const doc = await db.collection(STARTUPS).doc(id).get();
 
     if (!doc.exists) return null;
 
-    return {id: doc.id, ...doc.data()} as Startup;
+    const startup = {id: doc.id, ...doc.data()} as Startup;
+
+    if (includeDailyVariation) {
+      const startOfDayTs = getStartOfBrazilDayTimestamp();
+
+      const snap = await db
+        .collection(STARTUPS).doc(startup.id)
+        .collection(PRICE_HISTORY)
+        .where("createdAt", "<", startOfDayTs)
+        .orderBy("createdAt", "desc")
+        .limit(1)
+        .get();
+
+      if (!snap.empty) {
+        const fechamento = snap.docs[0].data().price as number;
+        const precoAtual = Number(startup.precoToken ?? 0);
+
+        startup.fechamentoOntemCentavos = fechamento;
+        startup.variacaoHojePercentual = calculateVariationPercent(
+          precoAtual,
+          fechamento
+        );
+        startup.variacaoLabel = "hoje";
+      } else {
+        const s = startup as unknown as Record<string, unknown>;
+        const anterior = s.precoTokenAnterior;
+
+        if (typeof anterior === "number" && anterior > 0) {
+          const precoAtual = Number(startup.precoToken ?? 0);
+
+          startup.fechamentoOntemCentavos = anterior;
+          startup.variacaoHojePercentual = calculateVariationPercent(
+            precoAtual,
+            anterior
+          );
+          startup.variacaoLabel = "última transação";
+        }
+      }
+    }
+
+    return startup;
   },
 
   async findPriceHistory(

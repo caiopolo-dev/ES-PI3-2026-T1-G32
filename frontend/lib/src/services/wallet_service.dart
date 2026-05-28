@@ -4,6 +4,8 @@
 
 import 'package:cloud_functions/cloud_functions.dart';
 
+import 'package:flutter/foundation.dart';
+
 class WalletService {
   static Future<Map<String, dynamic>> getWalletData() async {
     try {
@@ -115,6 +117,49 @@ class WalletService {
       return {'success': false, 'message': e.toString()};
     }
   }
+
+
+
+
+  static Future<Map<String, dynamic>> getPortfolioHistory() async {
+    try {
+      final result = await FirebaseFunctions.instance
+          .httpsCallable('getPortfolioHistory')
+          .call();
+
+      final list = (result.data['points'] as List? ?? [])
+          .map((e) => Map<String, dynamic>.from(e as Map))
+          .toList();
+
+      return {
+        'success': true,
+        'points': list,
+      };
+    } on FirebaseFunctionsException catch (e) {
+      debugPrint('ERRO getPortfolioHistory CODE: ${e.code}');
+      debugPrint('ERRO getPortfolioHistory MESSAGE: ${e.message}');
+      debugPrint('ERRO getPortfolioHistory DETAILS: ${e.details}');
+      return {
+        'success': false,
+        'message': e.message ?? 'Erro ao buscar histórico do portfólio',
+      };
+    } catch (e) {
+
+      debugPrint('ERRO getPortfolioHistory INESPERADO: $e');
+      return {
+        'success': false,
+        'message': e.toString(),
+      };
+    }
+  }
+
+
+
+
+
+
+
+
   static Future<Map<String, dynamic>> cancelOffer(String offerId) async {
     try {
       await FirebaseFunctions.instance
