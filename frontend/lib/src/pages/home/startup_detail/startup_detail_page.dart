@@ -132,8 +132,6 @@ class _StartupDetailPageState extends State<StartupDetailPage> {
         return dateA.compareTo(dateB);
       });
 
-
-
       setState(() {
       _priceHistory = history;
       _valorizacaoPercentual = _calcularValorizacao(history);
@@ -154,52 +152,50 @@ class _StartupDetailPageState extends State<StartupDetailPage> {
 
 
   double _calcularValorizacao(List<Map<String, dynamic>> history) {
-    if (history.isEmpty) return 0.0;
+    final data = startup;
 
-    final agora = DateTime.now();
+    final precoAtual = (data?['precoToken'] as num?)?.toDouble() ??
+        (history.isNotEmpty
+            ? (history.last['price'] as num?)?.toDouble() ?? 0.0
+            : 0.0);
 
-    final inicioDoDia = DateTime(
-      agora.year,
-      agora.month,
-      agora.day,
+    if (precoAtual <= 0) return 0.0;
+
+    final agoraUtc = DateTime.now().toUtc();
+
+    final inicioDoDiaUtc = DateTime.utc(
+      agoraUtc.year,
+      agoraUtc.month,
+      agoraUtc.day,
     );
-
-    final registrosHoje = history.where((item) {
-      final data = _converterDataHistorico(item['createdAt']?.toString());
-      if (data == null) return false;
-
-      final dataLocal = data;
-
-      return dataLocal.isAfter(inicioDoDia) ||
-          dataLocal.isAtSameMomentAs(inicioDoDia);
-    }).toList();
-
-    if (registrosHoje.isEmpty) {
-      return 0.0;
-    }
 
     Map<String, dynamic>? ultimoRegistroAntesDeHoje;
 
     for (final item in history) {
-      final data = _converterDataHistorico(item['createdAt']?.toString());
-      if (data == null) continue;
+      final dataHistorico = DateTime.tryParse(
+        item['createdAt']?.toString() ?? '',
+      );
 
-      if (data.isBefore(inicioDoDia)) {
+      if (dataHistorico == null) continue;
+
+      final dataUtc = dataHistorico.toUtc();
+
+      if (dataUtc.isBefore(inicioDoDiaUtc)) {
         ultimoRegistroAntesDeHoje = item;
       }
     }
 
+    final precoTokenAnterior =
+        (data?['precoTokenAnterior'] as num?)?.toDouble() ?? 0.0;
+
     final precoBase = ultimoRegistroAntesDeHoje != null
         ? (ultimoRegistroAntesDeHoje['price'] as num?)?.toDouble() ?? 0.0
-        : (registrosHoje.first['price'] as num?)?.toDouble() ?? 0.0;
-
-    final precoAtual = (history.last['price'] as num?)?.toDouble() ?? 0.0;
+        : precoTokenAnterior;
 
     if (precoBase <= 0) return 0.0;
 
     return ((precoAtual - precoBase) / precoBase) * 100;
-  }
-
+}
 
   DateTime? _converterDataHistorico(String? dataTexto) {
     if (dataTexto == null || dataTexto.isEmpty) return null;

@@ -12,6 +12,9 @@ import 'package:mescla_invest/src/services/storage_service.dart';
 import 'package:mescla_invest/src/pages/home/startup_detail/startup_detail_page.dart';
 import 'package:mescla_invest/src/widgets/widgets.dart';
 
+import 'package:fl_chart/fl_chart.dart';
+import 'package:mescla_invest/src/widgets/graficos.dart';
+
 class HomePage extends StatefulWidget {
   final Map<String, dynamic>? usuario;
   final void Function(int)? onTabSwitch;
@@ -29,7 +32,9 @@ class _HomePageState extends State<HomePage> {
   double _saldo = 0;
   double _valorPortfolio = 0;
   int _totalTokens = 0;
+
   List<Map<String, dynamic>> _meusInvestimentos = [];
+  List<Map<String, dynamic>> _portfolioHistory = [];
   Map<String, int> _tokenMap = {};
   Map<String, String?> _logoUrls = {};
 
@@ -90,6 +95,7 @@ class _HomePageState extends State<HomePage> {
       WalletService.getWalletData(),
       WalletService.getUserTokens(),
       StartupService.getStartups(includeDailyVariation: true),
+      WalletService.getPortfolioHistory(),
     ]);
 
     if (!mounted) return;
@@ -125,6 +131,16 @@ class _HomePageState extends State<HomePage> {
       _tokenMap = tokenMap;
     }
 
+    final portfolioHistory = results[3];
+      if (portfolioHistory['success'] == true) {
+        _portfolioHistory = List<Map<String, dynamic>>.from(
+          portfolioHistory['points'] ?? [],
+        );
+      }
+      debugPrint('PORTFOLIO HISTORY SUCCESS: ${portfolioHistory['success']}');
+      debugPrint('PORTFOLIO HISTORY POINTS: ${_portfolioHistory.length}');
+      debugPrint('PORTFOLIO HISTORY DATA: $_portfolioHistory');
+
     setState(() => _isLoading = false);
     _loadLogoUrls();
   }
@@ -141,6 +157,67 @@ class _HomePageState extends State<HomePage> {
     if (!mounted) return;
     setState(() => _logoUrls = Map.fromEntries(entries));
   }
+
+
+
+
+
+
+
+  List<FlSpot> _pontosGraficoPortfolio() {
+    if (_portfolioHistory.isEmpty) return [];
+
+    return List.generate(_portfolioHistory.length, (index) {
+      final valorCentavos =
+          (_portfolioHistory[index]['valueCents'] as num?)?.toDouble() ?? 0.0;
+
+      return FlSpot(index.toDouble(), valorCentavos / 100);
+    });
+  }
+
+  List<String> _labelsGraficoPortfolio() {
+    return _portfolioHistory.map((item) {
+      final date = DateTime.tryParse(item['date']?.toString() ?? '');
+
+      if (date == null) return '';
+
+      final dataLocal = date.toUtc().subtract(const Duration(hours: 3));
+
+      return '${dataLocal.day}/${dataLocal.month}';
+    }).toList();
+  }
+
+
+  List<FlSpot> _gerarPontosPercentuaisPortfolio() {
+    if (_portfolioHistory.isEmpty) return [];
+
+    final pontosOrdenados = List<Map<String, dynamic>>.from(_portfolioHistory)
+      ..sort((a, b) {
+        final da = DateTime.tryParse(a['date']?.toString() ?? '') ??
+            DateTime.fromMillisecondsSinceEpoch(0);
+        final db = DateTime.tryParse(b['date']?.toString() ?? '') ??
+            DateTime.fromMillisecondsSinceEpoch(0);
+        return da.compareTo(db);
+      });
+
+    final List<FlSpot> pontos = [];
+
+    for (int i = 0; i < pontosOrdenados.length; i++) {
+      final percentual =
+          (pontosOrdenados[i]['returnPercent'] as num?)?.toDouble() ?? 0.0;
+
+      pontos.add(FlSpot(i.toDouble(), percentual));
+    }
+
+    return pontos;
+  }
+
+  String _formatarPercentualGrafico(double valor) {
+    final sinal = valor > 0 ? '+' : '';
+    return '$sinal${valor.toStringAsFixed(1)}%';
+  }
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -283,8 +360,11 @@ class _HomePageState extends State<HomePage> {
                     fontFamily: 'JosefinSans',
                   ),
                 ),
+
+
+
                 Text(
-                  'Em breve',
+                  'Histórico',
                   style: TextStyle(
                     fontSize: 12,
                     color: AppColors.cinza500,
@@ -296,31 +376,10 @@ class _HomePageState extends State<HomePage> {
 
             const SizedBox(height: 12),
 
-            Container(
-              width: double.infinity,
-              height: 160,
-              decoration: BoxDecoration(
-                color: AppColors.branco,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppColors.cinza300),
-              ),
-              child: const Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.show_chart, size: 36, color: AppColors.cinza300),
-                    SizedBox(height: 8),
-                    Text(
-                      'Gráfico de valorização em desenvolvimento',
-                      style: TextStyle(
-                        fontFamily: 'JosefinSans',
-                        fontSize: 12,
-                        color: AppColors.cinza500,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+            GraficoLinha(
+              pontos: _gerarPontosPercentuaisPortfolio(),
+              labelsInferiores: _labelsGraficoPortfolio(),
+              formatarValorEsquerda: _formatarPercentualGrafico,
             ),
 
             const SizedBox(height: 28),
