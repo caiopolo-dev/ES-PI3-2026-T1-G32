@@ -292,7 +292,7 @@ class PortfolioChartSection extends StatelessWidget {
             formatarValorEsquerda: formatLabel,
             cor: cor,
           )
-        else if (pontos.length == 1 && valorPortfolio > 0)
+        else if (valorPortfolio > 0)
           const _ChartPlaceholder(
             icon: Icons.schedule_outlined,
             message: 'Volte amanhã para acompanhar\na valorização do seu portfólio',
