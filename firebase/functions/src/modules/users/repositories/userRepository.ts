@@ -8,7 +8,7 @@ import {
 
 /**
  * Registers a new user in Firestore.
- * @param {string} uid User`s uid.
+ * @param {string} uid User's uid.
  * @param {string} name User's full name.
  * @param {string} rg User's RG.
  * @param {string} telefone User's phone number.
@@ -100,5 +100,16 @@ export async function verificarEmailExiste(email: string): Promise<boolean> {
     .limit(1)
     .get();
   return !snapshot.empty;
+}
+
+
+/**
+ * Returns the IDs of all registered users.
+ * Used by scheduled jobs that need to iterate over every user.
+ * @return {Promise<string[]>} Array of user document IDs.
+ */
+export async function listAllUserIds(): Promise<string[]> {
+  const snap = await db.collection(USERS).get();
+  return snap.docs.map((doc) => doc.id);
 }
 
