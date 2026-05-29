@@ -118,9 +118,13 @@ class TwoFactorService {
         displayName: 'Autenticador',
       );
       return {'success': true};
+    } on FirebaseAuthException catch (e) {
+      if (e.code == 'invalid-verification-code') {
+        return {'success': false, 'message': 'Código inválido. Tente novamente.'};
+      }
+      return {'success': false, 'message': 'Erro ao ativar 2FA: ${e.message}'};
     } catch (e) {
-      // Firebase lança exceção se o código TOTP estiver errado ou expirado (janela de 30s).
-      return {'success': false, 'message': 'Código inválido. Tente novamente.'};
+      return {'success': false, 'message': 'Erro inesperado. Verifique sua conexão.'};
     }
   }
 

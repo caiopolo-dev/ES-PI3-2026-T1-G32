@@ -9,14 +9,19 @@ class StartupService {
 
   // Busca todas as startups, com filtro opcional por estágio
   // Exemplo: getStartups(estagio: 'nova')
-  static Future<Map<String, dynamic>> getStartups({String? estagio}) async {
+  static Future<Map<String, dynamic>> getStartups({
+    String? estagio,
+    bool includeDailyVariation = false,
+  }) async {
     try {
       final callable = FirebaseFunctions.instance
           .httpsCallable('getStartups');
 
-      final result = await callable.call(
-        estagio != null ? {'estagio': estagio} : {},
-      );
+      final params = <String, dynamic>{};
+      if (estagio != null) params['estagio'] = estagio;
+      if (includeDailyVariation) params['includeDailyVariation'] = true;
+
+      final result = await callable.call(params);
 
       // jsonDecode(jsonEncode(...)) converte o objeto dinâmico retornado pelo SDK
       // em tipos Dart nativos (Map/List), necessário para o cast funcionar corretamente.
@@ -58,6 +63,36 @@ class StartupService {
         'success': false,
         'error': e.code,
         'message': e.message ?? 'Erro ao buscar startup',
+      };
+    } catch (e) {
+      return {
+        'success': false,
+        'error': 'Erro inesperado',
+        'message': e.toString(),
+      };
+    }
+  }
+  
+  static Future<Map<String, dynamic>> getPriceHistory(String startupId) async {
+    try {
+      final callable = FirebaseFunctions.instance
+          .httpsCallable('getPriceHistory');
+
+      final result = await callable.call({
+        'startupId': startupId,
+        'limit': 200,
+      });
+
+      return {
+        'success': true,
+        'data': (jsonDecode(jsonEncode(result.data['data'])) as List)
+            .cast<Map<String, dynamic>>(),
+      };
+    } on FirebaseFunctionsException catch (e) {
+      return {
+        'success': false,
+        'error': e.code,
+        'message': e.message ?? 'Erro ao buscar histórico de preços',
       };
     } catch (e) {
       return {

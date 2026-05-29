@@ -17,7 +17,7 @@ export const getStartupById = onCall(async (request) => {
   }
 
   try {
-    const startup = await startupRepository.findById(id);
+    const startup = await startupRepository.findById(id, true);
 
     if (!startup) {
       throw new HttpsError("not-found", "Startup não encontrada");

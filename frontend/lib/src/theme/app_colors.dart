@@ -1,5 +1,5 @@
 // Autor: Gustavo Alves de Siqueira Costa
-// Data: 12/05/2026
+// Data: 17/05/2026
 // Descrição: Paleta de cores do app — fonte única de verdade para todas as cores
 
 import 'dart:ui';
@@ -57,4 +57,7 @@ class AppColors {
 
   // Laranja — avisos
   static const Color laranja = Color(0xFFFF9800);
+
+  // Amarelo — ordens em aberto / pendentes
+  static const Color amarelo = Color(0xFFFFB300);
 }

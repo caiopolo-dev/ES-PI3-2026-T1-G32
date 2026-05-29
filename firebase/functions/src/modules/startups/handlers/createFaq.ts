@@ -4,7 +4,10 @@
 
 import {onCall, HttpsError} from "firebase-functions/v2/https";
 import {faqsRepository} from "../repositories/faqsRepository";
-import {getUserById} from "../../users/repositories/userRepository";
+import {
+  getUserById,
+  hasTokensForStartup,
+} from "../../users/repositories/userRepository";
 import {requireAuth} from "../../../shared/validation";
 
 export const createFaq = onCall(async (request) => {
@@ -20,9 +23,17 @@ export const createFaq = onCall(async (request) => {
   }
 
   const uid = request.auth.uid;
-  // Email e nome são lidos do token/Firestore e nunca do request.data
-  // para evitar que o cliente envie valores falsos.
   const email = request.auth.token.email ?? "";
+
+  if (privada === true) {
+    const hasTokens = await hasTokensForStartup(uid, startupId);
+    if (!hasTokens) {
+      throw new HttpsError(
+        "permission-denied",
+        "Apenas investidores podem enviar perguntas privadas"
+      );
+    }
+  }
 
   // Nome vem do Firestore (campo 'name') pois o token Auth não o contém.
   const userDoc = await getUserById(uid);

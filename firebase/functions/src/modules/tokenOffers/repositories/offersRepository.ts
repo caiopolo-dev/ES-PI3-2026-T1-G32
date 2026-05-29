@@ -5,13 +5,57 @@ import {FieldValue} from "firebase-admin/firestore";
 import {db} from "../../../shared/firebase";
 import {HttpsError} from "firebase-functions/v2/https";
 import {
-  USERS, TOKEN_OFFERS, TOKEN_TRANSACTIONS, USER_TOKENS, WALLET, WALLET_SALDO,
+  USERS, STARTUPS, TOKEN_OFFERS, TRANSACTIONS,
+  WALLET, WALLET_SALDO, USER_TOKENS, PRICE_HISTORY,
+  OFFER_STATUS_OPEN, TX_TYPE_BUY, TX_SOURCE_OFFER,
 } from "../../../shared/collections";
+import {updateTodaySnapshot} from
+  "../../wallet/repositories/portfolioSnapshotRepository";
+import {FATOR_IMPACTO} from "../../../shared/tokenPricing";
 
 import {
   BuyTokenOfferParams,
   BuyTokenOfferResult,
 } from "../types/tokenOfferTypes";
+
+/**
+ * Lists open sell offers created by a specific seller.
+ * @param {string} sellerId Seller user ID.
+ * @return {Promise<Array<object>>} List of the seller's offers.
+ */
+export async function listOffersBySeller(sellerId: string) {
+  const snapshot = await db
+    .collection(TOKEN_OFFERS)
+    .where("sellerId", "==", sellerId)
+    .get();
+
+  const offers: Array<{
+    offerId: string;
+    startupId: string;
+    startupName: string;
+    amount: number;
+    valorUnitarioCentavos: number;
+    createdAt: string | null;
+  }> = [];
+
+  snapshot.docs.forEach((doc) => {
+    const data = doc.data();
+    const status = String(data.status ?? OFFER_STATUS_OPEN);
+    if (status !== OFFER_STATUS_OPEN) {
+      return;
+    }
+    offers.push({
+      offerId: doc.id,
+      startupId: data.startupId,
+      startupName: data.startupName,
+      amount: data.amount,
+      valorUnitarioCentavos: data.valorUnitarioCentavos,
+      createdAt: data.createdAt?.toDate?.()?.toISOString() ?? null,
+    });
+  });
+
+  return offers;
+}
 
 /**
  * Lists token offers from Firestore.
@@ -20,20 +64,54 @@ import {
  */
 export async function listAllOffers(excludeSellerId?: string) {
   const snapshot = await db.collection(TOKEN_OFFERS).get();
-  const offers = snapshot.docs
-    .map((doc) => {
-      const data = doc.data();
+  const offers: Array<{
+    offerId: string;
+    startupId: string | undefined;
+    startupName: string;
+    sellerId: string;
+    amount: number;
+    valorUnitarioCentavos: number;
+  }> = [];
 
-      return {
-        offerId: doc.id,
-        startupId: data.startupId,
-        sellerId: data.sellerId,
-        amount: data.amount,
-        valorUnitarioCentavos: data.valorUnitarioCentavos,
-      };
+  snapshot.docs.forEach((doc) => {
+    const data = doc.data();
+    const status = String(data.status ?? OFFER_STATUS_OPEN);
+    if (status !== OFFER_STATUS_OPEN) {
+      return;
+    }
+    const sellerId = data.sellerId as string;
+    if (excludeSellerId && sellerId === excludeSellerId) {
+      return;
+    }
+    offers.push({
+      offerId: doc.id,
+      startupId: data.startupId as string | undefined,
+      startupName: (data.startupName ?? data.startupId) as string,
+      sellerId,
+      amount: data.amount as number,
+      valorUnitarioCentavos: data.valorUnitarioCentavos as number,
+    });
+  });
+
+  // Busca precoToken atual de cada startup para exibir preço de mercado.
+  const uniqueStartupIds = [...new Set(
+    offers.map((o) => o.startupId).filter(Boolean) as string[]
+  )];
+
+  const startupPrices: Record<string, number> = {};
+  await Promise.all(
+    uniqueStartupIds.map(async (id) => {
+      const snap = await db.collection(STARTUPS).doc(id).get();
+      if (snap.exists) {
+        startupPrices[id] = Number(snap.data()?.precoToken ?? 0);
+      }
     })
-    .filter((offer) => !excludeSellerId || offer.sellerId !== excludeSellerId);
-  return offers;
+  );
+
+  return offers.map((o) => ({
+    ...o,
+    precoMercadoCentavos: o.startupId ? (startupPrices[o.startupId] ?? 0) : 0,
+  }));
 }
 
 
@@ -47,11 +125,17 @@ export async function buyTokenOffer(
 ): Promise<BuyTokenOfferResult> {
   const {offerId, buyerId, quantity} = params;
 
+  // Created OUTSIDE runTransaction so retries reuse the same doc IDs
+  const transactionRef = db.collection(TRANSACTIONS).doc();
+
+  let capturedSellerId: string | null = null;
+
   // Toda a operação é atômica: débito do comprador, crédito do vendedor,
   // atualização da oferta e registro da transação acontecem juntos ou falham.
-  return db.runTransaction(async (transaction) => {
+  const result = await db.runTransaction(async (transaction) => {
     const offerRef = db.collection(TOKEN_OFFERS).doc(offerId);
     const offerSnap = await transaction.get(offerRef);
+
 
     if (!offerSnap.exists) {
       throw new HttpsError(
@@ -69,7 +153,16 @@ export async function buyTokenOffer(
       );
     }
 
+    const status = String(offerData.status ?? OFFER_STATUS_OPEN);
+    if (status !== OFFER_STATUS_OPEN) {
+      throw new HttpsError(
+        "failed-precondition",
+        "Oferta não está ativa"
+      );
+    }
+
     const sellerId = offerData.sellerId;
+    capturedSellerId = sellerId as string;
     const startupId = offerData.startupId;
     const availableAmount = Number(offerData.amount ?? 0);
     const pricePerTokenCents = Number(
@@ -82,6 +175,9 @@ export async function buyTokenOffer(
         "Oferta inválida"
       );
     }
+
+    const startupRef = db.collection(STARTUPS).doc(startupId);
+    const startupSnap = await transaction.get(startupRef);
 
     if (sellerId === buyerId) {
       throw new HttpsError(
@@ -133,8 +229,10 @@ export async function buyTokenOffer(
       .doc(WALLET_SALDO);
 
     const userTokenRef = db
+      .collection(USERS)
+      .doc(buyerId)
       .collection(USER_TOKENS)
-      .doc(`${buyerId}_${startupId}`);
+      .doc(startupId);
 
     const buyerWalletSnap = await transaction.get(buyerWalletRef);
     const sellerWalletSnap = await transaction.get(sellerWalletRef);
@@ -183,7 +281,8 @@ export async function buyTokenOffer(
     const existingPreco = Number(userTokenSnap.data()?.precoMedio ?? 0);
     const newQty = existingQty + quantity;
     // Preço médio ponderado entre posição anterior e nova compra.
-    const newPrecoMedio = existingQty === 0 ?
+    // existingPreco === 0 guarda contra dado corrompido (evita média errada).
+    const newPrecoMedio = existingQty === 0 || existingPreco === 0 ?
       pricePerTokenCents :
       Math.round(
         (existingQty * existingPreco + quantity * pricePerTokenCents) / newQty
@@ -202,18 +301,40 @@ export async function buyTokenOffer(
       {merge: true}
     );
 
-    // token_transactions é a fonte de verdade para histórico e portfólio.
-    const transactionRef = db.collection(TOKEN_TRANSACTIONS).doc();
+    const startupData = startupSnap.data();
+    if (startupData) {
+      const totalTokens = Number(startupData.totalTokens ?? 1000);
+      const precoAtual = Number(startupData.precoToken ?? 0);
+      const impacto = (quantity / totalTokens) * FATOR_IMPACTO;
+      const novoPreco = Math.round(precoAtual * (1 + impacto));
+      transaction.update(startupRef, {
+        precoToken: novoPreco,
+        precoTokenAnterior: precoAtual,
+      });
+
+      const priceHistoryRef = db
+        .collection(STARTUPS).doc(startupId as string)
+        .collection(PRICE_HISTORY).doc();
+      transaction.set(priceHistoryRef, {
+        price: novoPreco,
+        type: TX_TYPE_BUY,
+        source: TX_SOURCE_OFFER,
+        quantity,
+        createdAt: FieldValue.serverTimestamp(),
+      });
+    }
 
     transaction.set(transactionRef, {
       offerId,
       startupId,
+      startupName: offerData.startupName ?? startupId,
       buyerId,
       sellerId,
       quantity,
       pricePerTokenCents,
       totalCents,
-      type: "buy",
+      type: TX_TYPE_BUY,
+      source: TX_SOURCE_OFFER,
       createdAt: FieldValue.serverTimestamp(),
     });
 
@@ -227,4 +348,16 @@ export async function buyTokenOffer(
       remainingAmount: newOfferAmount,
     };
   });
+
+  try {
+    await Promise.all([
+      updateTodaySnapshot(buyerId),
+      capturedSellerId ?
+        updateTodaySnapshot(capturedSellerId) : Promise.resolve(),
+    ]);
+  } catch (e) {
+    console.warn("updateTodaySnapshot failed (non-fatal):", e);
+  }
+
+  return result;
 }

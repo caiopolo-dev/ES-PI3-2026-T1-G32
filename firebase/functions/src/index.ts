@@ -7,8 +7,11 @@ import {initializeApp} from "firebase-admin/app";
 initializeApp();
 
 export {createUser, getUserData, checkUserExists} from "./modules/users";
-export {getStartups, getStartupById, createFaq, getFaqs}
+export {getStartups, getStartupById, createFaq, getFaqs, getPriceHistory}
   from "./modules/startups";
-export {listOffers, buyOffer} from "./modules/tokenOffers";
-export {getWalletInfo, getTransactionHistory, getUserTokens}
+export {listOffers, listMyOffers, buyOffer, buyStartupToken, createSellOffer,
+  cancelOffer}
+  from "./modules/tokenOffers";
+export {getWalletInfo, getTransactionHistory, getUserTokens, addBalance,
+  getPortfolioHistory, dailyPortfolioSnapshot}
   from "./modules/wallet";

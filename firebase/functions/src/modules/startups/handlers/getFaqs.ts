@@ -4,6 +4,7 @@
 
 import {onCall, HttpsError} from "firebase-functions/v2/https";
 import {faqsRepository} from "../repositories/faqsRepository";
+import {hasTokensForStartup} from "../../users/repositories/userRepository";
 import {requireAuth} from "../../../shared/validation";
 
 export const getFaqs = onCall(async (request) => {
@@ -15,11 +16,12 @@ export const getFaqs = onCall(async (request) => {
     throw new HttpsError("invalid-argument", "startupId é obrigatório");
   }
 
-  // Email do token é usado no repository para filtrar FAQs privadas:
-  // o usuário só vê as próprias perguntas privadas.
+  const uid = request.auth.uid;
   const email = request.auth.token.email ?? "";
 
-  const faqs = await faqsRepository.findByStartup(startupId, email);
+  const hasTokens = await hasTokensForStartup(uid, startupId);
+
+  const faqs = await faqsRepository.findByStartup(startupId, hasTokens, email);
 
   return {success: true, data: faqs};
 });

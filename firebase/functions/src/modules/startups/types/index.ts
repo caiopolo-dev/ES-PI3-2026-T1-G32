@@ -37,7 +37,7 @@ export interface Faq {
 }
 
 export interface Startup {
-  id?: string;
+  id: string;
   nome: string;
   descricao: string;
   estagio: EstagioStartup;
@@ -52,4 +52,7 @@ export interface Startup {
   status: string;
   createdAt?: FirebaseFirestore.Timestamp;
   updatedAt?: FirebaseFirestore.Timestamp;
+  fechamentoOntemCentavos?: number;
+  variacaoHojePercentual?: number;
+  variacaoLabel?: string;
 }

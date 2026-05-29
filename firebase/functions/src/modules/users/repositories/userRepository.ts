@@ -2,11 +2,13 @@
 // Descrição: Repository de usuários — cadastro, busca e verificação
 
 import {db} from "../../../shared/firebase";
-import {USERS, WALLET, WALLET_SALDO} from "../../../shared/collections";
+import {
+  USERS, WALLET, WALLET_SALDO, USER_TOKENS,
+} from "../../../shared/collections";
 
 /**
  * Registers a new user in Firestore.
- * @param {string} uid User`s uid.
+ * @param {string} uid User's uid.
  * @param {string} name User's full name.
  * @param {string} rg User's RG.
  * @param {string} telefone User's phone number.
@@ -53,6 +55,24 @@ export async function getUserById(uid: string) {
 
 
 /**
+ * Returns true if the user holds at least one token of a given startup.
+ * @param {string} uid User ID.
+ * @param {string} startupId Startup document ID.
+ * @return {Promise<boolean>}
+ */
+export async function hasTokensForStartup(
+  uid: string,
+  startupId: string
+): Promise<boolean> {
+  const doc = await db
+    .collection(USERS).doc(uid)
+    .collection(USER_TOKENS).doc(startupId)
+    .get();
+  return doc.exists && Number(doc.data()?.quantidade ?? 0) > 0;
+}
+
+
+/**
  * Checks if an RG is already registered in Firestore.
  * @param {string} rg User's RG.
  * @return {Promise<boolean>} True if the RG already exists.
@@ -80,5 +100,16 @@ export async function verificarEmailExiste(email: string): Promise<boolean> {
     .limit(1)
     .get();
   return !snapshot.empty;
+}
+
+
+/**
+ * Returns the IDs of all registered users.
+ * Used by scheduled jobs that need to iterate over every user.
+ * @return {Promise<string[]>} Array of user document IDs.
+ */
+export async function listAllUserIds(): Promise<string[]> {
+  const snap = await db.collection(USERS).get();
+  return snap.docs.map((doc) => doc.id);
 }
 
