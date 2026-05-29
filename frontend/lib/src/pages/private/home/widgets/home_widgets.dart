@@ -184,6 +184,7 @@ class PortfolioChartSection extends StatelessWidget {
   final ValueChanged<int> onPeriodChanged;
   final String Function(double) formatLabel;
   final List<Map<String, dynamic>> portfolioHistory;
+  final double valorPortfolio;
 
   const PortfolioChartSection({
     super.key,
@@ -195,6 +196,7 @@ class PortfolioChartSection extends StatelessWidget {
     required this.onPeriodChanged,
     required this.formatLabel,
     required this.portfolioHistory,
+    required this.valorPortfolio,
   });
 
   @override
@@ -283,13 +285,67 @@ class PortfolioChartSection extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 12),
-        GraficoLinha(
-          pontos: pontos,
-          labelsInferiores: labels,
-          formatarValorEsquerda: formatLabel,
-          cor: cor,
-        ),
+        if (pontos.length >= 2)
+          GraficoLinha(
+            pontos: pontos,
+            labelsInferiores: labels,
+            formatarValorEsquerda: formatLabel,
+            cor: cor,
+          )
+        else
+          _ChartPlaceholder(
+            icon: pontos.length == 1 && valorPortfolio > 0
+                ? Icons.schedule_outlined
+                : Icons.error_outline,
+            message: pontos.length == 1 && valorPortfolio > 0
+                ? 'Volte amanhã para acompanhar\na valorização do seu portfólio'
+                : 'Erro ao carregar dados do portfólio',
+            color: pontos.length == 1 && valorPortfolio > 0
+                ? AppColors.cinza500
+                : AppColors.laranja,
+          ),
       ],
+    );
+  }
+}
+
+class _ChartPlaceholder extends StatelessWidget {
+  final IconData icon;
+  final String message;
+  final Color color;
+
+  const _ChartPlaceholder({
+    required this.icon,
+    required this.message,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 180,
+      decoration: BoxDecoration(
+        border: Border.all(color: AppColors.cinza200),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 32, color: color),
+            const SizedBox(height: 10),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontFamily: 'JosefinSans',
+                fontSize: 13,
+                color: color,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

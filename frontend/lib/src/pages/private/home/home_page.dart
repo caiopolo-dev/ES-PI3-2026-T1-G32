@@ -297,6 +297,7 @@ class _HomePageState extends State<HomePage> {
               onPeriodChanged: (i) => setState(() => _selectedPeriodPortfolio = i),
               formatLabel: _formatarPercentualGrafico,
               portfolioHistory: _portfolioHistory,
+              valorPortfolio: _valorPortfolio,
             ),
 
             ], // end if (!_isLoading)
