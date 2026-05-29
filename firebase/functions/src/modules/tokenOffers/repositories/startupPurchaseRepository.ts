@@ -14,7 +14,7 @@ import {
   TX_TYPE_BUY, TX_SOURCE_STARTUP,
 } from "../../../shared/collections";
 import {updateTodaySnapshot} from
-  "../../wallet/repositories/portfolioSnapshotRepository";
+  "../../wallet/repositories/portfolioRepository";
 import {FATOR_IMPACTO} from "../../../shared/tokenPricing";
 
 /**

@@ -9,7 +9,7 @@ import {
   TX_TYPE_RETURN, TX_TYPE_CANCEL_OFFER, TX_SOURCE_SELL_OFFER,
 } from "../../../shared/collections";
 import {updateTodaySnapshot} from
-  "../../wallet/repositories/portfolioSnapshotRepository";
+  "../../wallet/repositories/portfolioRepository";
 import {
   CancelSellOfferParams,
   CancelSellOfferResult,

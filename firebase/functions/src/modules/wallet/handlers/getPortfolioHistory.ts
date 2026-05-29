@@ -4,7 +4,7 @@
 import {onCall, HttpsError} from "firebase-functions/v2/https";
 import {requireAuth} from "../../../shared/validation";
 import {getPortfolioHistoryByUserId} from
-  "../repositories/portfolioHistoryRepository";
+  "../repositories/portfolioRepository";
 
 export const getPortfolioHistory = onCall(async (request) => {
   requireAuth(request.auth);

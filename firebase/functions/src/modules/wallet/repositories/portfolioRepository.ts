@@ -1,21 +1,47 @@
-// Autor: Gustavo Alves de Siqueira Costa
-// Data: 28/05/2026
-// Descrição: Salva/atualiza o snapshot diário do portfólio do usuário.
-// Chamado após cada transação (compra, venda, cancelamento) e pelo job diário.
+// Autor: Caio Ferreira Polo - 25002823 / Gustavo Alves de Siqueira Costa
+// Descrição: Repositório de portfólio — histórico e snapshots diários
 
 import {FieldValue} from "firebase-admin/firestore";
 import {db} from "../../../shared/firebase";
 import {
   USERS,
-  USER_TOKENS,
   STARTUPS,
+  USER_TOKENS,
   PORTFOLIO_HISTORY,
 } from "../../../shared/collections";
 
 /**
- * Atualiza o ponto de hoje em users/{uid}/portfolioHistory/{date}.
- * Usa startup.precoToken (mesma fonte que getUserTokens) para consistência.
- * @param {string} uid ID do usuário.
+ * Returns daily portfolio history points for a user, ordered by date ascending.
+ * @param {string} uid User ID.
+ * @return {Promise<object>} Daily portfolio points for the chart.
+ */
+export async function getPortfolioHistoryByUserId(uid: string) {
+  const snap = await db
+    .collection(USERS).doc(uid)
+    .collection(PORTFOLIO_HISTORY)
+    .orderBy("date", "asc")
+    .get();
+
+  const points = snap.docs.map((doc) => {
+    const d = doc.data();
+    return {
+      date: d.date as string,
+      returnPercent: d.returnPercent as number,
+      investedCents: d.investedCents as number,
+      valueCents: d.valueCents as number,
+    };
+  });
+
+  return {points};
+}
+
+/**
+ * Creates or updates today's portfolio snapshot for a user.
+ * Reads current token positions and startup prices to compute
+ * invested value, current value and return percentage.
+ * Called after every transaction and by the daily scheduled job.
+ * @param {string} uid User ID.
+ * @return {Promise<void>}
  */
 export async function updateTodaySnapshot(uid: string): Promise<void> {
   const tokensSnap = await db

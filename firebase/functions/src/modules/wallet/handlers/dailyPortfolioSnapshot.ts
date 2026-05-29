@@ -6,7 +6,7 @@
 
 import {onSchedule} from "firebase-functions/v2/scheduler";
 import {listAllUserIds} from "../../users/repositories/userRepository";
-import {updateTodaySnapshot} from "../repositories/portfolioSnapshotRepository";
+import {updateTodaySnapshot} from "../repositories/portfolioRepository";
 
 export const dailyPortfolioSnapshot = onSchedule(
   {

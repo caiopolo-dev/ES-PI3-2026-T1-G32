@@ -10,7 +10,7 @@ import {
   OFFER_STATUS_OPEN, TX_TYPE_BUY, TX_SOURCE_OFFER,
 } from "../../../shared/collections";
 import {updateTodaySnapshot} from
-  "../../wallet/repositories/portfolioSnapshotRepository";
+  "../../wallet/repositories/portfolioRepository";
 import {FATOR_IMPACTO} from "../../../shared/tokenPricing";
 
 import {
