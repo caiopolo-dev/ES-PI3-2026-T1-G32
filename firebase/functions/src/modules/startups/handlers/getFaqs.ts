@@ -17,7 +17,7 @@ export const getFaqs = onCall(async (request) => {
   }
 
   const uid = request.auth.uid;
-  const email = request.auth.token.email!;
+  const email = request.auth.token.email ?? "";
 
   const hasTokens = await hasTokensForStartup(uid, startupId);
 
