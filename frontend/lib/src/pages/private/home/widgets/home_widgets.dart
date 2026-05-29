@@ -292,17 +292,23 @@ class PortfolioChartSection extends StatelessWidget {
             formatarValorEsquerda: formatLabel,
             cor: cor,
           )
+        else if (pontos.length == 1 && valorPortfolio > 0)
+          const _ChartPlaceholder(
+            icon: Icons.schedule_outlined,
+            message: 'Volte amanhã para acompanhar\na valorização do seu portfólio',
+            color: AppColors.cinza500,
+          )
+        else if (valorPortfolio == 0)
+          const _ChartPlaceholder(
+            icon: Icons.trending_up,
+            message: 'Comece a investir para acompanhar\na valorização do seu portfólio',
+            color: AppColors.azul,
+          )
         else
-          _ChartPlaceholder(
-            icon: pontos.length == 1 && valorPortfolio > 0
-                ? Icons.schedule_outlined
-                : Icons.error_outline,
-            message: pontos.length == 1 && valorPortfolio > 0
-                ? 'Volte amanhã para acompanhar\na valorização do seu portfólio'
-                : 'Erro ao carregar dados do portfólio',
-            color: pontos.length == 1 && valorPortfolio > 0
-                ? AppColors.cinza500
-                : AppColors.laranja,
+          const _ChartPlaceholder(
+            icon: Icons.error_outline,
+            message: 'Erro ao carregar dados do portfólio',
+            color: AppColors.laranja,
           ),
       ],
     );
