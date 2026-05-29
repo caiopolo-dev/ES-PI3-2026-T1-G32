@@ -1,12 +1,20 @@
 // Autor: Gustavo Alves de Siqueira Costa
-// Data: 14/05/2026
-// Descrição: Barrel de widgets reutilizáveis do app
+// Data: 28/05/2026
+// Descrição: Barrel de widgets compartilhados — exporta todos os componentes
+//            reutilizáveis do app (UI primitivos, financeiros e de layout)
 
-export 'app_filter_chip.dart';
-export 'app_loading_indicator.dart';
-export 'app_search_field.dart';
-export 'deposit_dialog.dart';
-export 'main_scaffold.dart';
-export 'saldo_display.dart';
-export 'user_avatar_menu.dart';
-export 'token_action_bottom_sheet.dart';
+// UI primitives
+export 'ui_primitives/app_button.dart';
+export 'ui_primitives/app_filter_chip.dart';
+export 'ui_primitives/app_loading_indicator.dart';
+export 'ui_primitives/app_search_field.dart';
+export 'ui_primitives/daily_variation_badge.dart';
+export 'ui_primitives/graficos.dart';
+export 'ui_primitives/user_avatar_menu.dart';
+
+// Finance
+export 'finance/deposit_dialog.dart';
+export 'finance/saldo_display.dart';
+
+// Layout
+export 'layout/main_scaffold.dart';

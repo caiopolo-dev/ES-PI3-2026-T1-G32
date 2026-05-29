@@ -7,7 +7,10 @@ import {HttpsError} from "firebase-functions/v2/https";
 import {
   USERS, STARTUPS, TOKEN_OFFERS, TRANSACTIONS,
   WALLET, WALLET_SALDO, USER_TOKENS, PRICE_HISTORY,
+  OFFER_STATUS_OPEN, TX_TYPE_BUY, TX_SOURCE_OFFER,
 } from "../../../shared/collections";
+import {updateTodaySnapshot} from
+  "../../wallet/repositories/portfolioSnapshotRepository";
 import {FATOR_IMPACTO} from "../../../shared/tokenPricing";
 
 import {
@@ -37,8 +40,8 @@ export async function listOffersBySeller(sellerId: string) {
 
   snapshot.docs.forEach((doc) => {
     const data = doc.data();
-    const status = String(data.status ?? "open");
-    if (status !== "open") {
+    const status = String(data.status ?? OFFER_STATUS_OPEN);
+    if (status !== OFFER_STATUS_OPEN) {
       return;
     }
     offers.push({
@@ -72,8 +75,8 @@ export async function listAllOffers(excludeSellerId?: string) {
 
   snapshot.docs.forEach((doc) => {
     const data = doc.data();
-    const status = String(data.status ?? "open");
-    if (status !== "open") {
+    const status = String(data.status ?? OFFER_STATUS_OPEN);
+    if (status !== OFFER_STATUS_OPEN) {
       return;
     }
     const sellerId = data.sellerId as string;
@@ -125,9 +128,11 @@ export async function buyTokenOffer(
   // Created OUTSIDE runTransaction so retries reuse the same doc IDs
   const transactionRef = db.collection(TRANSACTIONS).doc();
 
+  let capturedSellerId: string | null = null;
+
   // Toda a operação é atômica: débito do comprador, crédito do vendedor,
   // atualização da oferta e registro da transação acontecem juntos ou falham.
-  return db.runTransaction(async (transaction) => {
+  const result = await db.runTransaction(async (transaction) => {
     const offerRef = db.collection(TOKEN_OFFERS).doc(offerId);
     const offerSnap = await transaction.get(offerRef);
 
@@ -148,8 +153,8 @@ export async function buyTokenOffer(
       );
     }
 
-    const status = String(offerData.status ?? "open");
-    if (status !== "open") {
+    const status = String(offerData.status ?? OFFER_STATUS_OPEN);
+    if (status !== OFFER_STATUS_OPEN) {
       throw new HttpsError(
         "failed-precondition",
         "Oferta não está ativa"
@@ -157,6 +162,7 @@ export async function buyTokenOffer(
     }
 
     const sellerId = offerData.sellerId;
+    capturedSellerId = sellerId as string;
     const startupId = offerData.startupId;
     const availableAmount = Number(offerData.amount ?? 0);
     const pricePerTokenCents = Number(
@@ -275,7 +281,8 @@ export async function buyTokenOffer(
     const existingPreco = Number(userTokenSnap.data()?.precoMedio ?? 0);
     const newQty = existingQty + quantity;
     // Preço médio ponderado entre posição anterior e nova compra.
-    const newPrecoMedio = existingQty === 0 ?
+    // existingPreco === 0 guarda contra dado corrompido (evita média errada).
+    const newPrecoMedio = existingQty === 0 || existingPreco === 0 ?
       pricePerTokenCents :
       Math.round(
         (existingQty * existingPreco + quantity * pricePerTokenCents) / newQty
@@ -310,8 +317,8 @@ export async function buyTokenOffer(
         .collection(PRICE_HISTORY).doc();
       transaction.set(priceHistoryRef, {
         price: novoPreco,
-        type: "buy",
-        source: "offer",
+        type: TX_TYPE_BUY,
+        source: TX_SOURCE_OFFER,
         quantity,
         createdAt: FieldValue.serverTimestamp(),
       });
@@ -326,8 +333,8 @@ export async function buyTokenOffer(
       quantity,
       pricePerTokenCents,
       totalCents,
-      type: "buy",
-      source: "offer",
+      type: TX_TYPE_BUY,
+      source: TX_SOURCE_OFFER,
       createdAt: FieldValue.serverTimestamp(),
     });
 
@@ -341,4 +348,16 @@ export async function buyTokenOffer(
       remainingAmount: newOfferAmount,
     };
   });
+
+  try {
+    await Promise.all([
+      updateTodaySnapshot(buyerId),
+      capturedSellerId ?
+        updateTodaySnapshot(capturedSellerId) : Promise.resolve(),
+    ]);
+  } catch (e) {
+    console.warn("updateTodaySnapshot failed (non-fatal):", e);
+  }
+
+  return result;
 }

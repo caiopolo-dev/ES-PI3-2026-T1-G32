@@ -6,7 +6,10 @@ import {HttpsError} from "firebase-functions/v2/https";
 import {db} from "../../../shared/firebase";
 import {
   USERS, STARTUPS, TOKEN_OFFERS, USER_TOKENS, PRICE_HISTORY,
+  OFFER_STATUS_OPEN, TX_TYPE_SELL, TX_SOURCE_SELL_OFFER,
 } from "../../../shared/collections";
+import {updateTodaySnapshot} from
+  "../../wallet/repositories/portfolioSnapshotRepository";
 import {FATOR_IMPACTO} from "../../../shared/tokenPricing";
 import {
   CreateSellOfferParams,
@@ -23,7 +26,7 @@ export async function createSellOffer(
 ): Promise<CreateSellOfferResult> {
   const {startupId, sellerId, quantity, pricePerTokenCents} = params;
 
-  return db.runTransaction(async (transaction) => {
+  const result = await db.runTransaction(async (transaction) => {
     const startupRef = db.collection(STARTUPS).doc(startupId);
     const userTokenRef = db
       .collection(USERS)
@@ -85,14 +88,12 @@ export async function createSellOffer(
       startupId,
       startupName,
       amount: quantity,
-      // ------------------------ modificação - caio
       valorUnitarioCentavos: pricePerTokenCents,
       precoMedio,
       valorAtual,
-      status: "open",
+      status: OFFER_STATUS_OPEN,
       createdAt: FieldValue.serverTimestamp(),
       updatedAt: FieldValue.serverTimestamp(),
-      // -------------------------------------------
     });
 
     // Oferta de venda aumenta a oferta disponível → pressão de baixa no preço
@@ -110,8 +111,8 @@ export async function createSellOffer(
       .collection(PRICE_HISTORY).doc();
     transaction.set(priceHistoryRef, {
       price: novoPreco,
-      type: "sell",
-      source: "sell_offer",
+      type: TX_TYPE_SELL,
+      source: TX_SOURCE_SELL_OFFER,
       quantity,
       createdAt: FieldValue.serverTimestamp(),
     });
@@ -124,4 +125,12 @@ export async function createSellOffer(
       pricePerTokenCents,
     };
   });
+
+  try {
+    await updateTodaySnapshot(sellerId);
+  } catch (e) {
+    console.warn("updateTodaySnapshot failed (non-fatal):", e);
+  }
+
+  return result;
 }

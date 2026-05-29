@@ -4,8 +4,6 @@
 
 import 'package:cloud_functions/cloud_functions.dart';
 
-import 'package:flutter/foundation.dart';
-
 class WalletService {
   static Future<Map<String, dynamic>> getWalletData() async {
     try {
@@ -136,16 +134,11 @@ class WalletService {
         'points': list,
       };
     } on FirebaseFunctionsException catch (e) {
-      debugPrint('ERRO getPortfolioHistory CODE: ${e.code}');
-      debugPrint('ERRO getPortfolioHistory MESSAGE: ${e.message}');
-      debugPrint('ERRO getPortfolioHistory DETAILS: ${e.details}');
       return {
         'success': false,
         'message': e.message ?? 'Erro ao buscar histórico do portfólio',
       };
     } catch (e) {
-
-      debugPrint('ERRO getPortfolioHistory INESPERADO: $e');
       return {
         'success': false,
         'message': e.toString(),

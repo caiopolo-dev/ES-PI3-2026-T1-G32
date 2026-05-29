@@ -22,6 +22,15 @@ const docToFaq = (doc: FirebaseFirestore.QueryDocumentSnapshot): Faq => ({
 });
 
 export const faqsRepository = {
+  /**
+   * Returns the FAQs of a startup visible to the requesting user.
+   * Public FAQs are always included. Private FAQs are only included
+   * when the user holds tokens of the startup and is the author.
+   * @param {string} startupId Startup document ID.
+   * @param {boolean} hasTokens Whether the user holds tokens of this startup.
+   * @param {string} userEmail Email of the requesting user.
+   * @return {Promise<Faq[]>} FAQs sorted by most recent first.
+   */
   async findByStartup(
     startupId: string,
     hasTokens: boolean,
@@ -37,6 +46,15 @@ export const faqsRepository = {
       .sort((a, b) => (b.criadoEm ?? 0) - (a.criadoEm ?? 0));
   },
 
+  /**
+   * Creates a new FAQ entry for a startup.
+   * @param {string} startupId Startup document ID.
+   * @param {string} pergunta Question text.
+   * @param {boolean} privada Whether the question is private (author-only).
+   * @param {string} email Author's email address.
+   * @param {string} nomeUsuario Author's display name.
+   * @return {Promise<void>}
+   */
   async create(
     startupId: string,
     pergunta: string,

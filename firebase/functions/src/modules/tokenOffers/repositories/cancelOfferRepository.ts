@@ -6,7 +6,10 @@ import {HttpsError} from "firebase-functions/v2/https";
 import {db} from "../../../shared/firebase";
 import {
   USERS, TOKEN_OFFERS, USER_TOKENS, STARTUPS, PRICE_HISTORY, TRANSACTIONS,
+  TX_TYPE_RETURN, TX_TYPE_CANCEL_OFFER, TX_SOURCE_SELL_OFFER,
 } from "../../../shared/collections";
+import {updateTodaySnapshot} from
+  "../../wallet/repositories/portfolioSnapshotRepository";
 import {
   CancelSellOfferParams,
   CancelSellOfferResult,
@@ -25,7 +28,7 @@ export async function cancelOffer(
   // Created OUTSIDE runTransaction so retries reuse the same doc IDs
   const transactionRef = db.collection(TRANSACTIONS).doc();
 
-  return db.runTransaction(async (transaction) => {
+  const result = await db.runTransaction(async (transaction) => {
     const offerRef = db.collection(TOKEN_OFFERS).doc(offerId);
     const offerSnap = await transaction.get(offerRef);
     if (!offerSnap.exists) {
@@ -98,7 +101,7 @@ export async function cancelOffer(
 
     // Record the return in transaction history (creates a new lot in portfolio)
     transaction.set(transactionRef, {
-      type: "return",
+      type: TX_TYPE_RETURN,
       buyerId: sellerId,
       startupId,
       startupName,
@@ -127,8 +130,8 @@ export async function cancelOffer(
         .collection(PRICE_HISTORY).doc();
       transaction.set(priceHistoryRef, {
         price: precoRevertido,
-        type: "cancel_offer",
-        source: "sell_offer",
+        type: TX_TYPE_CANCEL_OFFER,
+        source: TX_SOURCE_SELL_OFFER,
         quantity: amount,
         createdAt: FieldValue.serverTimestamp(),
       });
@@ -142,4 +145,12 @@ export async function cancelOffer(
       returnedAmount: amount,
     };
   });
+
+  try {
+    await updateTodaySnapshot(sellerId);
+  } catch (e) {
+    console.warn("updateTodaySnapshot failed (non-fatal):", e);
+  }
+
+  return result;
 }

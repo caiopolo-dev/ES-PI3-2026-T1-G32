@@ -2,6 +2,7 @@
 // Data: 05/05/2026
 // Descrição: Service responsável pela resolução de URLs do Firebase Storage
 
+import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 
@@ -18,6 +19,8 @@ class StorageService {
       return await FirebaseStorage.instance
           .ref('$slug/$asset')
           .getDownloadURL();
+    } on SocketException {
+      return null;
     } catch (e) {
       debugPrint('[Storage] $asset error ($nome): $e');
       return null;

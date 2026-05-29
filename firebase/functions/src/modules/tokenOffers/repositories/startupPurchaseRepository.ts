@@ -11,7 +11,10 @@ import {
   WALLET_SALDO,
   USER_TOKENS,
   PRICE_HISTORY,
+  TX_TYPE_BUY, TX_SOURCE_STARTUP,
 } from "../../../shared/collections";
+import {updateTodaySnapshot} from
+  "../../wallet/repositories/portfolioSnapshotRepository";
 import {FATOR_IMPACTO} from "../../../shared/tokenPricing";
 
 /**
@@ -34,7 +37,7 @@ export async function buyStartupTokenDirectly(params: {
     .collection(STARTUPS).doc(startupId)
     .collection(PRICE_HISTORY).doc();
 
-  return db.runTransaction(async (transaction) => {
+  const result = await db.runTransaction(async (transaction) => {
     const startupRef = db.collection(STARTUPS).doc(startupId);
     const buyerWalletRef = db
       .collection(USERS)
@@ -141,8 +144,8 @@ export async function buyStartupTokenDirectly(params: {
 
     transaction.set(priceHistoryRef, {
       price: novoPreco,
-      type: "buy",
-      source: "startup",
+      type: TX_TYPE_BUY,
+      source: TX_SOURCE_STARTUP,
       quantity,
       createdAt: FieldValue.serverTimestamp(),
     });
@@ -169,8 +172,8 @@ export async function buyStartupTokenDirectly(params: {
       quantity,
       pricePerTokenCents,
       totalCents,
-      type: "buy",
-      source: "startup",
+      type: TX_TYPE_BUY,
+      source: TX_SOURCE_STARTUP,
       createdAt: FieldValue.serverTimestamp(),
     });
 
@@ -184,4 +187,12 @@ export async function buyStartupTokenDirectly(params: {
       remainingTokens: newAvailableTokens,
     };
   });
+
+  try {
+    await updateTodaySnapshot(buyerId);
+  } catch (e) {
+    console.warn("updateTodaySnapshot failed (non-fatal):", e);
+  }
+
+  return result;
 }

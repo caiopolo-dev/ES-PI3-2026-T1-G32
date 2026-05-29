@@ -6,7 +6,7 @@ import {FieldValue, Timestamp} from "firebase-admin/firestore";
 import {db} from "../../../shared/firebase";
 import {
   USERS, TRANSACTIONS, STARTUPS, WALLET, WALLET_SALDO, USER_TOKENS,
-  PRICE_HISTORY,
+  PRICE_HISTORY, TX_TYPE_SELL, TX_TYPE_DEPOSIT,
 } from "../../../shared/collections";
 
 /**
@@ -79,7 +79,7 @@ export async function getTransactionHistoryByUserId(uid: string) {
     const data = doc.data();
     return {
       id: doc.id,
-      type: "sell",
+      type: TX_TYPE_SELL,
       startupId: data.startupId ?? null,
       startupName: data.startupName ?? null,
       quantity: Number(data.quantity ?? 0),
@@ -126,11 +126,13 @@ export async function getUserTokensByUserId(uid: string) {
     }
   });
 
-  // Last price before today — same logic as startupRepository.
+  // Same cutoff as startupRepository: Brazil time (UTC-3 = 03:00 UTC).
+  const brazilNow = new Date(new Date().getTime() - 3 * 60 * 60 * 1000);
   const startOfDay = Timestamp.fromDate(new Date(Date.UTC(
-    new Date().getUTCFullYear(),
-    new Date().getUTCMonth(),
-    new Date().getUTCDate()
+    brazilNow.getUTCFullYear(),
+    brazilNow.getUTCMonth(),
+    brazilNow.getUTCDate(),
+    3, 0, 0, 0
   )));
   const fechamentoMap: Record<string, number> = {};
   await Promise.all(
@@ -197,7 +199,7 @@ export async function addBalanceToWallet(uid: string, amountCents: number) {
       {merge: true}
     );
     transaction.set(txRef, {
-      type: "deposit",
+      type: TX_TYPE_DEPOSIT,
       buyerId: uid,
       totalCents: amountCents,
       createdAt: FieldValue.serverTimestamp(),
