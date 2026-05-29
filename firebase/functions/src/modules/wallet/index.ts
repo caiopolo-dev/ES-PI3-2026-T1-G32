@@ -7,3 +7,4 @@ export {getTransactionHistory} from "./handlers/getTransactionHistory";
 export {getUserTokens} from "./handlers/getUserTokens";
 export {addBalance} from "./handlers/addBalance";
 export {getPortfolioHistory} from "./handlers/getPortfolioHistory";
+export {dailyPortfolioSnapshot} from "./handlers/dailyPortfolioSnapshot";
