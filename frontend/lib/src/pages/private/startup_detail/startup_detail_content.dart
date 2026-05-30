@@ -4,9 +4,11 @@
 
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:mescla_invest/src/theme/app_colors.dart';
 import 'package:mescla_invest/src/widgets/widgets.dart';
+import 'package:mescla_invest/src/pages/private/buy_steps/buy_steps_page.dart';
 import 'package:mescla_invest/src/pages/private/startup_detail/startup_detail_types.dart';
 import 'package:mescla_invest/src/pages/private/startup_detail/widgets/startup_detail_widgets.dart';
 
@@ -15,6 +17,10 @@ class StartupDetailContent extends StatelessWidget {
   final bool priceHistoryLoading;
   final List<Map<String, dynamic>> priceHistory;
   final PriceHistoryPeriod selectedPeriod;
+  final StartupDetailSection selectedSection;
+  final List<Map<String, dynamic>> offers;
+  final bool offersLoading;
+  final String? offersError;
   final String? videoUrl;
   final String? summaryUrl;
   final int userTokenQuantity;
@@ -27,6 +33,9 @@ class StartupDetailContent extends StatelessWidget {
   final VoidCallback onFaqDialogOpen;
   final ValueChanged<int> onPeriodChanged;
   final ValueChanged<int> onFaqFilterChanged;
+  final ValueChanged<StartupDetailSection> onSectionChanged;
+  final Future<void> Function() onOffersRefresh;
+  final VoidCallback? onOfferPurchased;
   final Future<void> Function()? onRefresh;
 
   const StartupDetailContent({
@@ -35,6 +44,10 @@ class StartupDetailContent extends StatelessWidget {
     required this.priceHistoryLoading,
     required this.priceHistory,
     required this.selectedPeriod,
+    required this.selectedSection,
+    required this.offers,
+    required this.offersLoading,
+    this.offersError,
     this.videoUrl,
     this.summaryUrl,
     required this.userTokenQuantity,
@@ -47,8 +60,16 @@ class StartupDetailContent extends StatelessWidget {
     required this.onFaqDialogOpen,
     required this.onPeriodChanged,
     required this.onFaqFilterChanged,
+    required this.onSectionChanged,
+    required this.onOffersRefresh,
+    this.onOfferPurchased,
     this.onRefresh,
   });
+
+  static final NumberFormat _currency =
+      NumberFormat.currency(locale: 'pt_BR', symbol: 'R\$');
+  static final NumberFormat _intFormat =
+      NumberFormat('#,##0', 'pt_BR');
 
   DateTime? _converterDataHistorico(String? dataTexto) {
     if (dataTexto == null || dataTexto.isEmpty) return null;
@@ -107,6 +128,256 @@ class StartupDetailContent extends StatelessWidget {
     }).toList();
   }
 
+  Widget _buildSectionTabs() {
+    return Row(
+      children: [
+        Expanded(
+          child: _buildSectionTab(
+            label: 'Gráfico de variação',
+            isSelected: selectedSection == StartupDetailSection.chart,
+            alignment: Alignment.centerLeft,
+            onTap: () => onSectionChanged(StartupDetailSection.chart),
+          ),
+        ),
+        Expanded(
+          child: _buildSectionTab(
+            label: 'Ofertas do balcão',
+            isSelected: selectedSection == StartupDetailSection.offers,
+            alignment: Alignment.centerRight,
+            onTap: () => onSectionChanged(StartupDetailSection.offers),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSectionTab({
+    required String label,
+    required bool isSelected,
+    required Alignment alignment,
+    required VoidCallback onTap,
+  }) {
+    final color = isSelected ? AppColors.azul : AppColors.cinza500;
+    final crossAxisAlignment = alignment == Alignment.centerLeft
+        ? CrossAxisAlignment.start
+        : CrossAxisAlignment.end;
+
+    return Align(
+      alignment: alignment,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: IntrinsicWidth(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: crossAxisAlignment,
+            children: [
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                  color: color,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Container(
+                height: 2,
+                color: isSelected ? AppColors.azul : AppColors.transparente,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSelectedSection(BuildContext context) {
+    if (selectedSection == StartupDetailSection.chart) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          priceHistoryLoading
+              ? Container(
+                  height: 180,
+                  decoration: BoxDecoration(
+                    border: Border.all(color: AppColors.cinza200),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Center(child: AppLoadingIndicator()),
+                )
+              : Builder(builder: (context) {
+                  final pontos = _pontosGrafico();
+                  final cor = pontos.length >= 2
+                      ? pontos.last.y > pontos.first.y
+                          ? AppColors.verde
+                          : pontos.last.y < pontos.first.y
+                              ? AppColors.vermelho
+                              : AppColors.preto
+                      : AppColors.preto;
+                  return GraficoLinha(
+                    pontos: pontos,
+                    labelsInferiores: _labelsGrafico(),
+                    formatarValorEsquerda: (valor) => 'R\$ ${valor.toStringAsFixed(2)}',
+                    cor: cor,
+                  );
+                }),
+          const SizedBox(height: 14),
+          PeriodSelectorRow(
+            labels: periods,
+            selected: selectedPeriod.index,
+            onSelected: onPeriodChanged,
+          ),
+        ],
+      );
+    }
+
+    return _buildOffersSection(context);
+  }
+
+  Widget _buildOffersSection(BuildContext context) {
+    const double offersHeight = 230;
+
+    if (offersLoading) {
+      return _buildOffersBox(
+        height: offersHeight,
+        child: const Center(child: AppLoadingIndicator()),
+      );
+    }
+
+    if (offersError != null) {
+      return _buildOffersBox(
+        height: offersHeight,
+        child: Center(
+          child: Text(
+            offersError!,
+            style: const TextStyle(color: AppColors.cinza500),
+          ),
+        ),
+      );
+    }
+
+    if (offers.isEmpty) {
+      return _buildOffersBox(
+        height: offersHeight,
+        child: const Center(
+          child: Text(
+            'Nenhuma oferta disponível para esta startup no momento.',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: AppColors.cinza500),
+          ),
+        ),
+      );
+    }
+
+    return _buildOffersBox(
+      height: offersHeight,
+      child: ListView.separated(
+        primary: false,
+        itemCount: offers.length,
+        separatorBuilder: (_, _) => const Divider(height: 16, color: AppColors.cinza200),
+        itemBuilder: (context, index) => _buildOfferItem(context, offers[index]),
+      ),
+    );
+  }
+
+  Widget _buildOffersBox({required double height, required Widget child}) {
+    return SizedBox(
+      height: height,
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          border: Border.all(color: AppColors.cinza200),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: child,
+      ),
+    );
+  }
+
+  Widget _buildOfferItem(BuildContext context, Map<String, dynamic> data) {
+    final amount = (data['amount'] as num?)?.toInt() ?? 0;
+    final unitCents = (data['valorUnitarioCentavos'] as num?)?.toInt() ?? 0;
+    final offerId = (data['offerId'] ?? '').toString();
+    final totalCents = amount * unitCents;
+    final startupName = (data['startupName'] ?? startup['nome'] ?? '').toString();
+    final unitValue = unitCents / 100;
+    final totalValue = totalCents / 100;
+
+    return Row(
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '${_intFormat.format(amount)} tokens',
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                '${_currency.format(unitValue)} por token',
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: AppColors.cinza700,
+                ),
+              ),
+              Text(
+                'Total: ${_currency.format(totalValue)}',
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: AppColors.cinza700,
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(width: 8),
+        SizedBox(
+          height: 30,
+          child: OutlinedButton(
+            onPressed: offerId.isEmpty || amount <= 0 || unitCents <= 0
+                ? null
+                : () async {
+                    final comprou = await Navigator.push<bool>(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => BuyStepsPage(
+                          startupName: startupName,
+                          availableQuantity: amount,
+                          pricePerTokenCents: unitCents,
+                          offerId: offerId,
+                        ),
+                      ),
+                    );
+                    if (!context.mounted) return;
+                    if (comprou == true) {
+                      onOfferPurchased?.call();
+                      await onOffersRefresh();
+                    }
+                  },
+            style: OutlinedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              foregroundColor: AppColors.azul,
+              side: const BorderSide(color: AppColors.azul),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            ),
+            child: const Text(
+              'Comprar',
+              style: TextStyle(
+                fontFamily: 'JosefinSans',
+                fontSize: 12,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final precoToken = ((startup['precoToken'] as num?)?.toDouble() ?? 0.0) / 100;
@@ -141,37 +412,9 @@ class StartupDetailContent extends StatelessWidget {
           const SizedBox(height: 16),
           const Divider(),
           const SizedBox(height: 36),
-          priceHistoryLoading
-              ? Container(
-                  height: 180,
-                  decoration: BoxDecoration(
-                    border: Border.all(color: AppColors.cinza200),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Center(child: AppLoadingIndicator()),
-                )
-              : Builder(builder: (context) {
-                  final pontos = _pontosGrafico();
-                  final cor = pontos.length >= 2
-                      ? pontos.last.y > pontos.first.y
-                          ? AppColors.verde
-                          : pontos.last.y < pontos.first.y
-                              ? AppColors.vermelho
-                              : AppColors.preto
-                      : AppColors.preto;
-                  return GraficoLinha(
-                    pontos: pontos,
-                    labelsInferiores: _labelsGrafico(),
-                    formatarValorEsquerda: (valor) => 'R\$ ${valor.toStringAsFixed(2)}',
-                    cor: cor,
-                  );
-                }),
-          const SizedBox(height: 14),
-          PeriodSelectorRow(
-            labels: periods,
-            selected: selectedPeriod.index,
-            onSelected: onPeriodChanged,
-          ),
+          _buildSectionTabs(),
+          const SizedBox(height: 12),
+          _buildSelectedSection(context),
           const SizedBox(height: 28),
           const SectionTitle(title: 'Apresentação em vídeo'),
           const SizedBox(height: 14),

@@ -5,3 +5,5 @@
 enum PriceHistoryPeriod { oneDay, sevenDays, oneMonth, sixMonths, oneYear, all }
 
 enum FaqFilter { todas, publicas, privadas }
+
+enum StartupDetailSection { chart, offers }

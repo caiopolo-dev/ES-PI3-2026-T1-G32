@@ -3,6 +3,7 @@
 // Descrição: Tela de detalhes de uma startup
 
 import 'package:flutter/material.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:mescla_invest/src/theme/app_colors.dart';
 import 'package:mescla_invest/src/services/startup_service.dart';
 import 'package:mescla_invest/src/services/faq_service.dart';
@@ -44,14 +45,18 @@ class _StartupDetailPageState extends State<StartupDetailPage> {
   String? _videoUrl;
   String? _summaryUrl;
   PriceHistoryPeriod _selectedPeriod = PriceHistoryPeriod.sixMonths;
+  StartupDetailSection _selectedSection = StartupDetailSection.chart;
   List<Map<String, dynamic>> _faqs = [];
   bool _faqsLoading = false;
   FaqFilter _faqFilter = FaqFilter.todas;
   bool _priceHistoryLoading = false;
   double _valorizacaoPercentual = 0.0;
   List<Map<String, dynamic>> _priceHistory = [];
+  List<Map<String, dynamic>> _offers = [];
+  bool _offersLoading = false;
+  String? _offersError;
 
-  final List<String> _periods = ['1D', '7D', '1M', '6M', '1A', 'Tudo'];
+  final List<String> _periods = ['1D', '7D', '1M', '6M', 'YTD', 'Tudo'];
   final List<String> _faqFilters = ['Todas', 'Públicas', 'Privadas'];
 
   @override
@@ -60,6 +65,7 @@ class _StartupDetailPageState extends State<StartupDetailPage> {
     _initPage();
     _loadFaqs();
     _loadPriceHistory();
+    _loadOffers();
   }
 
   Future<void> _initPage() async {
@@ -128,6 +134,40 @@ class _StartupDetailPageState extends State<StartupDetailPage> {
     }
   }
 
+  Future<void> _loadOffers() async {
+    if (!mounted) return;
+    setState(() {
+      _offersLoading = true;
+      _offersError = null;
+    });
+    try {
+      final result = await FirebaseFunctions.instance
+          .httpsCallable('listOffers')
+          .call();
+      if (!mounted) return;
+      final list = (result.data['data'] as List? ?? [])
+          .map((e) => Map<String, dynamic>.from(e as Map))
+          .where((o) => (o['startupId'] ?? '').toString() == widget.startupId)
+          .where((o) {
+            final amount = (o['amount'] as num?)?.toInt() ?? 0;
+            final unitCents = (o['valorUnitarioCentavos'] as num?)?.toInt() ?? 0;
+            final offerId = (o['offerId'] ?? '').toString();
+            return amount > 0 && unitCents > 0 && offerId.isNotEmpty;
+          })
+          .toList();
+      setState(() {
+        _offers = list;
+        _offersLoading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _offersError = 'Erro ao carregar ofertas';
+        _offersLoading = false;
+      });
+    }
+  }
+
   Future<void> _loadUserTokens() async {
     final result = await WalletService.getUserTokens();
     if (!mounted || result['success'] != true) return;
@@ -168,7 +208,21 @@ class _StartupDetailPageState extends State<StartupDetailPage> {
     }
   }
 
-  Future<void> _refresh() => Future.wait([_initPage(), _loadPriceHistory(), _loadFaqs()]);
+  Future<void> _refresh() => Future.wait([
+        _initPage(),
+        _loadPriceHistory(),
+        _loadFaqs(),
+        _loadOffers(),
+      ]);
+
+  void _handleOfferPurchase() {
+    _houvePurchase = true;
+    _loadUserTokens();
+    _loadFaqs();
+    _fetchDetail();
+    _loadPriceHistory();
+    _loadOffers();
+  }
 
   // O backend filtra FAQs privadas: o usuário só vê as próprias — as de outros são excluídas.
   Future<void> _loadFaqs() async {
@@ -322,6 +376,10 @@ class _StartupDetailPageState extends State<StartupDetailPage> {
                         priceHistoryLoading: _priceHistoryLoading,
                         priceHistory: _priceHistory,
                         selectedPeriod: _selectedPeriod,
+                        selectedSection: _selectedSection,
+                        offers: _offers,
+                        offersLoading: _offersLoading,
+                        offersError: _offersError,
                         videoUrl: _videoUrl,
                         summaryUrl: _summaryUrl,
                         userTokenQuantity: _userTokenQuantity,
@@ -334,6 +392,9 @@ class _StartupDetailPageState extends State<StartupDetailPage> {
                         onFaqDialogOpen: _showFaqDialog,
                         onPeriodChanged: (i) => setState(() => _selectedPeriod = PriceHistoryPeriod.values[i]),
                         onFaqFilterChanged: (i) => setState(() => _faqFilter = FaqFilter.values[i]),
+                        onSectionChanged: (section) => setState(() => _selectedSection = section),
+                        onOffersRefresh: _loadOffers,
+                        onOfferPurchased: _handleOfferPurchase,
                         onRefresh: _refresh,
                       ),
                     ),
