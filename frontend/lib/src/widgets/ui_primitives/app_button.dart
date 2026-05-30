@@ -101,14 +101,16 @@ class AppOutlineButton extends StatelessWidget {
   final Color color;
   final double borderRadius;
   final double verticalPadding;
+  final double horizontalPadding;
 
   const AppOutlineButton({
     super.key,
     required this.label,
     required this.onPressed,
-    this.color = AppColors.cinza400,
+    this.color = AppColors.azul,
     this.borderRadius = 24,
     this.verticalPadding = 14,
+    this.horizontalPadding = 16,
   });
 
   @override
@@ -117,8 +119,11 @@ class AppOutlineButton extends StatelessWidget {
       onPressed: onPressed,
       style: OutlinedButton.styleFrom(
         foregroundColor: color,
-        padding: EdgeInsets.symmetric(vertical: verticalPadding),
-        side: BorderSide(color: color),
+        padding: EdgeInsets.symmetric(
+          vertical: verticalPadding,
+          horizontal: horizontalPadding,
+        ),
+        side: BorderSide(color: color, width: 1.5),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(borderRadius),
         ),

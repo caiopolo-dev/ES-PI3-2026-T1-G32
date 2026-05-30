@@ -385,8 +385,9 @@ class StartupDetailContent extends StatelessWidget {
               if (url == null || url.isEmpty) return const SizedBox.shrink();
               return Center(
                 child: AppOutlineButton(
-                  label: 'Acessar sumário executivo',
+                  label: 'Ver sumário executivo',
                   borderRadius: 8,
+                  horizontalPadding: 20,
                   onPressed: () async {
                     final uri = Uri.tryParse(url);
                     if (uri == null) return;
