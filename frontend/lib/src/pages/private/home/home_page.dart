@@ -21,7 +21,12 @@ class HomePage extends StatefulWidget {
   final void Function(int)? onTabSwitch;
   final bool isActive;
 
-  const HomePage({super.key, this.usuario, this.onTabSwitch, this.isActive = false});
+  const HomePage({
+    super.key,
+    this.usuario,
+    this.onTabSwitch,
+    this.isActive = false,
+  });
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -54,7 +59,9 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _loadVisibility() async {
     final prefs = await SharedPreferences.getInstance();
-    if (mounted) setState(() => _saldoVisivel = prefs.getBool('balance_visible') ?? false);
+    if (mounted) {
+      setState(() => _saldoVisivel = prefs.getBool('balance_visible') ?? false);
+    }
   }
 
   Future<void> _saveVisibility(bool value) async {
@@ -156,7 +163,9 @@ class _HomePageState extends State<HomePage> {
       _meusInvestimentos.map((data) async {
         final id = data['id'] as String? ?? '';
         final url = await StorageService.getStartupAsset(
-          data['nome'] as String? ?? '', 'logoPhoto.jpeg');
+          data['nome'] as String? ?? '',
+          'logoPhoto.jpeg',
+        );
         return MapEntry(id, url);
       }),
     );
@@ -164,32 +173,39 @@ class _HomePageState extends State<HomePage> {
     setState(() => _logoUrls = Map.fromEntries(entries));
   }
 
-
-
-
-
-
   List<Map<String, dynamic>> _portfolioHistoricoFiltrado() {
     if (_portfolioHistory.isEmpty) return [];
     final agora = DateTime.now();
-    DateTime? dataInicial;
-    switch (_selectedPeriodPortfolio) {
-      case 0: dataInicial = agora.subtract(const Duration(days: 7)); break;
-      case 1: dataInicial = agora.subtract(const Duration(days: 30)); break;
-      case 2: dataInicial = agora.subtract(const Duration(days: 180)); break;
-      case 3: dataInicial = DateTime(agora.year, 1, 1); break;
-      default: dataInicial = null;
-    }
+    final dataInicial = switch (_selectedPeriodPortfolio) {
+      0 => agora.subtract(const Duration(days: 7)),
+      1 => agora.subtract(const Duration(days: 30)),
+      2 => agora.subtract(const Duration(days: 180)),
+      3 => DateTime(agora.year, 1, 1),
+      _ => null,
+    };
     if (dataInicial == null) return _portfolioHistory;
     return _portfolioHistory.where((item) {
       final date = DateTime.tryParse(item['date']?.toString() ?? '');
       if (date == null) return false;
-      return date.isAfter(dataInicial!);
+      return date.isAfter(dataInicial);
     }).toList();
   }
 
   List<String> _labelsGraficoPortfolio() {
-    const meses = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+    const meses = [
+      'Jan',
+      'Fev',
+      'Mar',
+      'Abr',
+      'Mai',
+      'Jun',
+      'Jul',
+      'Ago',
+      'Set',
+      'Out',
+      'Nov',
+      'Dez',
+    ];
     return _portfolioHistoricoFiltrado().map((item) {
       final date = DateTime.tryParse(item['date']?.toString() ?? '');
       if (date == null) return '';
@@ -209,7 +225,8 @@ class _HomePageState extends State<HomePage> {
   Color _corGraficoPortfolio() {
     final filtrado = _portfolioHistoricoFiltrado();
     if (filtrado.length < 2) return AppColors.cinza400;
-    final primeiro = (filtrado.first['returnPercent'] as num?)?.toDouble() ?? 0.0;
+    final primeiro =
+        (filtrado.first['returnPercent'] as num?)?.toDouble() ?? 0.0;
     final ultimo = (filtrado.last['returnPercent'] as num?)?.toDouble() ?? 0.0;
     if (ultimo > primeiro) return AppColors.verde;
     if (ultimo < primeiro) return AppColors.vermelho;
@@ -220,9 +237,6 @@ class _HomePageState extends State<HomePage> {
     final sinal = valor > 0 ? '+' : '';
     return '$sinal${valor.toStringAsFixed(2)}%';
   }
-
-
-
 
   @override
   Widget build(BuildContext context) {
@@ -286,20 +300,20 @@ class _HomePageState extends State<HomePage> {
             ),
 
             if (!_isLoading) ...[
-            const SizedBox(height: 28),
+              const SizedBox(height: 28),
 
-            PortfolioChartSection(
-              pontos: _gerarPontosPercentuaisPortfolio(),
-              labels: _labelsGraficoPortfolio(),
-              cor: _corGraficoPortfolio(),
-              periods: _periodsPortfolio,
-              selectedPeriod: _selectedPeriodPortfolio,
-              onPeriodChanged: (i) => setState(() => _selectedPeriodPortfolio = i),
-              formatLabel: _formatarPercentualGrafico,
-              portfolioHistory: _portfolioHistory,
-              valorPortfolio: _valorPortfolio,
-            ),
-
+              PortfolioChartSection(
+                pontos: _gerarPontosPercentuaisPortfolio(),
+                labels: _labelsGraficoPortfolio(),
+                cor: _corGraficoPortfolio(),
+                periods: _periodsPortfolio,
+                selectedPeriod: _selectedPeriodPortfolio,
+                onPeriodChanged: (i) =>
+                    setState(() => _selectedPeriodPortfolio = i),
+                formatLabel: _formatarPercentualGrafico,
+                portfolioHistory: _portfolioHistory,
+                valorPortfolio: _valorPortfolio,
+              ),
             ], // end if (!_isLoading)
 
             const SizedBox(height: 28),
@@ -329,7 +343,11 @@ class _HomePageState extends State<HomePage> {
                 child: const Center(
                   child: Column(
                     children: [
-                      Icon(Icons.business_center_outlined, size: 32, color: AppColors.cinza300),
+                      Icon(
+                        Icons.business_center_outlined,
+                        size: 32,
+                        color: AppColors.cinza300,
+                      ),
                       SizedBox(height: 8),
                       Text(
                         'Você ainda não investiu em nenhuma startup',
@@ -379,6 +397,3 @@ class _HomePageState extends State<HomePage> {
     );
   }
 }
-
-
-

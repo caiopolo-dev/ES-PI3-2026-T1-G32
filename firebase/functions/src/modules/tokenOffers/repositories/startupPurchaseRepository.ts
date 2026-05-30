@@ -11,9 +11,9 @@ import {
   WALLET_SALDO,
   USER_TOKENS,
   PRICE_HISTORY,
-  TX_TYPE_BUY, TX_SOURCE_STARTUP,
+  TxType, TxSource,
 } from "../../../shared/collections";
-import {FATOR_IMPACTO} from "../../../shared/tokenPricing";
+import {calcularNovoPreco} from "../../../shared/tokenPricing";
 
 /**
  * @param {object} params Dados necessários para realizar a compra.
@@ -130,8 +130,7 @@ export async function buyStartupTokenDirectly(params: {
     );
 
     const totalTokens = Number(startupData.totalTokens ?? 1000);
-    const impacto = (quantity / totalTokens) * FATOR_IMPACTO;
-    const novoPreco = Math.round(pricePerTokenCents * (1 + impacto));
+    const novoPreco = calcularNovoPreco(pricePerTokenCents, quantity, totalTokens, TxType.BUY);
 
     transaction.update(startupRef, {
       tokensDisponiveis: newAvailableTokens,
@@ -142,8 +141,8 @@ export async function buyStartupTokenDirectly(params: {
 
     transaction.set(priceHistoryRef, {
       price: novoPreco,
-      type: TX_TYPE_BUY,
-      source: TX_SOURCE_STARTUP,
+      type: TxType.BUY,
+      source: TxSource.STARTUP,
       quantity,
       createdAt: FieldValue.serverTimestamp(),
     });
@@ -170,8 +169,8 @@ export async function buyStartupTokenDirectly(params: {
       quantity,
       pricePerTokenCents,
       totalCents,
-      type: TX_TYPE_BUY,
-      source: TX_SOURCE_STARTUP,
+      type: TxType.BUY,
+      source: TxSource.STARTUP,
       createdAt: FieldValue.serverTimestamp(),
     });
 

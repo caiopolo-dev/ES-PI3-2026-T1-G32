@@ -14,11 +14,13 @@ class WalletService {
       return {
         'success': true,
         'saldo': ((result.data['saldo'] ?? 0) as num).toDouble() / 100,
-        'totalInvestido': ((result.data['totalInvestido'] ?? 0) as num).toDouble() / 100,
         'totalTokens': ((result.data['totalTokens'] ?? 0) as num).toInt(),
       };
     } on FirebaseFunctionsException catch (e) {
-      return {'success': false, 'message': e.message ?? 'Erro ao buscar carteira'};
+      return {
+        'success': false,
+        'message': e.message ?? 'Erro ao buscar carteira',
+      };
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -37,7 +39,10 @@ class WalletService {
           .toList();
       return {'success': true, 'transactions': list};
     } on FirebaseFunctionsException catch (e) {
-      return {'success': false, 'message': e.message ?? 'Erro ao buscar histórico'};
+      return {
+        'success': false,
+        'message': e.message ?? 'Erro ao buscar histórico',
+      };
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -45,12 +50,15 @@ class WalletService {
 
   static Future<Map<String, dynamic>> addBalance(int amountCents) async {
     try {
-      await FirebaseFunctions.instance
-          .httpsCallable('addBalance')
-          .call({'amountCents': amountCents});
+      await FirebaseFunctions.instance.httpsCallable('addBalance').call({
+        'amountCents': amountCents,
+      });
       return {'success': true};
     } on FirebaseFunctionsException catch (e) {
-      return {'success': false, 'message': e.message ?? 'Erro ao adicionar saldo'};
+      return {
+        'success': false,
+        'message': e.message ?? 'Erro ao adicionar saldo',
+      };
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -66,7 +74,10 @@ class WalletService {
           .toList();
       return {'success': true, 'offers': list};
     } on FirebaseFunctionsException catch (e) {
-      return {'success': false, 'message': e.message ?? 'Erro ao buscar ordens'};
+      return {
+        'success': false,
+        'message': e.message ?? 'Erro ao buscar ordens',
+      };
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -78,12 +89,17 @@ class WalletService {
     required int pricePerTokenCents,
   }) async {
     try {
-      await FirebaseFunctions.instance
-          .httpsCallable('createSellOffer')
-          .call({'startupId': startupId, 'quantity': quantity, 'pricePerTokenCents': pricePerTokenCents});
+      await FirebaseFunctions.instance.httpsCallable('createSellOffer').call({
+        'startupId': startupId,
+        'quantity': quantity,
+        'pricePerTokenCents': pricePerTokenCents,
+      });
       return {'success': true};
     } on FirebaseFunctionsException catch (e) {
-      return {'success': false, 'message': e.message ?? 'Erro ao criar ordem de venda'};
+      return {
+        'success': false,
+        'message': e.message ?? 'Erro ao criar ordem de venda',
+      };
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -99,25 +115,23 @@ class WalletService {
           .call();
       // precoMedio e valorAtual chegam em centavos do backend.
       // Convertemos para reais aqui para que a WalletPage exiba os valores formatados.
-      final list = (result.data['tokens'] as List? ?? [])
-          .map((e) {
-            final m = Map<String, dynamic>.from(e as Map);
-            m['precoMedio'] = ((m['precoMedio'] as num?) ?? 0) / 100.0;
-            m['valorAtual'] = ((m['valorAtual'] as num?) ?? 0) / 100.0;
-            m['precoAnterior'] = ((m['precoAnterior'] as num?) ?? 0) / 100.0;
-            return m;
-          })
-          .toList();
+      final list = (result.data['tokens'] as List? ?? []).map((e) {
+        final m = Map<String, dynamic>.from(e as Map);
+        m['precoMedio'] = ((m['precoMedio'] as num?) ?? 0) / 100.0;
+        m['valorAtual'] = ((m['valorAtual'] as num?) ?? 0) / 100.0;
+        m['precoAnterior'] = ((m['precoAnterior'] as num?) ?? 0) / 100.0;
+        return m;
+      }).toList();
       return {'success': true, 'tokens': list};
     } on FirebaseFunctionsException catch (e) {
-      return {'success': false, 'message': e.message ?? 'Erro ao buscar tokens'};
+      return {
+        'success': false,
+        'message': e.message ?? 'Erro ao buscar tokens',
+      };
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
   }
-
-
-
 
   static Future<Map<String, dynamic>> getPortfolioHistory() async {
     try {
@@ -129,35 +143,43 @@ class WalletService {
           .map((e) => Map<String, dynamic>.from(e as Map))
           .toList();
 
-      return {
-        'success': true,
-        'points': list,
-      };
+      return {'success': true, 'points': list};
     } on FirebaseFunctionsException catch (e) {
       return {
         'success': false,
         'message': e.message ?? 'Erro ao buscar histórico do portfólio',
       };
     } catch (e) {
-      return {
-        'success': false,
-        'message': e.toString(),
-      };
+      return {'success': false, 'message': e.toString()};
     }
   }
 
-
-
-
-
-
-
+  static Future<Map<String, dynamic>> listOffers() async {
+    try {
+      final result = await FirebaseFunctions.instance
+          .httpsCallable('listOffers')
+          .call();
+      return {
+        'success': true,
+        'data': (result.data['data'] as List? ?? [])
+            .map((e) => Map<String, dynamic>.from(e as Map))
+            .toList(),
+      };
+    } on FirebaseFunctionsException catch (e) {
+      return {
+        'success': false,
+        'message': e.message ?? 'Erro ao carregar ofertas',
+      };
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
 
   static Future<Map<String, dynamic>> cancelOffer(String offerId) async {
     try {
-      await FirebaseFunctions.instance
-          .httpsCallable('cancelOffer')
-          .call({'offerId': offerId});
+      await FirebaseFunctions.instance.httpsCallable('cancelOffer').call({
+        'offerId': offerId,
+      });
 
       return {'success': true};
     } on FirebaseFunctionsException catch (e) {

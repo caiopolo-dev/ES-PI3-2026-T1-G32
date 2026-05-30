@@ -91,28 +91,28 @@ class BalcaoDismissBackground extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        decoration: BoxDecoration(
-          color: AppColors.vermelho,
-          borderRadius: BorderRadius.circular(12),
+    margin: const EdgeInsets.only(bottom: 12),
+    decoration: BoxDecoration(
+      color: AppColors.vermelho,
+      borderRadius: BorderRadius.circular(12),
+    ),
+    alignment: Alignment.centerRight,
+    padding: const EdgeInsets.only(right: 24),
+    child: const Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Icon(Icons.delete_outline, color: AppColors.branco, size: 26),
+        SizedBox(height: 4),
+        Text(
+          'Cancelar',
+          style: TextStyle(
+            fontFamily: 'JosefinSans',
+            fontSize: 11,
+            fontWeight: FontWeight.bold,
+            color: AppColors.branco,
+          ),
         ),
-        alignment: Alignment.centerRight,
-        padding: const EdgeInsets.only(right: 24),
-        child: const Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.delete_outline, color: AppColors.branco, size: 26),
-            SizedBox(height: 4),
-            Text(
-              'Cancelar',
-              style: TextStyle(
-                fontFamily: 'JosefinSans',
-                fontSize: 11,
-                fontWeight: FontWeight.bold,
-                color: AppColors.branco,
-              ),
-            ),
-          ],
-        ),
-      );
+      ],
+    ),
+  );
 }
