@@ -75,8 +75,7 @@ class StartupDetailContent extends StatelessWidget {
     if (dataTexto == null || dataTexto.isEmpty) return null;
     final data = DateTime.tryParse(dataTexto);
     if (data == null) return null;
-    // Firestore vem em UTC. Brasil = UTC-3.
-    return data.toUtc().subtract(const Duration(hours: 3));
+    return data.toLocal();
   }
 
   List<Map<String, dynamic>> _historicoFiltradoPorPeriodo() {
@@ -85,7 +84,7 @@ class StartupDetailContent extends StatelessWidget {
     DateTime dataInicial;
     switch (selectedPeriod) {
       case PriceHistoryPeriod.oneDay:
-        dataInicial = DateTime(agora.year, agora.month, agora.day);
+        dataInicial = agora.subtract(const Duration(hours: 24));
       case PriceHistoryPeriod.sevenDays:
         dataInicial = agora.subtract(const Duration(days: 7));
       case PriceHistoryPeriod.oneMonth:

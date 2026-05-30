@@ -36,7 +36,7 @@ class _HomePageState extends State<HomePage> {
   int _totalTokens = 0;
 
   int _selectedPeriodPortfolio = 1;
-  static const _periodsPortfolio = ['7D', '1M', '6M', 'YTD', 'Tudo'];
+  static const _periodsPortfolio = ['7D', '1M', '6M', 'YTD'];
 
   List<Map<String, dynamic>> _meusInvestimentos = [];
   List<Map<String, dynamic>> _portfolioHistory = [];

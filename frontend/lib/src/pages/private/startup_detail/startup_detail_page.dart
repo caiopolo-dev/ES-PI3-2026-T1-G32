@@ -56,7 +56,7 @@ class _StartupDetailPageState extends State<StartupDetailPage> {
   bool _offersLoading = false;
   String? _offersError;
 
-  final List<String> _periods = ['1D', '7D', '1M', '6M', 'YTD', 'Tudo'];
+  final List<String> _periods = ['1D', '7D', '1M', '6M', 'YTD'];
   final List<String> _faqFilters = ['Todas', 'Públicas', 'Privadas'];
 
   @override
