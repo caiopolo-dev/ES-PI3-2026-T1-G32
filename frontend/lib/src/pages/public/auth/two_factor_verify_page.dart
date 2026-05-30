@@ -83,6 +83,7 @@ class _TwoFactorVerifyPageState extends State<TwoFactorVerifyPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.branco,
+      resizeToAvoidBottomInset: true,
       appBar: AppBar(
         backgroundColor: AppColors.branco,
         elevation: 0,
@@ -92,100 +93,98 @@ class _TwoFactorVerifyPageState extends State<TwoFactorVerifyPage> {
         ),
       ),
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 40),
-          child: Column(
-            children: [
-              Expanded(
-                child: Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Center(
-                        child: SizedBox(
-                          width: 100,
-                          height: 100,
-                          child: Image.asset('assets/MesclaLogoPequena.png'),
-                        ),
-                      ),
+        child: SingleChildScrollView(
+          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 40),
+            child: Column(
+              children: [
+                SizedBox(height: MediaQuery.of(context).size.height * 0.08),
 
-                      const SizedBox(height: 32),
-
-                      const Text(
-                        'Verificação em duas etapas',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                          fontFamily: 'JosefinSans',
-                        ),
-                      ),
-
-                      const SizedBox(height: 12),
-
-                      const Text(
-                        'Digite o código gerado pelo seu app autenticador',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: AppColors.preto54,
-                          fontFamily: 'JosefinSans',
-                        ),
-                      ),
-
-                      const SizedBox(height: 32),
-
-                      TextField(
-                        controller: _codeController,
-                        keyboardType: TextInputType.number,
-                        textAlign: TextAlign.center,
-                        maxLength: 6,
-                        style: const TextStyle(
-                          fontSize: 24,
-                          fontFamily: 'JosefinSans',
-                          letterSpacing: 8,
-                        ),
-                        decoration: const InputDecoration(
-                          hintText: '000000',
-                          hintStyle: TextStyle(color: AppColors.cinza400),
-                          counterText: '',
-                          enabledBorder: UnderlineInputBorder(
-                            borderSide: BorderSide(color: AppColors.cinza400),
-                          ),
-                          focusedBorder: UnderlineInputBorder(
-                            borderSide: BorderSide(color: AppColors.azul, width: 2),
-                          ),
-                        ),
-                      ),
-
-                      const SizedBox(height: 16),
-
-                      if (_errorText.isNotEmpty)
-                        Text(
-                          _errorText,
-                          style: const TextStyle(
-                            color: AppColors.vermelho,
-                            fontFamily: 'JosefinSans',
-                          ),
-                        ),
-                    ],
+                Center(
+                  child: SizedBox(
+                    width: 100,
+                    height: 100,
+                    child: Image.asset('assets/MesclaLogoPequena.png'),
                   ),
                 ),
-              ),
 
-              SizedBox(
-                width: 260,
-                child: AppPrimaryButton(
-                  label: 'Verificar',
-                  onPressed: _verify,
-                  isLoading: _isVerifying,
-                  elevated: true,
-                  verticalPadding: 14,
+                const SizedBox(height: 32),
+
+                const Text(
+                  'Verificação em duas etapas',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    fontFamily: 'JosefinSans',
+                  ),
                 ),
-              ),
 
-              const SizedBox(height: 60),
-            ],
+                const SizedBox(height: 12),
+
+                const Text(
+                  'Digite o código gerado pelo seu app autenticador',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: AppColors.preto54,
+                    fontFamily: 'JosefinSans',
+                  ),
+                ),
+
+                const SizedBox(height: 32),
+
+                TextField(
+                  controller: _codeController,
+                  keyboardType: TextInputType.number,
+                  textAlign: TextAlign.center,
+                  maxLength: 6,
+                  style: const TextStyle(
+                    fontSize: 24,
+                    fontFamily: 'JosefinSans',
+                    letterSpacing: 8,
+                  ),
+                  decoration: const InputDecoration(
+                    hintText: '000000',
+                    hintStyle: TextStyle(color: AppColors.cinza400),
+                    counterText: '',
+                    enabledBorder: UnderlineInputBorder(
+                      borderSide: BorderSide(color: AppColors.cinza400),
+                    ),
+                    focusedBorder: UnderlineInputBorder(
+                      borderSide: BorderSide(color: AppColors.azul, width: 2),
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 16),
+
+                if (_errorText.isNotEmpty)
+                  Text(
+                    _errorText,
+                    style: const TextStyle(
+                      color: AppColors.vermelho,
+                      fontFamily: 'JosefinSans',
+                    ),
+                  ),
+
+                const SizedBox(height: 40),
+
+                SizedBox(
+                  width: 260,
+                  child: AppPrimaryButton(
+                    label: 'Verificar',
+                    onPressed: _verify,
+                    isLoading: _isVerifying,
+                    elevated: true,
+                    verticalPadding: 14,
+                  ),
+                ),
+
+                SizedBox(height: MediaQuery.of(context).viewInsets.bottom + 24),
+              ],
+            ),
           ),
         ),
       ),

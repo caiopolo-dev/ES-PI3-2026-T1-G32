@@ -263,6 +263,7 @@ class _RegisterPageState extends State<RegisterPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.branco,
+      resizeToAvoidBottomInset: true,
       appBar: AppBar(
         backgroundColor: AppColors.branco,
         elevation: 0,
@@ -278,36 +279,38 @@ class _RegisterPageState extends State<RegisterPage> {
         ),
       ),
       body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Barras de progresso no topo
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
-              child: Row(
-                children: List.generate(3, (i) => Expanded(
-                  child: Container(
-                    margin: EdgeInsets.only(
-                      left: i > 0 ? 4 : 0,
-                      right: i < 2 ? 4 : 0,
+        child: SingleChildScrollView(
+          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Barras de progresso no topo
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
+                child: Row(
+                  children: List.generate(3, (i) => Expanded(
+                    child: Container(
+                      margin: EdgeInsets.only(
+                        left: i > 0 ? 4 : 0,
+                        right: i < 2 ? 4 : 0,
+                      ),
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: i <= currentStep ? AppColors.azul : AppColors.cinza200,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
                     ),
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: i <= currentStep ? AppColors.azul : AppColors.cinza200,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                )),
+                  )),
+                ),
               ),
-            ),
 
-            // Conteúdo centralizado verticalmente
-            Expanded(
-              child: Padding(
+              // Conteúdo com espaçamento dinâmico
+              Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 32),
                 child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
+                    SizedBox(height: MediaQuery.of(context).size.height * 0.06),
+
                     SizedBox(
                       width: 80,
                       height: 80,
@@ -353,26 +356,29 @@ class _RegisterPageState extends State<RegisterPage> {
                           ),
                         ],
                       ),
+
+                    const SizedBox(height: 40),
+
+                    // Botão
+                    Center(
+                      child: SizedBox(
+                        width: 260,
+                        child: AppPrimaryButton(
+                          label: currentStep == 2 ? 'Finalizar' : 'Continuar',
+                          onPressed: nextStep,
+                          isLoading: isLoading,
+                          elevated: true,
+                          verticalPadding: 14,
+                        ),
+                      ),
+                    ),
+
+                    SizedBox(height: MediaQuery.of(context).viewInsets.bottom + 24),
                   ],
                 ),
               ),
-            ),
-
-            // Botão fixo na parte inferior
-            Center(
-              child: SizedBox(
-                width: 260,
-                child: AppPrimaryButton(
-                  label: currentStep == 2 ? 'Finalizar' : 'Continuar',
-                  onPressed: nextStep,
-                  isLoading: isLoading,
-                  elevated: true,
-                  verticalPadding: 14,
-                ),
-              ),
-            ),
-            const SizedBox(height: 126),
-          ],
+            ],
+          ),
         ),
       ),
     );
