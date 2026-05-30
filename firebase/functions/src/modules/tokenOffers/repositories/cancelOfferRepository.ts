@@ -8,8 +8,6 @@ import {
   USERS, TOKEN_OFFERS, USER_TOKENS, STARTUPS, PRICE_HISTORY, TRANSACTIONS,
   TX_TYPE_RETURN, TX_TYPE_CANCEL_OFFER, TX_SOURCE_SELL_OFFER,
 } from "../../../shared/collections";
-import {updateAllSnapshots} from
-  "../../wallet/repositories/portfolioRepository";
 import {
   CancelSellOfferParams,
   CancelSellOfferResult,
@@ -146,11 +144,6 @@ export async function cancelOffer(
     };
   });
 
-  try {
-    await updateAllSnapshots();
-  } catch (e) {
-    console.warn("updateAllSnapshots failed (non-fatal):", e);
-  }
 
   return result;
 }

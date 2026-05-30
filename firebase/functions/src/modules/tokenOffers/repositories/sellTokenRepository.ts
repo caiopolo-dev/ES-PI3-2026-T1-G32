@@ -8,8 +8,6 @@ import {
   USERS, STARTUPS, TOKEN_OFFERS, USER_TOKENS, PRICE_HISTORY,
   OFFER_STATUS_OPEN, TX_TYPE_SELL, TX_SOURCE_SELL_OFFER,
 } from "../../../shared/collections";
-import {updateAllSnapshots} from
-  "../../wallet/repositories/portfolioRepository";
 import {FATOR_IMPACTO} from "../../../shared/tokenPricing";
 import {
   CreateSellOfferParams,
@@ -126,11 +124,6 @@ export async function createSellOffer(
     };
   });
 
-  try {
-    await updateAllSnapshots();
-  } catch (e) {
-    console.warn("updateAllSnapshots failed (non-fatal):", e);
-  }
 
   return result;
 }

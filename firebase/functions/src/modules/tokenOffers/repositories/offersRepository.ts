@@ -9,8 +9,6 @@ import {
   WALLET, WALLET_SALDO, USER_TOKENS, PRICE_HISTORY,
   OFFER_STATUS_OPEN, TX_TYPE_BUY, TX_SOURCE_OFFER,
 } from "../../../shared/collections";
-import {updateAllSnapshots} from
-  "../../wallet/repositories/portfolioRepository";
 import {FATOR_IMPACTO} from "../../../shared/tokenPricing";
 
 import {
@@ -346,11 +344,6 @@ export async function buyTokenOffer(
     };
   });
 
-  try {
-    await updateAllSnapshots();
-  } catch (e) {
-    console.warn("updateAllSnapshots failed (non-fatal):", e);
-  }
 
   return result;
 }

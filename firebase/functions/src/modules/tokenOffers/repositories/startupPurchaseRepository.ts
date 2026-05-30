@@ -13,8 +13,6 @@ import {
   PRICE_HISTORY,
   TX_TYPE_BUY, TX_SOURCE_STARTUP,
 } from "../../../shared/collections";
-import {updateAllSnapshots} from
-  "../../wallet/repositories/portfolioRepository";
 import {FATOR_IMPACTO} from "../../../shared/tokenPricing";
 
 /**
@@ -188,11 +186,6 @@ export async function buyStartupTokenDirectly(params: {
     };
   });
 
-  try {
-    await updateAllSnapshots();
-  } catch (e) {
-    console.warn("updateAllSnapshots failed (non-fatal):", e);
-  }
 
   return result;
 }

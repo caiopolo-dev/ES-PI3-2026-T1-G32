@@ -8,3 +8,4 @@ export {getUserTokens} from "./handlers/getUserTokens";
 export {addBalance} from "./handlers/addBalance";
 export {getPortfolioHistory} from "./handlers/getPortfolioHistory";
 export {dailyPortfolioSnapshot} from "./handlers/dailyPortfolioSnapshot";
+export {onStartupPriceChange} from "./handlers/onStartupPriceChange";
