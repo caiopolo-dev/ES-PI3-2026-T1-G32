@@ -6,13 +6,13 @@ import {HttpsError} from "firebase-functions/v2/https";
 import {db} from "../../../shared/firebase";
 import {
   USERS, TOKEN_OFFERS, USER_TOKENS, STARTUPS, PRICE_HISTORY, TRANSACTIONS,
-  TX_TYPE_RETURN, TX_TYPE_CANCEL_OFFER, TX_SOURCE_SELL_OFFER,
+  TxType, TxSource,
 } from "../../../shared/collections";
 import {
   CancelSellOfferParams,
   CancelSellOfferResult,
 } from "../types/tokenOfferTypes";
-import {FATOR_IMPACTO} from "../../../shared/tokenPricing";
+import {calcularNovoPreco} from "../../../shared/tokenPricing";
 
 /**
  * @param {CancelSellOfferParams} params
@@ -99,7 +99,7 @@ export async function cancelOffer(
 
     // Record the return in transaction history (creates a new lot in portfolio)
     transaction.set(transactionRef, {
-      type: TX_TYPE_RETURN,
+      type: TxType.RETURN,
       buyerId: sellerId,
       startupId,
       startupName,
@@ -114,8 +114,7 @@ export async function cancelOffer(
     if (startupData) {
       const totalTokens = Number(startupData.totalTokens ?? 1000);
       const precoAtual = Number(startupData.precoToken ?? 0);
-      const impacto = (amount / totalTokens) * FATOR_IMPACTO;
-      const precoRevertido = Math.round(precoAtual * (1 + impacto));
+      const precoRevertido = calcularNovoPreco(precoAtual, amount, totalTokens, TxType.CANCEL_OFFER);
 
       transaction.update(startupRef, {
         precoToken: precoRevertido,
@@ -128,8 +127,8 @@ export async function cancelOffer(
         .collection(PRICE_HISTORY).doc();
       transaction.set(priceHistoryRef, {
         price: precoRevertido,
-        type: TX_TYPE_CANCEL_OFFER,
-        source: TX_SOURCE_SELL_OFFER,
+        type: TxType.CANCEL_OFFER,
+        source: TxSource.SELL_OFFER,
         quantity: amount,
         createdAt: FieldValue.serverTimestamp(),
       });

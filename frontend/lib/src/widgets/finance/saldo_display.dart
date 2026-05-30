@@ -6,6 +6,8 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 class SaldoDisplay extends StatelessWidget {
+  static final _fmt = NumberFormat.currency(locale: 'pt_BR', symbol: 'R\$');
+
   final double saldo;
   final bool visivel;
   final String label;
@@ -29,7 +31,6 @@ class SaldoDisplay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final fmt = NumberFormat.currency(locale: 'pt_BR', symbol: 'R\$');
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -47,7 +48,9 @@ class SaldoDisplay extends StatelessWidget {
             GestureDetector(
               onTap: () => onVisibilityChanged?.call(!visivel),
               child: Icon(
-                visivel ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                visivel
+                    ? Icons.visibility_outlined
+                    : Icons.visibility_off_outlined,
                 size: 20,
                 color: eyeColor,
               ),
@@ -56,7 +59,7 @@ class SaldoDisplay extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         Text(
-          visivel ? fmt.format(saldo) : 'R\$ ••••••',
+          visivel ? _fmt.format(saldo) : 'R\$ ••••••',
           style: TextStyle(
             fontFamily: 'JosefinSans',
             fontSize: balanceFontSize,

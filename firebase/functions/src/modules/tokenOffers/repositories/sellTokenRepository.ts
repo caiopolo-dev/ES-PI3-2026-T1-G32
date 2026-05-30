@@ -6,9 +6,9 @@ import {HttpsError} from "firebase-functions/v2/https";
 import {db} from "../../../shared/firebase";
 import {
   USERS, STARTUPS, TOKEN_OFFERS, USER_TOKENS, PRICE_HISTORY,
-  OFFER_STATUS_OPEN, TX_TYPE_SELL, TX_SOURCE_SELL_OFFER,
+  TxType, TxSource,
 } from "../../../shared/collections";
-import {FATOR_IMPACTO} from "../../../shared/tokenPricing";
+import {calcularNovoPreco} from "../../../shared/tokenPricing";
 import {
   CreateSellOfferParams,
   CreateSellOfferResult,
@@ -89,7 +89,7 @@ export async function createSellOffer(
       valorUnitarioCentavos: pricePerTokenCents,
       precoMedio,
       valorAtual,
-      status: OFFER_STATUS_OPEN,
+      status: "open",
       createdAt: FieldValue.serverTimestamp(),
       updatedAt: FieldValue.serverTimestamp(),
     });
@@ -97,8 +97,7 @@ export async function createSellOffer(
     // Oferta de venda aumenta a oferta disponível → pressão de baixa no preço
     const totalTokens = Number(startupData.totalTokens ?? 1000);
     const precoAtual = Number(startupData.precoToken ?? 100);
-    const impacto = (quantity / totalTokens) * FATOR_IMPACTO;
-    const novoPreco = Math.max(1, Math.round(precoAtual * (1 - impacto)));
+    const novoPreco = calcularNovoPreco(precoAtual, quantity, totalTokens, TxType.SELL);
     transaction.update(startupRef, {
       precoToken: novoPreco,
       precoTokenAnterior: precoAtual,
@@ -109,8 +108,8 @@ export async function createSellOffer(
       .collection(PRICE_HISTORY).doc();
     transaction.set(priceHistoryRef, {
       price: novoPreco,
-      type: TX_TYPE_SELL,
-      source: TX_SOURCE_SELL_OFFER,
+      type: TxType.SELL,
+      source: TxSource.SELL_OFFER,
       quantity,
       createdAt: FieldValue.serverTimestamp(),
     });

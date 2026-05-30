@@ -7,9 +7,9 @@ import {HttpsError} from "firebase-functions/v2/https";
 import {
   USERS, STARTUPS, TOKEN_OFFERS, TRANSACTIONS,
   WALLET, WALLET_SALDO, USER_TOKENS, PRICE_HISTORY,
-  OFFER_STATUS_OPEN, TX_TYPE_BUY, TX_SOURCE_OFFER,
+  TxType, TxSource,
 } from "../../../shared/collections";
-import {FATOR_IMPACTO} from "../../../shared/tokenPricing";
+import {calcularNovoPreco} from "../../../shared/tokenPricing";
 
 import {
   BuyTokenOfferParams,
@@ -38,8 +38,8 @@ export async function listOffersBySeller(sellerId: string) {
 
   snapshot.docs.forEach((doc) => {
     const data = doc.data();
-    const status = String(data.status ?? OFFER_STATUS_OPEN);
-    if (status !== OFFER_STATUS_OPEN) {
+    const status = String(data.status ?? "open");
+    if (status !== "open") {
       return;
     }
     offers.push({
@@ -73,8 +73,8 @@ export async function listAllOffers(excludeSellerId?: string) {
 
   snapshot.docs.forEach((doc) => {
     const data = doc.data();
-    const status = String(data.status ?? OFFER_STATUS_OPEN);
-    if (status !== OFFER_STATUS_OPEN) {
+    const status = String(data.status ?? "open");
+    if (status !== "open") {
       return;
     }
     const sellerId = data.sellerId as string;
@@ -149,8 +149,8 @@ export async function buyTokenOffer(
       );
     }
 
-    const status = String(offerData.status ?? OFFER_STATUS_OPEN);
-    if (status !== OFFER_STATUS_OPEN) {
+    const status = String(offerData.status ?? "open");
+    if (status !== "open") {
       throw new HttpsError(
         "failed-precondition",
         "Oferta não está ativa"
@@ -300,8 +300,7 @@ export async function buyTokenOffer(
     if (startupData) {
       const totalTokens = Number(startupData.totalTokens ?? 1000);
       const precoAtual = Number(startupData.precoToken ?? 0);
-      const impacto = (quantity / totalTokens) * FATOR_IMPACTO;
-      const novoPreco = Math.round(precoAtual * (1 + impacto));
+      const novoPreco = calcularNovoPreco(precoAtual, quantity, totalTokens, TxType.BUY);
       transaction.update(startupRef, {
         precoToken: novoPreco,
         precoTokenAnterior: precoAtual,
@@ -312,8 +311,8 @@ export async function buyTokenOffer(
         .collection(PRICE_HISTORY).doc();
       transaction.set(priceHistoryRef, {
         price: novoPreco,
-        type: TX_TYPE_BUY,
-        source: TX_SOURCE_OFFER,
+        type: TxType.BUY,
+        source: TxSource.OFFER,
         quantity,
         createdAt: FieldValue.serverTimestamp(),
       });
@@ -328,8 +327,8 @@ export async function buyTokenOffer(
       quantity,
       pricePerTokenCents,
       totalCents,
-      type: TX_TYPE_BUY,
-      source: TX_SOURCE_OFFER,
+      type: TxType.BUY,
+      source: TxSource.OFFER,
       createdAt: FieldValue.serverTimestamp(),
     });
 

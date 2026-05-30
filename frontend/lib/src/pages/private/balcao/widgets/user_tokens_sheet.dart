@@ -18,6 +18,8 @@ class UserTokensSheet extends StatefulWidget {
 }
 
 class _UserTokensSheetState extends State<UserTokensSheet> {
+  static final _fmt = NumberFormat.currency(locale: 'pt_BR', symbol: 'R\$');
+
   List<Map<String, dynamic>> _tokens = [];
   bool _isLoading = true;
   Map<String, String?> _logoUrls = {};
@@ -44,7 +46,10 @@ class _UserTokensSheetState extends State<UserTokensSheet> {
     final entries = await Future.wait(
       _tokens.map((t) async {
         final nome = (t['startupNome'] as String?) ?? '';
-        final url = await StorageService.getStartupAsset(nome, 'logoPhoto.jpeg');
+        final url = await StorageService.getStartupAsset(
+          nome,
+          'logoPhoto.jpeg',
+        );
         return MapEntry(nome, url);
       }),
     );
@@ -90,29 +95,32 @@ class _UserTokensSheetState extends State<UserTokensSheet> {
             child: _isLoading
                 ? const AppLoadingIndicator()
                 : _tokens.isEmpty
-                    ? const Center(
-                        child: Text(
-                          'Você não possui tokens',
-                          style: TextStyle(fontFamily: 'JosefinSans', color: AppColors.cinza500),
-                        ),
-                      )
-                    : ListView.builder(
-                        controller: controller,
-                        padding: const EdgeInsets.symmetric(horizontal: 24),
-                        itemCount: _tokens.length,
-                        itemBuilder: (context, index) {
-                          final token = _tokens[index];
-                          final logoUrl = _logoUrls[token['startupNome'] as String? ?? ''];
-                          return WalletTokenCard(
-                            token: token,
-                            logoUrl: logoUrl,
-                            saldoVisivel: true,
-                            onTap: () => Navigator.pop(context, token),
-                            currencyFormat: NumberFormat.currency(
-                                locale: 'pt_BR', symbol: 'R\$'),
-                          );
-                        },
+                ? const Center(
+                    child: Text(
+                      'Você não possui tokens',
+                      style: TextStyle(
+                        fontFamily: 'JosefinSans',
+                        color: AppColors.cinza500,
                       ),
+                    ),
+                  )
+                : ListView.builder(
+                    controller: controller,
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    itemCount: _tokens.length,
+                    itemBuilder: (context, index) {
+                      final token = _tokens[index];
+                      final logoUrl =
+                          _logoUrls[token['startupNome'] as String? ?? ''];
+                      return WalletTokenCard(
+                        token: token,
+                        logoUrl: logoUrl,
+                        saldoVisivel: true,
+                        onTap: () => Navigator.pop(context, token),
+                        currencyFormat: _fmt,
+                      );
+                    },
+                  ),
           ),
         ],
       ),

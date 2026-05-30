@@ -19,7 +19,12 @@ class WalletPage extends StatefulWidget {
   final void Function(int)? onTabSwitch;
   final bool isActive;
 
-  const WalletPage({super.key, this.usuario, this.onTabSwitch, this.isActive = false});
+  const WalletPage({
+    super.key,
+    this.usuario,
+    this.onTabSwitch,
+    this.isActive = false,
+  });
 
   @override
   State<WalletPage> createState() => _WalletPageState();
@@ -42,8 +47,7 @@ class _WalletPageState extends State<WalletPage>
   TokenSort _tokenSort = TokenSort.alfa;
   TxFilter _txFilter = TxFilter.todos;
 
-  final currencyFormat =
-      NumberFormat.currency(locale: 'pt_BR', symbol: 'R\$');
+  final currencyFormat = NumberFormat.currency(locale: 'pt_BR', symbol: 'R\$');
 
   @override
   void didUpdateWidget(WalletPage oldWidget) {
@@ -58,14 +62,23 @@ class _WalletPageState extends State<WalletPage>
     var list = List<Map<String, dynamic>>.from(_tokens);
     switch (_tokenSort) {
       case TokenSort.alfa:
-        list.sort((a, b) => (a['startupNome'] as String? ?? '')
-            .compareTo(b['startupNome'] as String? ?? ''));
+        list.sort(
+          (a, b) => (a['startupNome'] as String? ?? '').compareTo(
+            b['startupNome'] as String? ?? '',
+          ),
+        );
       case TokenSort.precoAsc:
-        list.sort((a, b) => ((a['valorAtual'] as num?) ?? 0)
-            .compareTo((b['valorAtual'] as num?) ?? 0));
+        list.sort(
+          (a, b) => ((a['valorAtual'] as num?) ?? 0).compareTo(
+            (b['valorAtual'] as num?) ?? 0,
+          ),
+        );
       case TokenSort.precoDesc:
-        list.sort((a, b) => ((b['valorAtual'] as num?) ?? 0)
-            .compareTo((a['valorAtual'] as num?) ?? 0));
+        list.sort(
+          (a, b) => ((b['valorAtual'] as num?) ?? 0).compareTo(
+            (a['valorAtual'] as num?) ?? 0,
+          ),
+        );
     }
     return list;
   }
@@ -134,8 +147,9 @@ class _WalletPageState extends State<WalletPage>
     }
 
     if (history['success'] == true) {
-      _transactions =
-          List<Map<String, dynamic>>.from(history['transactions'] ?? []);
+      _transactions = List<Map<String, dynamic>>.from(
+        history['transactions'] ?? [],
+      );
     }
 
     if (tokens['success'] == true) {
@@ -167,8 +181,10 @@ class _WalletPageState extends State<WalletPage>
     }
     final entries = await Future.wait(
       idToNome.entries.map((e) async {
-        final url =
-            await StorageService.getStartupAsset(e.value, 'logoPhoto.jpeg');
+        final url = await StorageService.getStartupAsset(
+          e.value,
+          'logoPhoto.jpeg',
+        );
         return MapEntry(e.key, url);
       }),
     );
@@ -177,10 +193,10 @@ class _WalletPageState extends State<WalletPage>
   }
 
   double get _valorAtualPortfolio => _tokens.fold(0.0, (sum, t) {
-        final valorAtual = (t['valorAtual'] as num?)?.toDouble() ?? 0.0;
-        final quantidade = (t['quantidade'] as num?)?.toInt() ?? 0;
-        return sum + valorAtual * quantidade;
-      });
+    final valorAtual = (t['valorAtual'] as num?)?.toDouble() ?? 0.0;
+    final quantidade = (t['quantidade'] as num?)?.toInt() ?? 0;
+    return sum + valorAtual * quantidade;
+  });
 
   Future<void> _showAddBalanceDialog() async {
     final amountCents = await showDialog<int>(
@@ -214,7 +230,9 @@ class _WalletPageState extends State<WalletPage>
       saldoVisivel: _saldoVisivel,
       usuario: widget.usuario,
       onTabSwitch: widget.onTabSwitch,
-      onRefresh: () { if (mounted) _loadAll(); },
+      onRefresh: () {
+        if (mounted) _loadAll();
+      },
     );
   }
 
@@ -255,7 +273,8 @@ class _WalletPageState extends State<WalletPage>
                           logoUrls: _logoUrls,
                           saldoVisivel: _saldoVisivel,
                           tokenSort: _tokenSort,
-                          onSortChanged: (sort) => setState(() => _tokenSort = sort),
+                          onSortChanged: (sort) =>
+                              setState(() => _tokenSort = sort),
                           onTokenTap: _openTokenActions,
                           currencyFormat: currencyFormat,
                         ),
@@ -264,7 +283,8 @@ class _WalletPageState extends State<WalletPage>
                           logoUrls: _logoUrls,
                           saldoVisivel: _saldoVisivel,
                           txFilter: _txFilter,
-                          onFilterChanged: (filter) => setState(() => _txFilter = filter),
+                          onFilterChanged: (filter) =>
+                              setState(() => _txFilter = filter),
                           currencyFormat: currencyFormat,
                         ),
                       ],
@@ -299,8 +319,11 @@ class _WalletPageState extends State<WalletPage>
             const SizedBox(height: 8),
             Row(
               children: [
-                const Icon(Icons.warning_amber_rounded,
-                    size: 14, color: AppColors.laranja),
+                const Icon(
+                  Icons.warning_amber_rounded,
+                  size: 14,
+                  color: AppColors.laranja,
+                ),
                 const SizedBox(width: 6),
                 Expanded(
                   child: Text(
@@ -335,7 +358,4 @@ class _WalletPageState extends State<WalletPage>
       ),
     );
   }
-
 }
-
-
