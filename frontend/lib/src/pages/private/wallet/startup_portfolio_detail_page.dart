@@ -320,6 +320,7 @@ class _StartupPortfolioCardState extends State<_StartupPortfolioCard> {
                     child: AppSecondaryButton(
                       label: 'Vender',
                       onPressed: () => _handleSell(dialogContext),
+                      verticalPadding: 10,
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -327,6 +328,7 @@ class _StartupPortfolioCardState extends State<_StartupPortfolioCard> {
                     child: AppPrimaryButton(
                       label: 'Comprar mais',
                       onPressed: () => _handleBuy(dialogContext),
+                      verticalPadding: 10,
                     ),
                   ),
                 ],
