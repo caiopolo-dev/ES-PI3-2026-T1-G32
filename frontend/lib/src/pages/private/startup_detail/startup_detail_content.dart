@@ -330,6 +330,10 @@ class StartupDetailContent extends StatelessWidget {
     final precoToken = ((startup['precoToken'] as num?)?.toDouble() ?? 0.0) / 100;
     final totalTokens = (startup['totalTokens'] as num?)?.toInt() ?? 0;
     final tokensDisponiveis = (startup['tokensDisponiveis'] as num?)?.toInt() ?? 0;
+    final totalTokensBalcao = offers.fold<int>(
+      0,
+      (total, offer) => total + ((offer['amount'] as num?)?.toInt() ?? 0),
+    );
     final descricao = startup['descricao'] as String? ?? '';
     final socios = (startup['socios'] as List?)
             ?.map((s) => Map<String, dynamic>.from(s as Map))
@@ -355,7 +359,11 @@ class StartupDetailContent extends StatelessWidget {
           const SizedBox(height: 16),
           const Divider(),
           const SizedBox(height: 12),
-          TokensInfo(totalTokens: totalTokens, tokensDisponiveis: tokensDisponiveis),
+          TokensInfo(
+            totalTokens: totalTokens,
+            tokensDisponiveis: tokensDisponiveis,
+            tokensBalcao: totalTokensBalcao > 0 ? totalTokensBalcao : null,
+          ),
           const SizedBox(height: 16),
           const Divider(),
           const SizedBox(height: 36),
