@@ -11,6 +11,23 @@ import {
 } from "../../../shared/collections";
 
 /**
+ * Updates today's portfolio snapshot for all registered users.
+ * Called after any price-changing transaction so every portfolio
+ * reflects the new price on the same day — not just at 23:58.
+ * @return {Promise<void>}
+ */
+export async function updateAllSnapshots(): Promise<void> {
+  const snap = await db.collection(USERS).get();
+  await Promise.all(
+    snap.docs.map((doc) =>
+      updateTodaySnapshot(doc.id).catch((e) =>
+        console.warn(`updateAllSnapshots failed for ${doc.id}:`, e)
+      )
+    )
+  );
+}
+
+/**
  * Returns daily portfolio history points for a user, ordered by date ascending.
  * @param {string} uid User ID.
  * @return {Promise<object>} Daily portfolio points for the chart.

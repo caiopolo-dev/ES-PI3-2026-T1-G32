@@ -9,7 +9,7 @@ import {
   WALLET, WALLET_SALDO, USER_TOKENS, PRICE_HISTORY,
   OFFER_STATUS_OPEN, TX_TYPE_BUY, TX_SOURCE_OFFER,
 } from "../../../shared/collections";
-import {updateTodaySnapshot} from
+import {updateAllSnapshots} from
   "../../wallet/repositories/portfolioRepository";
 import {FATOR_IMPACTO} from "../../../shared/tokenPricing";
 
@@ -128,8 +128,6 @@ export async function buyTokenOffer(
   // Created OUTSIDE runTransaction so retries reuse the same doc IDs
   const transactionRef = db.collection(TRANSACTIONS).doc();
 
-  let capturedSellerId: string | null = null;
-
   // Toda a operação é atômica: débito do comprador, crédito do vendedor,
   // atualização da oferta e registro da transação acontecem juntos ou falham.
   const result = await db.runTransaction(async (transaction) => {
@@ -162,7 +160,6 @@ export async function buyTokenOffer(
     }
 
     const sellerId = offerData.sellerId;
-    capturedSellerId = sellerId as string;
     const startupId = offerData.startupId;
     const availableAmount = Number(offerData.amount ?? 0);
     const pricePerTokenCents = Number(
@@ -350,13 +347,9 @@ export async function buyTokenOffer(
   });
 
   try {
-    await Promise.all([
-      updateTodaySnapshot(buyerId),
-      capturedSellerId ?
-        updateTodaySnapshot(capturedSellerId) : Promise.resolve(),
-    ]);
+    await updateAllSnapshots();
   } catch (e) {
-    console.warn("updateTodaySnapshot failed (non-fatal):", e);
+    console.warn("updateAllSnapshots failed (non-fatal):", e);
   }
 
   return result;

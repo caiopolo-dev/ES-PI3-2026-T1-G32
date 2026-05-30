@@ -8,7 +8,7 @@ import {
   USERS, TOKEN_OFFERS, USER_TOKENS, STARTUPS, PRICE_HISTORY, TRANSACTIONS,
   TX_TYPE_RETURN, TX_TYPE_CANCEL_OFFER, TX_SOURCE_SELL_OFFER,
 } from "../../../shared/collections";
-import {updateTodaySnapshot} from
+import {updateAllSnapshots} from
   "../../wallet/repositories/portfolioRepository";
 import {
   CancelSellOfferParams,
@@ -147,9 +147,9 @@ export async function cancelOffer(
   });
 
   try {
-    await updateTodaySnapshot(sellerId);
+    await updateAllSnapshots();
   } catch (e) {
-    console.warn("updateTodaySnapshot failed (non-fatal):", e);
+    console.warn("updateAllSnapshots failed (non-fatal):", e);
   }
 
   return result;
