@@ -9,6 +9,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:mescla_invest/src/theme/app_colors.dart';
 import 'package:mescla_invest/src/widgets/widgets.dart';
 import 'package:mescla_invest/src/pages/private/buy_steps/buy_steps_page.dart';
+import 'package:mescla_invest/src/pages/private/balcao/widgets/offer_card.dart';
 import 'package:mescla_invest/src/pages/private/startup_detail/startup_detail_types.dart';
 import 'package:mescla_invest/src/pages/private/startup_detail/widgets/startup_detail_widgets.dart';
 
@@ -68,8 +69,6 @@ class StartupDetailContent extends StatelessWidget {
 
   static final NumberFormat _currency =
       NumberFormat.currency(locale: 'pt_BR', symbol: 'R\$');
-  static final NumberFormat _intFormat =
-      NumberFormat('#,##0', 'pt_BR');
 
   DateTime? _converterDataHistorico(String? dataTexto) {
     if (dataTexto == null || dataTexto.isEmpty) return null;
@@ -298,82 +297,31 @@ class StartupDetailContent extends StatelessWidget {
     final amount = (data['amount'] as num?)?.toInt() ?? 0;
     final unitCents = (data['valorUnitarioCentavos'] as num?)?.toInt() ?? 0;
     final offerId = (data['offerId'] ?? '').toString();
-    final totalCents = amount * unitCents;
     final startupName = (data['startupName'] ?? startup['nome'] ?? '').toString();
-    final unitValue = unitCents / 100;
-    final totalValue = totalCents / 100;
-
-    return Row(
-      children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                '${_intFormat.format(amount)} tokens',
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
+    return OfferCard(
+      data: data,
+      currency: _currency,
+      showLogo: false,
+      onTap: offerId.isEmpty || amount <= 0 || unitCents <= 0
+          ? () {}
+          : () async {
+              final comprou = await Navigator.push<bool>(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => BuyStepsPage(
+                    startupName: startupName,
+                    availableQuantity: amount,
+                    pricePerTokenCents: unitCents,
+                    offerId: offerId,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                '${_currency.format(unitValue)} por token',
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: AppColors.cinza700,
-                ),
-              ),
-              Text(
-                'Total: ${_currency.format(totalValue)}',
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: AppColors.cinza700,
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(width: 8),
-        SizedBox(
-          height: 30,
-          child: OutlinedButton(
-            onPressed: offerId.isEmpty || amount <= 0 || unitCents <= 0
-                ? null
-                : () async {
-                    final comprou = await Navigator.push<bool>(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => BuyStepsPage(
-                          startupName: startupName,
-                          availableQuantity: amount,
-                          pricePerTokenCents: unitCents,
-                          offerId: offerId,
-                        ),
-                      ),
-                    );
-                    if (!context.mounted) return;
-                    if (comprou == true) {
-                      onOfferPurchased?.call();
-                      await onOffersRefresh();
-                    }
-                  },
-            style: OutlinedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              foregroundColor: AppColors.azul,
-              side: const BorderSide(color: AppColors.azul),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            ),
-            child: const Text(
-              'Comprar',
-              style: TextStyle(
-                fontFamily: 'JosefinSans',
-                fontSize: 12,
-              ),
-            ),
-          ),
-        ),
-      ],
+              );
+              if (!context.mounted) return;
+              if (comprou == true) {
+                onOfferPurchased?.call();
+                await onOffersRefresh();
+              }
+            },
     );
   }
 

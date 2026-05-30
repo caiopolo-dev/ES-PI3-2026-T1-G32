@@ -11,8 +11,16 @@ class OfferCard extends StatelessWidget {
   final NumberFormat currency;
   final VoidCallback onTap;
   final String? logoUrl;
+  final bool showLogo;
 
-  const OfferCard({super.key, required this.data, required this.currency, required this.onTap, this.logoUrl});
+  const OfferCard({
+    super.key,
+    required this.data,
+    required this.currency,
+    required this.onTap,
+    this.logoUrl,
+    this.showLogo = true,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -55,15 +63,17 @@ class OfferCard extends StatelessWidget {
                       children: [
                         Row(
                           children: [
-                            CircleAvatar(
-                              radius: 22,
-                              backgroundColor: accentColor.withValues(alpha: 0.1),
-                              backgroundImage: logoUrl != null ? NetworkImage(logoUrl!) : null,
-                              child: logoUrl == null
-                                  ? Icon(Icons.business, color: accentColor, size: 20)
-                                  : null,
-                            ),
-                            const SizedBox(width: 12),
+                            if (showLogo) ...[
+                              CircleAvatar(
+                                radius: 22,
+                                backgroundColor: accentColor.withValues(alpha: 0.1),
+                                backgroundImage: logoUrl != null ? NetworkImage(logoUrl!) : null,
+                                child: logoUrl == null
+                                    ? Icon(Icons.business, color: accentColor, size: 20)
+                                    : null,
+                              ),
+                              const SizedBox(width: 12),
+                            ],
                             Expanded(
                               child: Text(
                                 name,
