@@ -32,6 +32,13 @@ class HomePage extends StatefulWidget {
   State<HomePage> createState() => _HomePageState();
 }
 
+/// Tela inicial pós-login que agrega resumo financeiro, gráfico de
+/// performance do portfólio e lista de investimentos do usuário.
+///
+/// Responsabilidades principais:
+/// - Carregar dados da carteira, tokens do usuário e startups
+/// - Controlar visibilidade do saldo usando `SharedPreferences`
+/// - Preparar dados do gráfico e indicar tendência por cor
 class _HomePageState extends State<HomePage> {
   bool _isLoading = true;
   bool _saldoVisivel = false;
@@ -101,6 +108,9 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _loadData() async {
+    // Recarrega todos os dados relevantes da tela em paralelo para reduzir
+    // latência: carteira, tokens do usuário, lista de startups e histórico
+    // do portfólio. Mantemos `_isLoading` enquanto as chamadas estão em curso.
     setState(() {
       _isLoading = true;
       _portfolioHistory = [];
@@ -115,12 +125,14 @@ class _HomePageState extends State<HomePage> {
 
     if (!mounted) return;
 
+    // Wallet data
     final wallet = results[0];
     if (wallet['success'] == true) {
       _saldo = wallet['saldo'] ?? 0.0;
       _totalTokens = wallet['totalTokens'] ?? 0;
     }
 
+    // Tokens do usuário — usamos isso para calcular o valor do portfólio
     final tokens = results[1];
     final Map<String, int> tokenMap = {};
     if (tokens['success'] == true) {
@@ -138,6 +150,8 @@ class _HomePageState extends State<HomePage> {
       }
     }
 
+    // Startups: filtramos localmente para mostrar apenas as que o usuário
+    // possui tokens (na seção "Meus investimentos").
     final startups = results[2];
     if (startups['success'] == true) {
       final lista = List<Map<String, dynamic>>.from(startups['data'] as List);
@@ -147,6 +161,7 @@ class _HomePageState extends State<HomePage> {
       _tokenMap = tokenMap;
     }
 
+    // Histórico do portfólio (pontos de retorno percentual) usado pelo gráfico
     final portfolioHistory = results[3];
     if (portfolioHistory['success'] == true) {
       _portfolioHistory = List<Map<String, dynamic>>.from(
@@ -170,6 +185,8 @@ class _HomePageState extends State<HomePage> {
       }),
     );
     if (!mounted) return;
+    // Mapeia id -> url para que as cards consigam requisitar a imagem
+    // sem acessar storage repetidamente.
     setState(() => _logoUrls = Map.fromEntries(entries));
   }
 

@@ -8,6 +8,14 @@ import {onSchedule} from "firebase-functions/v2/scheduler";
 import {listAllUserIds} from "../../users/repositories/userRepository";
 import {updateTodaySnapshot} from "../repositories/portfolioRepository";
 
+// Job agendado que captura um snapshot diário do portfólio de cada usuário
+// com tokens às 23:58 (horário de Brasília).
+// Observações:
+// - Executa em paralelo (`Promise.all`) para throughput; falhas por usuário
+//   são logadas mas não interrompem o processamento dos demais.
+// - Uso principal: garante um ponto diário no histórico mesmo sem transações
+//   do usuário, permitindo análise de variação de preços ao longo do tempo.
+
 export const dailyPortfolioSnapshot = onSchedule(
   {
     schedule: "58 23 * * *",

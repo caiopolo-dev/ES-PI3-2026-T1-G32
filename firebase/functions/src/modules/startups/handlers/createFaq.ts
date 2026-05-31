@@ -11,8 +11,10 @@ import {
 import {requireAuth} from "../../../shared/validation";
 
 export const createFaq = onCall(async (request) => {
+  // Requer autenticação; lança HttpsError se o usuário não estiver autenticado.
   requireAuth(request.auth);
 
+  // Validação mínima do payload: startupId e pergunta são obrigatórios.
   const {startupId, pergunta, privada} = request.data;
 
   if (!startupId || !pergunta) {
@@ -22,9 +24,12 @@ export const createFaq = onCall(async (request) => {
     );
   }
 
+  // Dados do usuário a partir do contexto de autenticação.
   const uid = request.auth.uid;
   const email = request.auth.token.email ?? "";
 
+  // Permissão para perguntas privadas: apenas usuários com tokens da startup
+  // podem enviar perguntas marcadas como `privada`.
   if (privada === true) {
     const hasTokens = await hasTokensForStartup(uid, startupId);
     if (!hasTokens) {
@@ -35,10 +40,14 @@ export const createFaq = onCall(async (request) => {
     }
   }
 
-  // Nome vem do Firestore (campo 'name') pois o token Auth não o contém.
+  // Obtém o nome do usuário no Firestore — o token Auth pode não conter
+  // o campo `name`, por isso lemos do documento do usuário para registrar
+  // a FAQ com o nome correto do autor.
   const userDoc = await getUserById(uid);
   const nomeUsuario = (userDoc.data()?.name as string) ?? "";
 
+  // Persiste a FAQ; o repositório espera startupId, texto, flag privada,
+  // email e nome do autor.
   await faqsRepository.create(
     startupId, pergunta, privada === true, email, nomeUsuario
   );

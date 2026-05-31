@@ -17,6 +17,16 @@ class BalcaoEmptyState extends StatelessWidget {
     required this.icon,
   });
 
+  /// Widget simples para exibir um estado vazio nas abas do balcão.
+  ///
+  /// Uso típico:
+  /// - Quando não há ofertas públicas disponíveis.
+  /// - Quando o usuário não possui ordens abertas.
+  ///
+  /// Parâmetros:
+  /// - `message`: texto a ser exibido abaixo do ícone.
+  /// - `icon`: ícone representativo do estado (por exemplo, lupa para busca).
+
   @override
   Widget build(BuildContext context) {
     return Center(
@@ -86,6 +96,12 @@ class BalcaoSortChips extends StatelessWidget {
   }
 }
 
+/// Conjunto de chips que permitem ao usuário selecionar o modo de ordenação
+/// das listas exibidas no balcão (alfabética, menor preço, maior preço).
+///
+/// `topPadding` facilita posicionamento quando o componente é usado em
+/// diferentes contextos (ex: dentro de colunas com espaçamentos variados).
+
 class BalcaoDismissBackground extends StatelessWidget {
   const BalcaoDismissBackground({super.key});
 
@@ -116,3 +132,9 @@ class BalcaoDismissBackground extends StatelessWidget {
     ),
   );
 }
+
+/// Fundo exibido quando o usuário arrasta uma ordem para cancelar.
+///
+/// Projetado para ser usado como `secondaryBackground` em `Dismissible`.
+/// Exibe um ícone de lixeira e o texto "Cancelar" alinhados à direita,
+/// seguindo o estilo visual do app (cor de alerta `AppColors.vermelho`).

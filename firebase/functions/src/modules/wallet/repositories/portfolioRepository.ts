@@ -10,6 +10,16 @@ import {
   PORTFOLIO_HISTORY,
 } from "../../../shared/collections";
 
+// Repositório responsável por criar e ler snapshots diários do portfólio.
+// Observações importantes:
+// - Valores monetários são armazenados em centavos (inteiros).
+// - `updateTodaySnapshot` é chamado tanto por transações que mudam
+//   preços quanto pelo job noturno, garantindo pelo menos um ponto
+//   diário por usuário para visualizações históricas.
+// - Funções usam `Promise.all` para paralelizar leituras, mas processe
+//   apenas usuários com posições ativas para economizar leituras.
+// - A hora considerada para corte diário é UTC-3 (horário do Brasil).
+
 /**
  * Updates today's portfolio snapshot for all registered users.
  * Called after any price-changing transaction so every portfolio
@@ -92,6 +102,9 @@ export async function updateTodaySnapshot(uid: string): Promise<void> {
 
   if (investedCents <= 0) return;
 
+  // Calcula retorno percentual a partir de valores em centavos para evitar
+  // imprecisões de ponto flutuante; armazena data no formato YYYY-MM-DD
+  // considerando fuso UTC-3 para alinhar com fechamento diário esperado.
   const returnPercent = ((valueCents - investedCents) / investedCents) * 100;
   const brazilNow = new Date(new Date().getTime() - 3 * 60 * 60 * 1000);
   const today = brazilNow.toISOString().slice(0, 10);

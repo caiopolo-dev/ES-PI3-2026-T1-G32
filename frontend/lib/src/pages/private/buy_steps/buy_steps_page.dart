@@ -10,6 +10,15 @@ import 'package:mescla_invest/src/pages/private/buy_steps/widgets/buy_confirm_wi
 import 'package:mescla_invest/src/utils/currency_formatter.dart';
 import 'package:mescla_invest/src/widgets/widgets.dart';
 
+/// Página que conduz o usuário pelo fluxo de compra/venda em 3 passos:
+/// 0) Seleção de quantidade / preço
+/// 1) Revisão / confirmação
+/// 2) Resultado (sucesso)
+///
+/// A mesma página suporta modo de venda (`isSellMode`) e fluxo de
+/// startup (`isStartupFlow`). Recebe parâmetros essenciais como preço,
+/// quantidade disponível e identificadores de oferta/startup quando
+/// aplicáveis.
 class BuyStepsPage extends StatefulWidget {
   @override
   State<BuyStepsPage> createState() => _BuyStepsPageState();
@@ -34,6 +43,11 @@ class BuyStepsPage extends StatefulWidget {
   });
 }
 
+/// Estado que controla o passo atual, valores temporários (quantidade,
+/// preço de venda), validações e chamadas a services para executar a
+/// compra/venda. Mantém `walletBalance` para validar saldo quando for
+/// necessário e usa `mounted` antes de atualizar o estado em callbacks
+/// assíncronos.
 class _BuyStepsPageState extends State<BuyStepsPage> {
   int currentStep = 0;
   bool isLoading = false;
@@ -52,13 +66,18 @@ class _BuyStepsPageState extends State<BuyStepsPage> {
       ? ['Venda de token', 'Confirmação de venda', 'Ordem criada']
       : ['Compra de token', 'Confirmação de compra', 'Compra concluída'];
 
+  /// Carrega o saldo atual da carteira do usuário via `TokenDataService`.
+  /// Usa `mounted` para evitar setState depois que o widget foi descartado.
   Future<void> loadWalletBalance() async {
     final balance = await TokenDataService.getWalletBalance();
     if (!mounted) return;
     setState(() => walletBalance = balance);
   }
 
-  int get totalCents =>
+    /// Total em centavos para a operação atual.
+    /// Se estiver em modo venda (`isSellMode`) considera `_sellPriceCents`,
+    /// caso contrário usa `widget.pricePerTokenCents` (preço da oferta/startup).
+    int get totalCents =>
       tokenAmount *
       (widget.isSellMode ? _sellPriceCents : widget.pricePerTokenCents);
 
@@ -80,6 +99,16 @@ class _BuyStepsPageState extends State<BuyStepsPage> {
     }
   }
 
+  /// Executa a confirmação final da compra/venda.
+  ///
+  /// Comportamento:
+  /// - Define `isLoading` enquanto a chamada de rede acontece.
+  /// - Dependendo do modo, chama o service apropriado:
+  ///   * venda -> `WalletService.createSellOffer`
+  ///   * startup -> `TokenDataService.buyStartupToken`
+  ///   * oferta -> `TokenDataService.buyOffer`
+  /// - Em caso de sucesso avança para o passo de resultado, senão mostra
+  ///   a mensagem de erro retornada pelo service.
   Future<void> confirmPurchase() async {
     setState(() {
       isLoading = true;
@@ -175,6 +204,8 @@ class _BuyStepsPageState extends State<BuyStepsPage> {
     super.dispose();
   }
 
+  /// Valida os dados do passo atual. Retorna `true` se tudo estiver ok,
+  /// caso contrário atualiza `errorText` com a mensagem apropriada.
   bool validateStep() {
     setState(() => errorText = '');
     switch (currentStep) {
@@ -207,6 +238,8 @@ class _BuyStepsPageState extends State<BuyStepsPage> {
     }
   }
 
+  /// Avança para o próximo passo se a validação atual passar. Se já estiver
+  /// no último passo, fecha a tela retornando `true` para o chamador.
   void nextStep() {
     if (!validateStep()) return;
     if (currentStep < 2) {

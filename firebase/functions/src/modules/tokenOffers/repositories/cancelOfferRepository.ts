@@ -23,6 +23,15 @@ export async function cancelOffer(
 ): Promise<CancelSellOfferResult> {
   const {offerId, sellerId} = params;
 
+  // Função responsável por reverter uma oferta de venda ativa.
+  // Observações importantes:
+  // - A operação ocorre dentro de uma transação Firestore para garantir
+  //   atomicidade: devolução dos tokens ao usuário, remoção da oferta
+  //   e ajuste do preço da startup ocorrem juntas ou falham.
+  // - Unidades monetárias de preço são tratadas em centavos (inteiros).
+  // - O repositório lança HttpsError em validações de pré-condição,
+  //   permitindo que o handler mapear erros para o cliente.
+
   // Created OUTSIDE runTransaction so retries reuse the same doc IDs
   const transactionRef = db.collection(TRANSACTIONS).doc();
 

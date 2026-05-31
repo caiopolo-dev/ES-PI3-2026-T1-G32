@@ -24,6 +24,14 @@ export async function createSellOffer(
 ): Promise<CreateSellOfferResult> {
   const {startupId, sellerId, quantity, pricePerTokenCents} = params;
 
+  // Cria uma oferta de venda bloqueando tokens do vendedor.
+  // Observações:
+  // - Executado em transação para garantir que a remoção/atualização da
+  //   posição do usuário e a criação da oferta sejam atômicas.
+  // - `pricePerTokenCents` é expressado em centavos (inteiro).
+  // - O repositório valida existência da startup, saldo de tokens e
+  //   atualiza histórico de preço da startup (impacto de oferta).
+
   const result = await db.runTransaction(async (transaction) => {
     const startupRef = db.collection(STARTUPS).doc(startupId);
     const userTokenRef = db

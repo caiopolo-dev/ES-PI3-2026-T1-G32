@@ -174,6 +174,10 @@ class _RegisterPageState extends State<RegisterPage> {
   }
 
   void nextStep() async {
+    // Avança entre os 3 passos de cadastro. No último passo (`currentStep == 2`)
+    // realiza a chamada a `AuthService.registerUser` enviando dados sem
+    // máscaras (somente dígitos onde esperado). Em caso de sucesso mostra um
+    // diálogo de confirmação; em caso de erro exibe `SnackBar`.
     if (!validateStep()) {
       setState(() {});
       return;

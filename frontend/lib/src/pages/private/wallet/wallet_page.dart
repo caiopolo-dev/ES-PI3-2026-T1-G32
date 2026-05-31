@@ -53,6 +53,8 @@ class _WalletPageState extends State<WalletPage>
   void didUpdateWidget(WalletPage oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.isActive && !oldWidget.isActive) {
+      // Quando a aba é ativada, recarregamos visibilidade e dados.
+      // `_loadVisibility` lê a preferência local; `_loadAll` busca dados remotos.
       _loadVisibility();
       _loadAll();
     }
@@ -117,6 +119,11 @@ class _WalletPageState extends State<WalletPage>
   }
 
   Future<void> _loadAll() async {
+    // Carrega todos os dados visíveis na tela de carteira em paralelo:
+    // - WalletService.getWalletData: saldo total e resumo
+    // - WalletService.getTransactionHistory: histórico de transações
+    // - WalletService.getUserTokens: tokens do usuário
+    // Resultado agrupado reduz round-trips e simplifica o loading state.
     setState(() {
       _isLoading = true;
       _errorText = '';
@@ -139,6 +146,8 @@ class _WalletPageState extends State<WalletPage>
     final history = results[1];
     final tokens = results[2];
 
+    // Atualiza estado com dados do backend, usando valores default quando
+    // campos esperados estiverem ausentes, para evitar crashes.
     if (wallet['success'] == true) {
       _saldo = wallet['saldo'] ?? 0.0;
       _totalTokens = wallet['totalTokens'] ?? 0;
@@ -179,6 +188,8 @@ class _WalletPageState extends State<WalletPage>
         idToNome[id] = nome;
       }
     }
+    // Busca as URLs de logo por nome da startup. Fazemos as requisições em
+    // paralelo e armazenamos um mapa id->url para uso nos cards.
     final entries = await Future.wait(
       idToNome.entries.map((e) async {
         final url = await StorageService.getStartupAsset(
@@ -205,6 +216,7 @@ class _WalletPageState extends State<WalletPage>
     );
     if (!mounted || amountCents == null) return;
 
+    // Atualiza UI imediatamente para mostrar loading e chama o serviço.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) setState(() => _isLoading = true);
     });
@@ -212,6 +224,7 @@ class _WalletPageState extends State<WalletPage>
     final result = await WalletService.addBalance(amountCents);
     if (!mounted) return;
     if (result['success'] == true) {
+      // Recarrega todos os dados para refletir o novo saldo.
       _loadAll();
     } else {
       setState(() => _isLoading = false);
@@ -231,6 +244,8 @@ class _WalletPageState extends State<WalletPage>
       usuario: widget.usuario,
       onTabSwitch: widget.onTabSwitch,
       onRefresh: () {
+        // Ao fechar o diálogo com ação (compra/venda), recarregamos a lista
+        // para refletir alterações no portfolio.
         if (mounted) _loadAll();
       },
     );

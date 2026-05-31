@@ -23,13 +23,25 @@ class InvestimentoCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Valor atual do token no objeto `data`. O backend guarda centavos,
+    // portanto aqui `precoAtual` representa centavos (ex: 100 == R$1,00).
     final precoAtual = (data['precoToken'] as num?)?.toDouble() ?? 0.0;
+    // Valor de fechamento do dia anterior, quando disponível, também em centavos.
     final fechamento = (data['fechamentoOntemCentavos'] as num?)?.toDouble();
+    // Verifica se há variação calculável (fechamento válido > 0).
     final temVariacao = fechamento != null && fechamento > 0;
+    // Percentual de variação em relação ao fechamento anterior.
     final variacaoPct = temVariacao ? (precoAtual - fechamento) / fechamento * 100 : 0.0;
+    // Define cor de destaque: verde para alta, vermelho para baixa, azul neutro
+    // quando não há histórico para comparar.
     final accentColor = temVariacao
         ? (variacaoPct >= 0 ? AppColors.verde : AppColors.vermelho)
         : AppColors.azul;
+
+    // NOTE: `precoAtual` é exibido dividindo por 100 ao formatar com
+    // `currencyFormat` (porque `currencyFormat` espera unidades, não centavos).
+    // O badge à esquerda usa `accentColor` para tornar o cartão reconhecível
+    // rapidamente (ganho/perda/neutro) sem o usuário precisar ler números.
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -54,6 +66,8 @@ class InvestimentoCard extends StatelessWidget {
                         radius: 22,
                         backgroundColor: accentColor.withValues(alpha: 0.1),
                         backgroundImage: logoUrl != null ? NetworkImage(logoUrl!) : null,
+                        // Mostra ícone fallback quando não há imagem disponível
+                        // — evita layout quebrado ao depender apenas de `backgroundImage`.
                         child: logoUrl == null
                             ? Icon(Icons.business, color: accentColor, size: 20)
                             : null,
@@ -123,6 +137,9 @@ class InvestimentoCard extends StatelessWidget {
                           ),
                           const SizedBox(height: 4),
                           DailyVariationBadge(
+                            // `DailyVariationBadge` recebe `null` quando não há
+                            // histórico, assim o componente pode optar por não
+                            // exibir um valor percentual.
                             variacaoPct: temVariacao ? variacaoPct : null,
                           ),
                         ],

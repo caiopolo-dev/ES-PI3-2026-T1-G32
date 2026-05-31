@@ -6,6 +6,10 @@ import {onCall, HttpsError} from "firebase-functions/v2/https";
 import {getTransactionHistoryByUserId} from "../repositories/walletRepository";
 import {requireAuth} from "../../../shared/validation";
 
+// Handler que retorna o histórico de transações do usuário.
+// - Requer autenticação.
+// - Encapsula erros do repositório e mapeia para `HttpsError` para o cliente.
+
 export const getTransactionHistory = onCall(async (request) => {
   requireAuth(request.auth);
 

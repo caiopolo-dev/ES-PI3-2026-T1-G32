@@ -18,10 +18,17 @@ class UserTokensSheet extends StatefulWidget {
 }
 
 class _UserTokensSheetState extends State<UserTokensSheet> {
+  /// Formato de moeda padrão usado neste sheet.
   static final _fmt = NumberFormat.currency(locale: 'pt_BR', symbol: 'R\$');
 
+  /// Lista de tokens do usuário carregada a partir do `WalletService`.
   List<Map<String, dynamic>> _tokens = [];
+
+  /// Flag de carregamento para controlar o indicador de progresso.
   bool _isLoading = true;
+
+  /// Cache local de URLs das logos, indexado pelo nome da startup.
+  /// Evita múltiplas requisições ao Storage enquanto o sheet estiver aberto.
   Map<String, String?> _logoUrls = {};
 
   @override
@@ -30,6 +37,13 @@ class _UserTokensSheetState extends State<UserTokensSheet> {
     _load();
   }
 
+  /// Carrega os tokens do usuário via `WalletService` e atualiza o estado.
+  ///
+  /// Estratégia:
+  /// - Chama a API local `WalletService.getUserTokens()`.
+  /// - Se bem-sucedido, popula `_tokens` e desativa o indicador de
+  ///   carregamento.
+  /// - Em seguida chama `_loadLogoUrls()` para popular as imagens.
   Future<void> _load() async {
     final result = await WalletService.getUserTokens();
     if (!mounted) return;
@@ -42,6 +56,11 @@ class _UserTokensSheetState extends State<UserTokensSheet> {
     _loadLogoUrls();
   }
 
+  /// Faz o download (ou resolve as URLs) das logos das startups listadas
+  /// em `_tokens`, armazenando o resultado em `_logoUrls`.
+  ///
+  /// Observação: usamos `Future.wait` para paralelizar as requisições por
+  /// startup e depois atualizamos o estado com `Map.fromEntries(entries)`.
   Future<void> _loadLogoUrls() async {
     final entries = await Future.wait(
       _tokens.map((t) async {
@@ -59,6 +78,8 @@ class _UserTokensSheetState extends State<UserTokensSheet> {
 
   @override
   Widget build(BuildContext context) {
+    // DraggableScrollableSheet usado para exibir o sheet com comportamento
+    // de arrastar/expandir típico em bottom sheets modernos.
     return DraggableScrollableSheet(
       initialChildSize: 0.6,
       minChildSize: 0.4,
@@ -66,6 +87,7 @@ class _UserTokensSheetState extends State<UserTokensSheet> {
       expand: false,
       builder: (_, controller) => Column(
         children: [
+          // Indicador visual no topo para sugerir que o sheet é arrastável.
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 12),
             child: Container(
@@ -110,12 +132,15 @@ class _UserTokensSheetState extends State<UserTokensSheet> {
                     itemCount: _tokens.length,
                     itemBuilder: (context, index) {
                       final token = _tokens[index];
+                      // Busca a URL do logo a partir do cache `_logoUrls`.
                       final logoUrl =
                           _logoUrls[token['startupNome'] as String? ?? ''];
                       return WalletTokenCard(
                         token: token,
                         logoUrl: logoUrl,
                         saldoVisivel: true,
+                        // Ao tocar em um token, retornamos o token selecionado
+                        // para o chamador via `Navigator.pop(context, token)`.
                         onTap: () => Navigator.pop(context, token),
                         currencyFormat: _fmt,
                       );

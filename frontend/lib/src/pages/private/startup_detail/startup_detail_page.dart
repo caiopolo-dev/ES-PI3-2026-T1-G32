@@ -61,6 +61,10 @@ class _StartupDetailPageState extends State<StartupDetailPage> {
   @override
   void initState() {
     super.initState();
+    // Carregamento inicial coordenado:
+    // - `_initPage` busca metadados da startup e tokens do usuário em paralelo.
+    // - `_loadFaqs`, `_loadPriceHistory` e `_loadOffers` populam seções
+    //   específicas da página (FAQs, gráfico e ofertas).
     _initPage();
     _loadFaqs();
     _loadPriceHistory();
@@ -68,6 +72,7 @@ class _StartupDetailPageState extends State<StartupDetailPage> {
   }
 
   Future<void> _initPage() async {
+    // Busca startup e tokens em paralelo para reduzir latência.
     final results = await Future.wait([
       StartupService.getStartupById(widget.startupId),
       WalletService.getUserTokens(),
@@ -81,6 +86,7 @@ class _StartupDetailPageState extends State<StartupDetailPage> {
         : <Map<String, dynamic>>[];
     final match = tokens.where((t) => t['startupId'] == widget.startupId);
 
+    // Atualiza o estado com segurança após as chamadas assíncronas.
     setState(() {
       isLoading = false;
       if (startupResult['success'] as bool) {
@@ -100,6 +106,7 @@ class _StartupDetailPageState extends State<StartupDetailPage> {
   }
 
   Future<void> _loadStorageAssets(String nome) async {
+    // Baixa URLs de ativos (vídeo e sumário) em paralelo e grava no estado.
     final results = await Future.wait([
       StorageService.getStartupAsset(nome, 'video.mp4'),
       StorageService.getStartupAsset(nome, 'summary.pdf'),
@@ -112,6 +119,7 @@ class _StartupDetailPageState extends State<StartupDetailPage> {
   }
 
   Future<void> _loadPriceHistory() async {
+    // Carrega o histórico de preços e ordena por data crescente.
     setState(() => _priceHistoryLoading = true);
     final result = await StartupService.getPriceHistory(widget.startupId);
     if (!mounted) return;
@@ -136,6 +144,7 @@ class _StartupDetailPageState extends State<StartupDetailPage> {
   }
 
   Future<void> _loadOffers() async {
+    // Lista ofertas do balcão e filtra apenas as válidas para esta startup.
     if (!mounted) return;
     setState(() {
       _offersLoading = true;
@@ -275,6 +284,9 @@ class _StartupDetailPageState extends State<StartupDetailPage> {
     final pricePerTokenCents = (data['precoToken'] as num?)?.toInt() ?? 0;
     final availableQuantity = (data['tokensDisponiveis'] as num?)?.toInt() ?? 0;
 
+    // Validações rápidas antes de abrir o fluxo de compra:
+    // - Se não houver tokens disponíveis ou preço inválido mostramos snackbar
+    //   e impedimos a navegação.
     if (availableQuantity <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(

@@ -17,6 +17,17 @@ class CancelOfferDialog extends StatelessWidget {
     required this.currency,
   });
 
+  /// Diálogo de confirmação para cancelar uma oferta.
+  ///
+  /// Exibe informações resumidas da oferta (startup, quantidade e preço por
+  /// token) e oferece duas ações:
+  /// - `Cancelar`: fecha o diálogo sem realizar o cancelamento (retorna false)
+  /// - `Confirmar`: fecha o diálogo confirmando o cancelamento (retorna true)
+  ///
+  /// Recebe `offer` como `Map<String, dynamic>` e `currency` para formatar
+  /// valores monetários. Mantém toda a lógica de UI neste widget; a ação
+  /// real de cancelamento deve ser executada pelo chamador (ex: via service).
+
   @override
   Widget build(BuildContext context) {
     final name = (offer['startupName'] ?? offer['startupId'] ?? '—').toString();
@@ -138,16 +149,16 @@ class CancelOfferDialog extends StatelessWidget {
   Widget _row(String label, String value) => Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label,
-              style: const TextStyle(
-                  fontFamily: 'JosefinSans',
-                  fontSize: 12,
-                  color: AppColors.cinza500)),
-          Text(value,
-              style: const TextStyle(
-                  fontFamily: 'JosefinSans',
-                  fontSize: 13,
-                  fontWeight: FontWeight.bold)),
+        Text(label,
+          style: const TextStyle(
+            fontFamily: 'JosefinSans',
+            fontSize: 12,
+            color: AppColors.cinza500)),
+        Text(value,
+          style: const TextStyle(
+            fontFamily: 'JosefinSans',
+            fontSize: 13,
+            fontWeight: FontWeight.bold)),
         ],
       );
 }

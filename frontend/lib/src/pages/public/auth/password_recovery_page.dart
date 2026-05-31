@@ -19,6 +19,12 @@ class _PasswordRecoveryPageState extends State<PasswordRecoveryPage> {
   String errorText = '';
   bool isLoading = false;
 
+  // Observação geral:
+  // - Validação é feita localmente (regex) para evitar chamadas desnecessárias
+  //   ao backend quando o e-mail é claramente inválido.
+  // - `sendRecoveryEmail` delega o envio real ao `AuthService` e trata o
+  //   resultado exibindo mensagens apropriadas ao usuário.
+
   // Validação local com regex completa antes de qualquer chamada de rede.
   // Regex mais rigorosa que a do auth_service para evitar requisição com e-mail claramente inválido.
   bool validateEmail() {

@@ -43,6 +43,12 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   Future<void> login() async {
+    // Fluxo de login:
+    // 1) Validação local via `validateLogin`.
+    // 2) Chamada a `AuthService.loginUser` para autenticar.
+    // 3) Tratamento de 2FA: `FirebaseAuthMultiFactorException` redireciona para
+    //    `TwoFactorVerifyPage` responsável por completar o fluxo.
+    // 4) Em sucesso, redireciona para `MainScaffold` removendo a pilha.
     if (validateLogin()) {
       setState(() => isLoading = true);
 

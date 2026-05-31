@@ -101,6 +101,8 @@ class _StartupPortfolioCardState extends State<_StartupPortfolioCard> {
   @override
   Widget build(BuildContext context) {
     final nome = widget.token['startupNome'] as String? ?? '—';
+    // Valores numéricos extraídos do token do usuário. Conversões seguras com
+    // fallback evitam crashes caso o backend envie campos faltantes.
     final precoMedio = (widget.token['precoMedio'] as num?)?.toDouble() ?? 0.0;
     final valorAtual = (widget.token['valorAtual'] as num?)?.toDouble() ?? 0.0;
     final quantidade = (widget.token['quantidade'] as num?)?.toInt() ?? 0;
@@ -210,16 +212,19 @@ class _StartupPortfolioCardState extends State<_StartupPortfolioCard> {
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     GestureDetector(
-                      onTap: () =>
-                          setState(() => _saldoVisivel = !_saldoVisivel),
-                      child: Icon(
-                        _saldoVisivel
-                            ? Icons.visibility_outlined
-                            : Icons.visibility_off_outlined,
-                        size: 20,
-                        color: AppColors.cinza500,
-                      ),
-                    ),
+                          // Alterna visibilidade do saldo localmente neste diálogo.
+                          // A preferência global (persistida) é gerenciada pela
+                          // `WalletPage`; aqui apenas alteramos a exibição temporária.
+                          onTap: () =>
+                              setState(() => _saldoVisivel = !_saldoVisivel),
+                          child: Icon(
+                            _saldoVisivel
+                                ? Icons.visibility_outlined
+                                : Icons.visibility_off_outlined,
+                            size: 20,
+                            color: AppColors.cinza500,
+                          ),
+                        ),
                     const SizedBox(height: 6),
                     Container(
                       padding: const EdgeInsets.symmetric(

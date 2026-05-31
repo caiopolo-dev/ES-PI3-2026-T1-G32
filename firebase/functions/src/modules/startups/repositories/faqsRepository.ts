@@ -12,6 +12,12 @@ const faqsRef = (startupId: string) =>
     .doc(startupId)
     .collection(FAQS);
 
+// Converte um documento do Firestore para o tipo `Faq` usado pelo backend.
+// Observações:
+// - `criadoEm` é armazenado como `serverTimestamp()` e convertido para
+//   milissegundos para facilitar ordenação e transporte via JSON.
+// - Usamos `?.toMillis?.()` defensivamente caso o campo ainda não tenha sido
+//   resolvido pelo servidor.
 const docToFaq = (doc: FirebaseFirestore.QueryDocumentSnapshot): Faq => ({
   id: doc.id,
   pergunta: doc.data().pergunta,
@@ -62,6 +68,8 @@ export const faqsRepository = {
     email: string,
     nomeUsuario: string
   ): Promise<void> {
+    // Insere o documento usando `serverTimestamp()` para que o timestamp seja
+    // definido pelo servidor, evitando desvio de relógio do cliente.
     await faqsRef(startupId).add({
       pergunta,
       privada,

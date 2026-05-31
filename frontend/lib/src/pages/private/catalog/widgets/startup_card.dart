@@ -45,6 +45,16 @@ class StartupCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // O `StartupCard` é responsável por apresentar informações resumidas
+    // da startup no catálogo, incluindo preço atual, variação diária,
+    // estágio (com cor) e se o usuário possui tokens.
+    //
+    // Estratégia de cor/variação:
+    // - Se não houver `fechamentoOntem` (<= 0) exibimos o preço em preto
+    //   sem badge de variação.
+    // - Caso exista valor anterior calculamos `variacaoPct` em porcentagem
+    //   e definimos `precoColor` conforme positivo (verde), negativo
+    //   (vermelho) ou neutro (cinza).
     final accentColor = estagioColors[estagio] ?? AppColors.azul;
     final Color precoColor;
     final double? variacaoPct;
@@ -68,6 +78,7 @@ class StartupCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(6),
       ),
       child: Text(
+        // Rótulo legível para o estágio (ex: 'Nova', 'Em Operação').
         estagioLabels[estagio] ?? estagio,
         style: TextStyle(
           fontFamily: 'JosefinSans',

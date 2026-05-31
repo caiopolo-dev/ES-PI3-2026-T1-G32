@@ -5,6 +5,14 @@
 import 'package:flutter/material.dart';
 import 'package:mescla_invest/src/theme/app_colors.dart';
 
+/// Widgets primitivos compartilhados pelo fluxo de compra/venda.
+///
+/// Contém indicadores de progresso, botões de passo e linhas de confirmação
+/// usadas por `BuyStepsPage` e seus componentes. Os widgets aqui são
+/// intencionados para serem pequenos, stateless e facilmente reutilizáveis.
+
+/// Barra de progresso horizontal que representa o passo atual dentro do
+/// total de passos do fluxo. Cada segmento é preenchido até `currentStep`.
 class StepProgressBar extends StatelessWidget {
   final int currentStep;
   final int totalSteps;
@@ -40,6 +48,8 @@ class StepProgressBar extends StatelessWidget {
   }
 }
 
+/// Botão quadrado usado para incrementar/decrementar a quantidade (±).
+/// Estilizado com `OutlinedButton` para manter contraste com o fundo.
 class StepButton extends StatelessWidget {
   final String label;
   final VoidCallback onPressed;
@@ -63,6 +73,8 @@ class StepButton extends StatelessWidget {
       );
 }
 
+/// Divisor horizontal usado dentro das caixas de confirmação para
+/// separar grupos de informações com espaçamento padronizado.
 class ConfirmDivider extends StatelessWidget {
   const ConfirmDivider({super.key});
 
@@ -72,6 +84,8 @@ class ConfirmDivider extends StatelessWidget {
           margin: const EdgeInsets.symmetric(vertical: 12));
 }
 
+/// Linha simples de confirmação que mostra `label` e `value` alinhados nas
+/// extremidades — usada para pares como "Startup: Nome" ou "Preço: R$ X".
 class ConfirmRow extends StatelessWidget {
   final String label;
   final String value;
@@ -95,6 +109,9 @@ class ConfirmRow extends StatelessWidget {
       );
 }
 
+/// Linha de confirmação específica para exibir a quantidade de tokens em
+/// um badge à direita. Mantém ícone e estilo visual consistente com o
+/// restante dos componentes de confirmação.
 class ConfirmRowTokens extends StatelessWidget {
   final int quantity;
   const ConfirmRowTokens({super.key, required this.quantity});

@@ -11,6 +11,11 @@ class InitialPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Tela inicial simples: mostra logo, slogan e dois botões principais.
+    // - 'Abrir conta' navega para a tela de registro (`RegisterPage`).
+    // - 'Já tenho conta' navega para a tela de login (`LoginPage`).
+    // Este widget é `Stateless` e não mantém estado local; toda ação de
+    // navegação é feita via `Navigator`.
     return Scaffold(
       backgroundColor: AppColors.branco,
       body: SafeArea(

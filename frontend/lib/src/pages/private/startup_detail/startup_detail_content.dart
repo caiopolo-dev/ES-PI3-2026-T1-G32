@@ -71,6 +71,9 @@ class StartupDetailContent extends StatelessWidget {
       NumberFormat.currency(locale: 'pt_BR', symbol: 'R\$');
 
   DateTime? _converterDataHistorico(String? dataTexto) {
+    // Converte uma string ISO/UTC para `DateTime` no fuso local.
+    // Retorna `null` quando a string é nula ou inválida, evitando exceções
+    // ao trabalhar com dados históricos incompletos.
     if (dataTexto == null || dataTexto.isEmpty) return null;
     final data = DateTime.tryParse(dataTexto);
     if (data == null) return null;
@@ -78,6 +81,10 @@ class StartupDetailContent extends StatelessWidget {
   }
 
   List<Map<String, dynamic>> _historicoFiltradoPorPeriodo() {
+    // Filtra `priceHistory` pelo período selecionado.
+    // - Quando não há histórico retorna lista vazia.
+    // - Para cada período calculamos a data inicial e incluímos apenas os
+    //   registros com `createdAt` posterior a essa data.
     if (priceHistory.isEmpty) return [];
     final agora = DateTime.now();
     DateTime dataInicial;
@@ -104,6 +111,9 @@ class StartupDetailContent extends StatelessWidget {
 
   List<FlSpot> _pontosGrafico() {
     final historico = _historicoFiltradoPorPeriodo();
+    // Converte a lista filtrada para pontos do gráfico.
+    // - O backend fornece `price` em centavos; dividimos por 100 para exibir
+    //   valores em reais no eixo Y.
     return List.generate(historico.length, (index) {
       final precoCentavos = (historico[index]['price'] as num?)?.toDouble() ?? 0.0;
       return FlSpot(index.toDouble(), precoCentavos / 100);
@@ -113,6 +123,10 @@ class StartupDetailContent extends StatelessWidget {
   List<String> _labelsGrafico() {
     final historico = _historicoFiltradoPorPeriodo();
     const meses = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+    // Gera rótulos inferiores do gráfico:
+    // - 1D => usa hora:minuto
+    // - 6M/1Y/ALL => usa mês abreviado
+    // - demais => usa dia/mês
     return historico.map((item) {
       final dataLocal = _converterDataHistorico(item['createdAt']?.toString());
       if (dataLocal == null) return '';
@@ -298,6 +312,8 @@ class StartupDetailContent extends StatelessWidget {
     final unitCents = (data['valorUnitarioCentavos'] as num?)?.toInt() ?? 0;
     final offerId = (data['offerId'] ?? '').toString();
     final startupName = (data['startupName'] ?? startup['nome'] ?? '').toString();
+    // Mostra a oferta e abre o fluxo de compra quando válida.
+    // Verificações: `offerId` não vazio, `amount` e `unitCents` positivos.
     return OfferCard(
       data: data,
       currency: _currency,

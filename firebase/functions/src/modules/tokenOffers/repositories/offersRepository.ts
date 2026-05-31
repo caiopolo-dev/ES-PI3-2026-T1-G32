@@ -27,6 +27,10 @@ export async function listOffersBySeller(sellerId: string) {
     .where("sellerId", "==", sellerId)
     .get();
 
+  // Retorna apenas ofertas com status "open" do vendedor informado.
+  // Essa lista é formatada para o frontend: contém IDs, quantidades,
+  // preços em centavos e timestamps ISO. Não altera estado no banco.
+
   const offers: Array<{
     offerId: string;
     startupId: string;
@@ -133,6 +137,7 @@ export async function buyTokenOffer(
     const offerSnap = await transaction.get(offerRef);
 
 
+    // Verifica existência e integridade da oferta.
     if (!offerSnap.exists) {
       throw new HttpsError(
         "not-found",
@@ -174,6 +179,7 @@ export async function buyTokenOffer(
     const startupRef = db.collection(STARTUPS).doc(startupId);
     const startupSnap = await transaction.get(startupRef);
 
+    // Proteção: usuário não pode comprar sua própria oferta.
     if (sellerId === buyerId) {
       throw new HttpsError(
         "failed-precondition",
@@ -209,6 +215,7 @@ export async function buyTokenOffer(
       );
     }
 
+    // Cálculo em centavos para evitar problemas com ponto flutuante.
     const totalCents = quantity * pricePerTokenCents;
 
     const buyerWalletRef = db
@@ -236,6 +243,7 @@ export async function buyTokenOffer(
     const buyerBalance = Number(buyerWalletSnap.data()?.saldo ?? 0);
     const sellerBalance = Number(sellerWalletSnap.data()?.saldo ?? 0);
 
+    // Valida saldo do comprador antes de efetuar débito.
     if (buyerBalance < totalCents) {
       throw new HttpsError(
         "failed-precondition",
@@ -272,6 +280,8 @@ export async function buyTokenOffer(
       });
     }
 
+    // Atualiza posição do comprador: calcula novo `precoMedio` ponderado
+    // entre posição anterior e nova compra, em centavos.
     const existingQty = Number(userTokenSnap.data()?.quantidade ?? 0);
     const existingPreco = Number(userTokenSnap.data()?.precoMedio ?? 0);
     const newQty = existingQty + quantity;

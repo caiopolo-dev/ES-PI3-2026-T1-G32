@@ -53,6 +53,7 @@ export async function buyStartupTokenDirectly(params: {
     const buyerWalletSnap = await transaction.get(buyerWalletRef);
     const userTokenSnap = await transaction.get(userTokenRef);
 
+    // Valida existência da startup e dados necessários para compra direta.
     if (!startupSnap.exists) {
       throw new HttpsError(
         "not-found",
@@ -71,6 +72,7 @@ export async function buyStartupTokenDirectly(params: {
 
 
     const startupName = String(startupData.nome ?? startupId);
+    // Preço da startup é armazenado em centavos (inteiro).
     const pricePerTokenCents = Number(startupData.precoToken ?? 0);
     const availableTokens = Number(startupData.tokensDisponiveis ?? 0);
 
@@ -94,6 +96,7 @@ export async function buyStartupTokenDirectly(params: {
         "Quantidade maior que a disponível"
       );
     }
+    // Calcula total em centavos para evitar imprecisão de ponto flutuante.
     const totalCents = quantity * pricePerTokenCents;
     const buyerBalance = Number(buyerWalletSnap.data()?.saldo ?? 0);
 
@@ -106,6 +109,7 @@ export async function buyStartupTokenDirectly(params: {
     const newBuyerBalance = buyerBalance - totalCents;
     const newAvailableTokens = availableTokens - quantity;
 
+    // Atualiza posição do comprador: recalcula `precoMedio` ponderado em centavos.
     const existingQty = Number(userTokenSnap.data()?.quantidade ?? 0);
     const existingPreco = Number(userTokenSnap.data()?.precoMedio ?? 0);
     const newQty = existingQty + quantity;

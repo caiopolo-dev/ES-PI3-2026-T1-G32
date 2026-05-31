@@ -7,8 +7,10 @@ import {createSellOffer as createSellOfferInRepo}
   from "../repositories/sellTokenRepository";
 
 export const createSellOffer = onCall(async (request) => {
+  // Requer autenticação para criar uma oferta.
   requireAuth(request.auth);
 
+  // Valida argumentos básicos do payload.
   const {startupId, quantity, pricePerTokenCents} = request.data ?? {};
 
   if (!startupId || typeof startupId !== "string") {
@@ -27,6 +29,9 @@ export const createSellOffer = onCall(async (request) => {
     );
   }
 
+  // `pricePerTokenCents` deve ser inteiro em centavos. Validamos faixa
+  // mínima (R$0,01) e máxima (R$50.000 = 5_000_000 centavos) para proteger
+  // contra valores abusivos.
   const priceNumber = Number(pricePerTokenCents);
 
   const priceInvalid = !Number.isInteger(priceNumber) ||
@@ -38,6 +43,8 @@ export const createSellOffer = onCall(async (request) => {
     );
   }
 
+  // Delegamos ao repositório que deve: reservar tokens, criar a oferta e
+  // garantir atomicidade das operações.
   const result = await createSellOfferInRepo({
     startupId,
     sellerId: request.auth.uid,

@@ -20,12 +20,32 @@ class MyOrderCard extends StatelessWidget {
     this.onCancel,
   });
 
+  /// Card que representa uma ordem do próprio usuário na aba "Minhas ordens".
+  ///
+  /// Props:
+  /// - `data`: mapa com campos da ordem (startupName/startupId, amount,
+  ///   valorUnitarioCentavos, offerId, etc.).
+  /// - `currency`: `NumberFormat` usado para formatar valores monetários.
+  /// - `logoUrl`: URL opcional da logo da startup para exibir no avatar.
+  /// - `onCancel`: callback acionado quando o usuário toca em "Cancelar".
+  ///
+  /// Observações de UX/implementação:
+  /// - Exibe um indicador visual de estado (barra verde à esquerda e
+  ///   badge "Em aberto").
+  /// - Mostra preço por token e total (preço * quantidade).
+  /// - O botão "Cancelar" é um `GestureDetector` que delega a ação para
+  ///   quem construiu o card — geralmente a tela chamará um diálogo de
+  ///   confirmação antes de executar a remoção no backend.
+
   @override
   Widget build(BuildContext context) {
     final name = (data['startupName'] ?? data['startupId'] ?? '—').toString();
     final amount = (data['amount'] as num?)?.toInt() ?? 0;
     final centavos = (data['valorUnitarioCentavos'] as num?)?.toDouble() ?? 0;
     final preco = centavos / 100;
+
+    // Normaliza e calcula valores a serem exibidos:
+    // - `preco` representa o valor por token em reais (centavos/100).
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),

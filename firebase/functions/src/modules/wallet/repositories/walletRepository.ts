@@ -9,6 +9,15 @@ import {
   PRICE_HISTORY, TxType,
 } from "../../../shared/collections";
 
+// Repositório da carteira do usuário (saldo, posições e histórico).
+// Notas de implementação:
+// - Saldo e preços são armazenados em centavos (inteiros) para evitar
+//   problemas com ponto flutuante.
+// - Consultas de transações usam limites e tentativas de fallback quando
+//   índices necessários ainda não estão prontos (ex.: `sellerId`).
+// - A função `getUserTokensByUserId` prefere preço de fechamento diário
+//   do histórico para calcular variações exibidas no frontend.
+
 /**
  * Returns wallet balance and portfolio summary for a user.
  * @param {string} uid User ID.

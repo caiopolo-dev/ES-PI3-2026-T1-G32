@@ -7,8 +7,11 @@ import {listOffersBySeller} from "../repositories/offersRepository";
 import {requireAuth} from "../../../shared/validation";
 
 export const listMyOffers = onCall(async (request) => {
+  // Requer autenticação e retorna as ofertas do usuário que são vendidas
+  // pelo `sellerId` presente no token.
   requireAuth(request.auth);
 
+  // O repositório retorna ofertas já formatadas para consumo pelo cliente.
   const offers = await listOffersBySeller(request.auth.uid);
 
   return {data: offers};

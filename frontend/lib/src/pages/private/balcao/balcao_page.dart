@@ -15,6 +15,15 @@ import 'package:mescla_invest/src/pages/private/balcao/widgets/cancel_offer_dial
 import 'package:mescla_invest/src/pages/private/balcao/widgets/balcao_widgets.dart';
 import 'package:mescla_invest/src/pages/private/balcao/balcao_types.dart';
 
+/// Página principal do balcão de negociação.
+///
+/// Responsabilidades:
+/// - Exibir o mercado de ofertas públicas (`Mercado`).
+/// - Exibir as ordens do usuário (`Minhas ordens`).
+/// - Expor ações para criar ordens de venda e navegar para passos de compra/venda.
+///
+/// A página usa `DefaultTabController` para alternar entre as abas e recebe
+/// o objeto `usuario` e um callback `onTabSwitch` para navegação externa.
 class BalcaoNegociacaoPage extends StatefulWidget {
   final Map<String, dynamic>? usuario;
   final void Function(int)? onTabSwitch;
@@ -31,6 +40,11 @@ class BalcaoNegociacaoPage extends StatefulWidget {
   State<BalcaoNegociacaoPage> createState() => _BalcaoNegociacaoPageState();
 }
 
+/// Estado da página `BalcaoNegociacaoPage`.
+///
+/// Mantém os arrays de ofertas, flags de carregamento/erro, filtros de
+/// pesquisa e ordenação, e um cache local de URLs de logos para melhorar
+/// desempenho na renderização dos cards.
 class _BalcaoNegociacaoPageState extends State<BalcaoNegociacaoPage> {
   final _currency = NumberFormat.currency(locale: 'pt_BR', symbol: 'R\$');
 
@@ -45,7 +59,11 @@ class _BalcaoNegociacaoPageState extends State<BalcaoNegociacaoPage> {
   String? myOffersError;
   Map<String, String?> _logoUrls = {};
 
+  /// Modo de ordenação das listas exibidas na aba de mercado.
+  /// Pode ser alterado pelo usuário através dos chips de ordenação.
   SortMode _sortMode = SortMode.alphabetical;
+
+  /// Modo de ordenação usado especificamente na aba "Minhas ordens".
   SortMode _mySortMode = SortMode.alphabetical;
 
   @override
@@ -66,11 +84,21 @@ class _BalcaoNegociacaoPageState extends State<BalcaoNegociacaoPage> {
     super.dispose();
   }
 
+  /// Carrega simultaneamente ofertas públicas e ordens do usuário,
+  /// e em seguida inicia o carregamento dos logos para exibição.
+  ///
+  /// Usa `Future.wait` para paralelizar `loadOffers()` e `loadMyOffers()`.
   Future<void> _loadAll() async {
     await Future.wait([loadOffers(), loadMyOffers()]);
     _loadLogoUrls();
   }
 
+  /// Popula o mapa `_logoUrls` com URLs de logo para as startups
+  /// presentes nas listas `offers` e `myOffers`.
+  ///
+  /// Observações:
+  /// - Remove entradas vazias antes de requisitar ao Storage.
+  /// - Agrupa nomes únicos para evitar requisições duplicadas.
   Future<void> _loadLogoUrls() async {
     final names = <String>{
       for (final o in [...offers, ...myOffers])
@@ -111,6 +139,13 @@ class _BalcaoNegociacaoPageState extends State<BalcaoNegociacaoPage> {
     }
   }
 
+  /// Requisita ao `WalletService` a lista de ofertas públicas do mercado.
+  /// Atualiza `offers`, `isLoadingOffers` e `offersError` conforme o resultado.
+  ///
+  /// Observações de implementação:
+  /// - Verifica `mounted` antes de chamar `setState` para evitar erros
+  ///   quando o widget tiver sido descartado durante a requisição.
+
   Future<void> loadMyOffers() async {
     if (!mounted) return;
     setState(() {
@@ -130,6 +165,11 @@ class _BalcaoNegociacaoPageState extends State<BalcaoNegociacaoPage> {
     });
   }
 
+  /// Retorna as ordens do usuário já ordenadas de acordo com `_mySortMode`.
+  ///
+  /// NOTA: a ordenação é aplicada sobre uma cópia da lista para evitar
+  /// mutações inesperadas em `myOffers` que poderiam causar efeitos colaterais
+  /// ao re-renderizar a UI.
   List<dynamic> get filteredMyOffers {
     final list = List<dynamic>.from(myOffers);
     switch (_mySortMode) {
@@ -155,6 +195,10 @@ class _BalcaoNegociacaoPageState extends State<BalcaoNegociacaoPage> {
     return list;
   }
 
+  /// Retorna lista de ofertas filtrada por busca (`_search`) e ordenada por
+  /// `_sortMode`.
+  ///
+  /// A busca é case-insensitive e compara o termo com `startupName`/`startupId`.
   List<dynamic> get filteredOffers {
     final q = _search.trim().toLowerCase();
     var list = q.isEmpty
@@ -193,6 +237,8 @@ class _BalcaoNegociacaoPageState extends State<BalcaoNegociacaoPage> {
   }
 
   Future<void> _openUserTokensForSell() async {
+    // Abre o bottom sheet com tokens do usuário e inicia fluxo de venda.
+    // Comentários adicionais acima foram colocados para descrever o fluxo.
     final selectedToken = await showModalBottomSheet<Map<String, dynamic>>(
       context: context,
       isScrollControlled: true,
@@ -222,6 +268,9 @@ class _BalcaoNegociacaoPageState extends State<BalcaoNegociacaoPage> {
     if (vendeu == true && mounted) _loadAll();
   }
 
+  /// Mostra diálogo de confirmação e tenta cancelar a oferta via `WalletService`.
+  ///
+  /// Retorna `true` quando o cancelamento foi bem-sucedido; caso contrário `false`.
   Future<bool> _confirmCancelOffer(Map<String, dynamic> offer) async {
     final offerId = (offer['offerId'] ?? '').toString();
 
@@ -321,6 +370,11 @@ class _BalcaoNegociacaoPageState extends State<BalcaoNegociacaoPage> {
     );
   }
 
+  /// Constrói a aba "Mercado": campo de busca, chips de ordenação e lista
+  /// de ofertas públicas.
+  ///
+  /// Lida com estados de carregamento, erro e lista vazia, exibindo os
+  /// componentes visuais apropriados.
   Widget _buildMercado() {
     return Column(
       children: [
@@ -366,10 +420,12 @@ class _BalcaoNegociacaoPageState extends State<BalcaoNegociacaoPage> {
                     itemCount: filteredOffers.length,
                     itemBuilder: (context, index) {
                       final data = filteredOffers[index];
-                      final name =
+                        final name =
                           (data['startupName'] ?? data['startupId'] ?? '')
-                              .toString();
-                      return OfferCard(
+                            .toString();
+                        // Renderiza cada oferta usando `OfferCard`, fornecendo
+                        // dados, moeda formatada e URL do logo quando disponível.
+                        return OfferCard(
                         data: data,
                         currency: _currency,
                         logoUrl: _logoUrls[name],
@@ -443,10 +499,13 @@ class _BalcaoNegociacaoPageState extends State<BalcaoNegociacaoPage> {
                       final offer = Map<String, dynamic>.from(
                         filteredMyOffers[index] as Map,
                       );
-                      final name =
+                        final name =
                           (offer['startupName'] ?? offer['startupId'] ?? '')
-                              .toString();
-                      return Dismissible(
+                            .toString();
+                        // `Dismissible` permite ao usuário cancelar a ordem
+                        // arrastando a célula; `confirmDismiss` abre o diálogo
+                        // que de fato executa o cancelamento via `_confirmCancelOffer`.
+                        return Dismissible(
                         key: Key((offer['offerId'] ?? index).toString()),
                         direction: DismissDirection.endToStart,
                         confirmDismiss: (_) => _confirmCancelOffer(offer),

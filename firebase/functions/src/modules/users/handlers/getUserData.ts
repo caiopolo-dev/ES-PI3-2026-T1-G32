@@ -6,6 +6,12 @@ import {onCall, HttpsError} from "firebase-functions/v2/https";
 import {getUserById} from "../repositories/userRepository";
 import {requireAuth} from "../../../shared/validation";
 
+// Handler que retorna os dados do usuário autenticado a partir do Firestore.
+// Observações:
+// - Exige autenticação (`requireAuth`).
+// - Retorna o `doc.data()` bruto do documento do usuário; o cliente
+//   deve tratar quais campos exibir.
+
 export const getUserData = onCall(async (request) => {
   requireAuth(request.auth);
 

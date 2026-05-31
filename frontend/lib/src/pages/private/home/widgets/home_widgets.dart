@@ -32,6 +32,16 @@ class HomeFinanceCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // `HomeFinanceCard` exibe o resumo financeiro do usuário na home.
+    // Detalhes e contratos de API internos:
+    // - `saldo` e `valorPortfolio` são valores numéricos preparados pelo
+    //   `HomePage`. `currencyFormat` é usado para formatar esses números
+    //   de forma consistente com a localidade `pt_BR`.
+    // - `saldoVisivel` controla se mostramos os valores reais ou os mascaramos
+    //   (pontos). A mudança deve ser persistida pelo pai via
+    //   `onVisibilityChanged` para que a preferência sobreviva a navegações.
+    // - `onDepositar` apenas disparará a navegação/economia — a lógica de
+    //   execução do depósito vive em `WalletService` e é orquestrada pelo pai.
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(24),
@@ -74,6 +84,10 @@ class HomeFinanceCard extends StatelessWidget {
                       balanceFontSize: 32,
                       onVisibilityChanged: onVisibilityChanged,
                     ),
+                    // Botão para iniciar fluxo de depósito; estilo consistente
+                    // com o design do card financeiro. Não executa lógica
+                    // aqui: delega ao `onDepositar` para manter este widget
+                    // stateless e reutilizável em outros contextos.
                     GestureDetector(
                       onTap: onDepositar,
                       child: Container(
@@ -201,6 +215,14 @@ class PortfolioChartSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Seção que renderiza o resumo da valorização do portfólio e o gráfico.
+    // Contrato e responsabilidades:
+    // - `pontos` e `labels` chegam prontos do pai e são consumidos diretamente
+    //   pelo `GraficoLinha`.
+    // - `formatLabel` é usado para converter valores em rótulos legíveis na
+    //   lateral do gráfico (ex: '+1.23%').
+    // - A badge ao lado do título mostra o último percentual de retorno e
+    //   muda a cor conforme thresholds (0.05% para evitar ruído muito pequeno).
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -227,6 +249,10 @@ class PortfolioChartSection extends StatelessWidget {
                     : isNeg
                         ? AppColors.vermelho
                         : AppColors.cinza400;
+                // Badge que mostra o percentual de retorno (último ponto).
+                // A cor muda para verde/vermelho/neutro conforme o sinal.
+                // Observação: usamos thresholds moderados para evitar que
+                // pequenas flutuações provoquem cores indesejadas.
                 return Container(
                   padding:
                       const EdgeInsets.symmetric(horizontal: 10, vertical: 4),

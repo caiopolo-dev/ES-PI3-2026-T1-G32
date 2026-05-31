@@ -8,6 +8,10 @@ import 'package:mescla_invest/src/theme/app_colors.dart';
 import 'package:mescla_invest/src/utils/currency_formatter.dart';
 import 'package:mescla_invest/src/pages/private/buy_steps/widgets/buy_steps_widgets.dart';
 
+/// Cartão informativo exibido no passo de seleção (step 0).
+///
+/// Mostra o saldo/quantidade do usuário, preço por token (quando aplicável)
+/// e um resumo rápido de quantos tokens estão disponíveis na startup.
 class BuyInfoCard extends StatelessWidget {
   final bool isSellMode;
   final int availableQuantity;
@@ -104,6 +108,12 @@ class BuyInfoCard extends StatelessWidget {
   }
 }
 
+/// Campo de entrada formatado para o preço por token.
+///
+/// Usa `CurrencyFormatter` como `inputFormatter` para garantir que o
+/// usuário veja valores em formato monetário enquanto digita. `onChanged`
+/// recebe a string formatada (após o formatter) para que o pai possa
+/// extrair os centavos.
 class BuyPriceField extends StatelessWidget {
   final TextEditingController controller;
   final FocusNode focusNode;
@@ -151,6 +161,7 @@ class BuyPriceField extends StatelessWidget {
                 controller: controller,
                 focusNode: focusNode,
                 keyboardType: TextInputType.number,
+                // Formata a entrada para dinheiro em tempo real (ex: R$ 1,00).
                 inputFormatters: [CurrencyFormatter()],
                 textAlign: TextAlign.right,
                 style: TextStyle(
@@ -174,6 +185,11 @@ class BuyPriceField extends StatelessWidget {
   }
 }
 
+/// Seletor de quantidade com botões de incremento/decremento.
+///
+/// A entrada aceita apenas dígitos (`FilteringTextInputFormatter.digitsOnly`)
+/// e delega a lógica de validação/ajuste ao widget pai através de
+/// `onChanged`, `onSub` e `onSum` para manter o controle de estado único.
 class BuyQuantitySelector extends StatelessWidget {
   final TextEditingController controller;
   final FocusNode focusNode;
@@ -211,6 +227,7 @@ class BuyQuantitySelector extends StatelessWidget {
               controller: controller,
               focusNode: focusNode,
               keyboardType: TextInputType.number,
+              // Apenas dígitos são permitidos para evitar caracteres não numéricos.
               inputFormatters: [FilteringTextInputFormatter.digitsOnly],
               style: TextStyle(
                 fontFamily: 'JosefinSans',
@@ -236,6 +253,10 @@ class BuyQuantitySelector extends StatelessWidget {
   }
 }
 
+/// Cartão que mostra o total a pagar/receber para a operação atual.
+///
+/// Recebe `totalCents` em centavos e o converte com `CurrencyFormatter`.
+/// A cor e a label mudam conforme `isSellMode` para deixar claro o fluxo.
 class BuyTotalCard extends StatelessWidget {
   final bool isSellMode;
   final int totalCents;

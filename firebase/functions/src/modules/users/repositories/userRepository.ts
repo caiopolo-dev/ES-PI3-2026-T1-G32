@@ -6,6 +6,13 @@ import {
   USERS, WALLET, WALLET_SALDO, USER_TOKENS,
 } from "../../../shared/collections";
 
+// Observações do repositório de usuários:
+// - Valores monetários (`saldo`) são armazenados em centavos (inteiro).
+// - `registerUser` cria o documento do usuário e a subcoleção `wallet`
+//   em batch para garantir que ambos existam de forma consistente.
+// - Funções auxiliares retornam DocumentSnapshot ou booleanos para uso
+//   pelos handlers, que mapeiam erros para `HttpsError` quando necessário.
+
 /**
  * Registers a new user in Firestore.
  * @param {string} uid User's uid.

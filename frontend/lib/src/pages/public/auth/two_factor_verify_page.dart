@@ -32,16 +32,20 @@ class _TwoFactorVerifyPageState extends State<TwoFactorVerifyPage> {
   String _errorText = '';
 
   Future<void> _verify() async {
+    // Validação simples do código TOTP localmente antes de enviar ao serviço.
     if (_codeController.text.length != 6) {
       setState(() => _errorText = 'Digite o código de 6 dígitos');
       return;
     }
 
+    // Indica que estamos verificando e limpa erro anterior.
     setState(() {
       _isVerifying = true;
       _errorText = '';
     });
 
+    // Envia o código para o serviço que utiliza o `MultiFactorResolver`
+    // obtido na exceção do login. O serviço retorna um mapa com 'success'.
     final result = await TwoFactorService.verifyTotp(
       widget.resolver,
       _codeController.text,
@@ -50,8 +54,9 @@ class _TwoFactorVerifyPageState extends State<TwoFactorVerifyPage> {
     if (!mounted) return;
 
     if (result['success'] == true) {
-      // Após completar o 2FA, o token de auth existe mas os dados do Firestore
-      // ainda não foram carregados — busca os dados do usuário antes de navegar.
+      // 2FA completo: busca dados do usuário no Firestore antes de
+      // navegar para a tela principal. Isso garante que `MainScaffold`
+      // receba o `usuario` já carregado.
       final data = await AuthService.fetchUserData();
       final usuario = data['success'] == true
           ? data['usuario'] as Map<String, dynamic>?
@@ -65,6 +70,7 @@ class _TwoFactorVerifyPageState extends State<TwoFactorVerifyPage> {
         (_) => false,
       );
     } else {
+      // Mantém o campo habilitado para nova tentativa e mostra mensagem.
       setState(() {
         _errorText =
             result['message'] as String? ?? 'Código inválido. Tente novamente.';
