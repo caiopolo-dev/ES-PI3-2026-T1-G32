@@ -41,6 +41,11 @@ class GraficoLinha extends StatelessWidget {
     final maxY = _maiorValorY();
     final intervaloY = _calcularIntervaloY(minY, maxY);
     final intervaloX = _calcularIntervaloX();
+    final rotulosDistribuidos = labelsInferiores.length == 7 && pontos.length > 1;
+    final rotulosEixoY = rotulosDistribuidos
+      ? _rotulosEixoYParaSeteDias(minY, maxY)
+      : const <double>[];
+    double? ultimoRotuloExibidoEixoY;
 
     return Container(
       height: 180,
@@ -73,6 +78,32 @@ class GraficoLinha extends StatelessWidget {
                 interval: intervaloX,
                 reservedSize: 26,
                 getTitlesWidget: (value, meta) {
+                  if (rotulosDistribuidos) {
+                    final maxIndex = (pontos.length - 1).toDouble();
+                    if (maxIndex <= 0) {
+                      return const SizedBox.shrink();
+                    }
+
+                    final labelIndex = ((value / maxIndex) * (labelsInferiores.length - 1))
+                        .round()
+                        .clamp(0, labelsInferiores.length - 1);
+
+                    if (labelIndex < 0 || labelIndex >= labelsInferiores.length) {
+                      return const SizedBox.shrink();
+                    }
+
+                    return Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: Text(
+                        labelsInferiores[labelIndex],
+                        style: TextStyle(
+                          fontSize: 9,
+                          color: AppColors.cinza700,
+                        ),
+                      ),
+                    );
+                  }
+
                   final index = value.toInt();
 
                   if (index < 0 || index >= labelsInferiores.length) {
@@ -103,6 +134,21 @@ class GraficoLinha extends StatelessWidget {
                 reservedSize: 46,
                 interval: intervaloY,
                 getTitlesWidget: (value, meta) {
+                  if (rotulosDistribuidos) {
+                    final toleranciaAlvo = (intervaloY / 2).clamp(0.04, 0.12);
+                    final muitoProximoDoAnterior = ultimoRotuloExibidoEixoY != null &&
+                        (value - ultimoRotuloExibidoEixoY!).abs() < (intervaloY * 0.7);
+                    final ehRotuloAlvo = rotulosEixoY.any(
+                      (rotulo) => (value - rotulo).abs() <= toleranciaAlvo,
+                    );
+
+                    if (!ehRotuloAlvo || muitoProximoDoAnterior) {
+                      return const SizedBox.shrink();
+                    }
+
+                    ultimoRotuloExibidoEixoY = value;
+                  }
+
                   return Text(
                     formatarValorEsquerda(value),
                     style: TextStyle(
@@ -182,7 +228,26 @@ class GraficoLinha extends StatelessWidget {
     return diferenca / 3;
   }
 
+  List<double> _rotulosEixoYParaSeteDias(double minY, double maxY) {
+    final diferenca = maxY - minY;
+
+    if (diferenca <= 0) {
+      return [double.parse(minY.toStringAsFixed(2))];
+    }
+
+    return [
+      minY,
+      minY + (diferenca / 3),
+      minY + ((diferenca * 2) / 3),
+      maxY,
+    ].map((valor) => double.parse(valor.toStringAsFixed(2))).toList();
+  }
+
   double _calcularIntervaloX() {
+    if (labelsInferiores.length == 7 && pontos.length > 1) {
+      return (pontos.length - 1) / (labelsInferiores.length - 1);
+    }
+
     if (pontos.length <= 5) {
       return 1;
     }

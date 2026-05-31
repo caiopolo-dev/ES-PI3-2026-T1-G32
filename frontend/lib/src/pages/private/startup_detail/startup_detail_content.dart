@@ -121,6 +121,17 @@ class StartupDetailContent extends StatelessWidget {
   }
 
   List<String> _labelsGrafico() {
+    if (selectedPeriod == PriceHistoryPeriod.sevenDays) {
+      final hoje = DateTime.now();
+      final inicio = DateTime(hoje.year, hoje.month, hoje.day)
+          .subtract(const Duration(days: 6));
+
+      return List.generate(7, (index) {
+        final dia = inicio.add(Duration(days: index));
+        return '${dia.day}/${dia.month}';
+      });
+    }
+
     final historico = _historicoFiltradoPorPeriodo();
     const meses = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
     // Gera rótulos inferiores do gráfico:
