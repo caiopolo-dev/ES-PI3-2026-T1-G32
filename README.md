@@ -18,7 +18,8 @@ O **MesclaInvest** é um aplicativo móvel que simula um ambiente de investiment
 - Catálogo de startups com filtros por estágio (Nova, Em Operação, Em Expansão) e busca textual
 - **Balcão de negociações**: mercado secundário com compra e venda de tokens entre usuários
 - **Carteira do usuário**: saldo, histórico de transações e portfólio de tokens com preço médio
-- **Gráfico de portfólio**: histórico de valorização persistido com snapshots diários, chip de retorno total e filtros 7D / 1M / 6M / 1A / Tudo
+- **Gráfico de portfólio**: histórico de valorização persistido com snapshots diários, chip de retorno total e filtros 7D / 1M / 6M / YTD
+- **Gráfico de preço da startup**: histórico de transações com filtros 1D / 7D / 1M / 6M / YTD
 - **Detalhe de startup**: histórico de preço com gráfico interativo, vídeo de apresentação, PDF de resumo executivo e FAQ pública/privada
 - Perfil do usuário com gerenciamento de 2FA
 - Pull-to-refresh em todas as telas com dados dinâmicos
@@ -89,10 +90,10 @@ As funções seguem uma arquitetura em camadas por módulo:
 
 ```
 shared/
-  collections.ts  → constantes de coleções, tipos e origens de transação
+  collections.ts  → constantes de coleções; enums TxType e TxSource (tipos e origens de transação)
   firebase.ts     → instância db compartilhada
   validation.ts   → requireAuth (type predicate para TypeScript)
-  tokenPricing.ts → FATOR_IMPACTO (pressão de preço por transação)
+  tokenPricing.ts → FATOR_IMPACTO + calcularNovoPreco (lógica de precificação centralizada)
 
 modules/<dominio>/
   handlers/       → recebem a requisição, validam auth e entrada, delegam
@@ -114,6 +115,7 @@ modules/<dominio>/
 | tokenOffers | `buyStartupToken`, `buyOffer`, `createSellOffer`, `cancelOffer`, `listOffers`, `listMyOffers` | onCall |
 | wallet | `getWalletInfo`, `getTransactionHistory`, `getUserTokens`, `addBalance`, `getPortfolioHistory` | onCall |
 | wallet | `dailyPortfolioSnapshot` | onSchedule (23:58 BRT) |
+| wallet | `onStartupPriceChange` | onDocumentUpdated (atualiza snapshots de portfólio em tempo real) |
 
 ---
 
@@ -162,12 +164,41 @@ Se a Cloud Function falhar após o Auth ser criado, a conta do Auth é deletada 
 
 ---
 
+## Preço Médio Ponderado
+
+Cada token na carteira do usuário possui um **preço médio de aquisição** calculado automaticamente a cada compra usando média ponderada:
+
+```
+novoPrecoMedio = (qtdAnterior × precoMedioAnterior + qtdComprada × precoAtual) / novaQtdTotal
+```
+
+Isso permite ao usuário comparar o custo médio de aquisição (`precoMedio`) com o valor atual do token (`valorAtual`) e visualizar o retorno da posição diretamente na carteira.
+
+---
+
 ## Histórico de Portfólio
 
 O gráfico de portfólio usa snapshots diários persistidos em `users/{uid}/portfolioHistory/{YYYY-MM-DD}`. Cada ponto é criado ou atualizado:
 
 - **Em tempo real**: após cada compra, venda ou cancelamento de oferta
 - **Diariamente**: o job `dailyPortfolioSnapshot` roda às 23:58 BRT e salva um ponto para todos os usuários com tokens, capturando variações de preço mesmo sem transações
+
+---
+
+## Testes
+
+O projeto inclui testes unitários para as regras de negócio do fluxo de compra de tokens.
+
+```bash
+cd frontend
+flutter test
+```
+
+Os testes cobrem:
+- Cálculo do total da compra em centavos (`preço × quantidade`)
+- Cálculo do saldo restante após compra
+- Validação de quantidade (zero e negativa são rejeitadas)
+- Validação de saldo suficiente para a compra
 
 ---
 
