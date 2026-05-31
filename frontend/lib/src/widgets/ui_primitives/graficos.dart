@@ -21,6 +21,7 @@ class GraficoLinha extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Se não houver pelo menos dois pontos, o gráfico não tem como ser desenhado.
     if (pontos.length < 2) {
       return Container(
         height: 180,
@@ -39,9 +40,13 @@ class GraficoLinha extends StatelessWidget {
 
     final minY = _menorValorY();
     final maxY = _maiorValorY();
+    // O intervalo do eixo Y é calculado com base na amplitude dos valores.
     final intervaloY = _calcularIntervaloY(minY, maxY);
+    // O eixo X usa uma distribuição diferente quando o período selecionado é 7D.
     final intervaloX = _calcularIntervaloX();
+    // No 7D, os rótulos inferiores são distribuídos para mostrar os 7 dias do intervalo.
     final rotulosDistribuidos = labelsInferiores.length == 7 && pontos.length > 1;
+    // Lista de valores usados para controlar quais labels do eixo Y podem aparecer no 7D.
     final rotulosEixoY = rotulosDistribuidos
       ? _rotulosEixoYParaSeteDias(minY, maxY)
       : const <double>[];
@@ -134,6 +139,7 @@ class GraficoLinha extends StatelessWidget {
                 reservedSize: 46,
                 interval: intervaloY,
                 getTitlesWidget: (value, meta) {
+                  // No 7D, ocultamos valores muito próximos para evitar sobreposição visual.
                   if (rotulosDistribuidos) {
                     final toleranciaAlvo = (intervaloY / 2).clamp(0.04, 0.12);
                     final muitoProximoDoAnterior = ultimoRotuloExibidoEixoY != null &&
@@ -195,6 +201,7 @@ class GraficoLinha extends StatelessWidget {
   }
 
   double _menorValorY() {
+    // Parte do primeiro ponto e procura o menor valor da série.
     double menor = pontos.first.y;
 
     for (final ponto in pontos) {
@@ -207,6 +214,7 @@ class GraficoLinha extends StatelessWidget {
   }
 
   double _maiorValorY() {
+    // Parte do primeiro ponto e procura o maior valor da série.
     double maior = pontos.first.y;
 
     for (final ponto in pontos) {
@@ -225,6 +233,7 @@ class GraficoLinha extends StatelessWidget {
       return 1;
     }
 
+    // Divide a amplitude em três faixas para manter alguns rótulos espaçados.
     return diferenca / 3;
   }
 
@@ -235,6 +244,7 @@ class GraficoLinha extends StatelessWidget {
       return [double.parse(minY.toStringAsFixed(2))];
     }
 
+    // Gera quatro referências: mínimo, 1/3, 2/3 e máximo.
     return [
       minY,
       minY + (diferenca / 3),
@@ -244,6 +254,7 @@ class GraficoLinha extends StatelessWidget {
   }
 
   double _calcularIntervaloX() {
+    // No 7D, o eixo X é distribuído ao longo dos pontos para cobrir todo o intervalo.
     if (labelsInferiores.length == 7 && pontos.length > 1) {
       return (pontos.length - 1) / (labelsInferiores.length - 1);
     }
