@@ -43,10 +43,7 @@ class FaqService {
     required bool privada,
   }) async {
     try {
-      // Atenção à segurança: o backend deve obter o autor (email/nome) a partir
-      // do token de autenticação e não dos dados enviados no payload. Aqui
-      // apenas chamamos a callable function passando os parâmetros sem dados
-      // sensíveis do usuário.
+     // O backend lê email e nome do token de autenticação — nunca do payload.
       await FirebaseFunctions.instance
           .httpsCallable('createFaq')
           .call({'startupId': startupId, 'pergunta': pergunta, 'privada': privada});
