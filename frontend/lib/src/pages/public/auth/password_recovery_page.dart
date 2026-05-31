@@ -19,6 +19,12 @@ class _PasswordRecoveryPageState extends State<PasswordRecoveryPage> {
   String errorText = '';
   bool isLoading = false;
 
+  // Observação geral:
+  // - Validação é feita localmente (regex) para evitar chamadas desnecessárias
+  //   ao backend quando o e-mail é claramente inválido.
+  // - `sendRecoveryEmail` delega o envio real ao `AuthService` e trata o
+  //   resultado exibindo mensagens apropriadas ao usuário.
+
   // Validação local com regex completa antes de qualquer chamada de rede.
   // Regex mais rigorosa que a do auth_service para evitar requisição com e-mail claramente inválido.
   bool validateEmail() {
@@ -71,6 +77,7 @@ class _PasswordRecoveryPageState extends State<PasswordRecoveryPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.branco,
+      resizeToAvoidBottomInset: true,
       appBar: AppBar(
         backgroundColor: AppColors.branco,
         elevation: 0,
@@ -80,96 +87,94 @@ class _PasswordRecoveryPageState extends State<PasswordRecoveryPage> {
         ),
       ),
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 40),
-          child: Column(
-            children: [
-              Expanded(
-                child: Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      // Logo
-                      Center(
-                        child: SizedBox(
-                          width: 100,
-                          height: 100,
-                          child: Image.asset('assets/MesclaLogoPequena.png'),
-                        ),
-                      ),
+        child: SingleChildScrollView(
+          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 40),
+            child: Column(
+              children: [
+                SizedBox(height: MediaQuery.of(context).size.height * 0.08),
 
-                      const SizedBox(height: 40),
-
-                      // Título
-                      const Text(
-                        'Recuperar Senha',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 30,
-                          fontWeight: FontWeight.bold,
-                          fontFamily: 'JosefinSans',
-                        ),
-                      ),
-
-                      const SizedBox(height: 2),
-
-                      // Subtítulo
-                      const Text(
-                        'Informe o email cadastrado \n para receber as instruções',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontFamily: 'JosefinSans',
-                          color: AppColors.preto54,
-                        ),
-                      ),
-
-                      const SizedBox(height: 30),
-
-                      // Email Input
-                      TextField(
-                        controller: emailController,
-                        keyboardType: TextInputType.emailAddress,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(fontFamily: 'JosefinSans', fontSize: 18),
-                        decoration: const InputDecoration(
-                          hintText: 'Digite seu email',
-                          hintStyle: TextStyle(color: AppColors.cinza400),
-                          enabledBorder: UnderlineInputBorder(
-                            borderSide: BorderSide(color: AppColors.cinza400),
-                          ),
-                          focusedBorder: UnderlineInputBorder(
-                            borderSide: BorderSide(color: AppColors.azul, width: 2),
-                          ),
-                        ),
-                      ),
-
-                      const SizedBox(height: 20),
-
-                      // Erro
-                      if (errorText.isNotEmpty)
-                        Text(
-                          errorText,
-                          style: const TextStyle(color: AppColors.vermelho),
-                        ),
-                    ],
+                // Logo
+                Center(
+                  child: SizedBox(
+                    width: 100,
+                    height: 100,
+                    child: Image.asset('assets/MesclaLogoPequena.png'),
                   ),
                 ),
-              ),
 
-              // Botão Enviar Email
-              SizedBox(
-                width: 260,
-                child: AppPrimaryButton(
-                  label: 'Enviar Email',
-                  onPressed: sendRecoveryEmail,
-                  elevated: true,
-                  verticalPadding: 14,
+                const SizedBox(height: 40),
+
+                // Título
+                const Text(
+                  'Recuperar Senha',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 30,
+                    fontWeight: FontWeight.bold,
+                    fontFamily: 'JosefinSans',
+                  ),
                 ),
-              ),
 
-              const SizedBox(height: 126),
-            ],
+                const SizedBox(height: 2),
+
+                // Subtítulo
+                const Text(
+                  'Informe o email cadastrado \n para receber as instruções',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontFamily: 'JosefinSans',
+                    color: AppColors.preto54,
+                  ),
+                ),
+
+                const SizedBox(height: 30),
+
+                // Email Input
+                TextField(
+                  controller: emailController,
+                  keyboardType: TextInputType.emailAddress,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontFamily: 'JosefinSans', fontSize: 18),
+                  decoration: const InputDecoration(
+                    hintText: 'Digite seu email',
+                    hintStyle: TextStyle(color: AppColors.cinza400),
+                    enabledBorder: UnderlineInputBorder(
+                      borderSide: BorderSide(color: AppColors.cinza400),
+                    ),
+                    focusedBorder: UnderlineInputBorder(
+                      borderSide: BorderSide(color: AppColors.azul, width: 2),
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 20),
+
+                // Erro
+                if (errorText.isNotEmpty)
+                  Text(
+                    errorText,
+                    style: const TextStyle(color: AppColors.vermelho),
+                  ),
+
+                const SizedBox(height: 40),
+
+                // Botão Enviar Email
+                SizedBox(
+                  width: 260,
+                  child: AppPrimaryButton(
+                    label: 'Enviar Email',
+                    onPressed: sendRecoveryEmail,
+                    elevated: true,
+                    verticalPadding: 14,
+                  ),
+                ),
+
+                SizedBox(height: MediaQuery.of(context).viewInsets.bottom + 24),
+              ],
+            ),
           ),
         ),
       ),

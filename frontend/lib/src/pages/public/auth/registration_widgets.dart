@@ -47,6 +47,10 @@ class RegisterInput extends StatelessWidget {
       );
 }
 
+  // `RegisterInput` é um wrapper leve em torno de `TextField` usado no fluxo
+  // de registro para centralizar estilos e máscaras. Mantém-se simples para
+  // permitir reutilização entre os passos do cadastro.
+
 class PasswordRequirement extends StatelessWidget {
   final String label;
   final bool met;
@@ -81,6 +85,9 @@ class PasswordRequirement extends StatelessWidget {
   }
 }
 
+// `PasswordRequirement` mostra requisito de senha com ícone e cor.
+// Usado para feedback visual imediato enquanto o usuário digita.
+
 // NomeFormatter: bloqueia números e caracteres especiais no campo de nome.
 class NomeFormatter extends TextInputFormatter {
   @override
@@ -95,6 +102,9 @@ class NomeFormatter extends TextInputFormatter {
     );
   }
 }
+
+// O `NomeFormatter` garante que apenas letras (incluindo acentos) e espaços
+// permaneçam, evitando que usuários insiram números ou símbolos no nome.
 
 // RgFormatter: aplica máscara XX.XXX.XXX-X conforme o usuário digita.
 class RgFormatter extends TextInputFormatter {
@@ -116,6 +126,10 @@ class RgFormatter extends TextInputFormatter {
   }
 }
 
+// `RgFormatter` aplica máscara progressiva e limita a 9 dígitos, retornando
+// ao valor anterior quando o usuário excede o limite, prevenindo entradas
+// inválidas.
+
 // PhoneFormatter: aplica máscara (XX) XXXXX-XXXX conforme o usuário digita.
 class PhoneFormatter extends TextInputFormatter {
   @override
@@ -136,3 +150,6 @@ class PhoneFormatter extends TextInputFormatter {
     );
   }
 }
+
+// `PhoneFormatter` formata DDD + número móvel (11 dígitos) conforme a digitação
+// e protege contra maiores entradas.

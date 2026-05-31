@@ -6,15 +6,13 @@ import {HttpsError} from "firebase-functions/v2/https";
 import {db} from "../../../shared/firebase";
 import {
   USERS, TOKEN_OFFERS, USER_TOKENS, STARTUPS, PRICE_HISTORY, TRANSACTIONS,
-  TX_TYPE_RETURN, TX_TYPE_CANCEL_OFFER, TX_SOURCE_SELL_OFFER,
+  TxType, TxSource,
 } from "../../../shared/collections";
-import {updateTodaySnapshot} from
-  "../../wallet/repositories/portfolioSnapshotRepository";
 import {
   CancelSellOfferParams,
   CancelSellOfferResult,
 } from "../types/tokenOfferTypes";
-import {FATOR_IMPACTO} from "../../../shared/tokenPricing";
+import {calcularNovoPreco} from "../../../shared/tokenPricing";
 
 /**
  * @param {CancelSellOfferParams} params
@@ -24,6 +22,15 @@ export async function cancelOffer(
   params: CancelSellOfferParams
 ): Promise<CancelSellOfferResult> {
   const {offerId, sellerId} = params;
+
+  // Função responsável por reverter uma oferta de venda ativa.
+  // Observações importantes:
+  // - A operação ocorre dentro de uma transação Firestore para garantir
+  //   atomicidade: devolução dos tokens ao usuário, remoção da oferta
+  //   e ajuste do preço da startup ocorrem juntas ou falham.
+  // - Unidades monetárias de preço são tratadas em centavos (inteiros).
+  // - O repositório lança HttpsError em validações de pré-condição,
+  //   permitindo que o handler mapear erros para o cliente.
 
   // Created OUTSIDE runTransaction so retries reuse the same doc IDs
   const transactionRef = db.collection(TRANSACTIONS).doc();
@@ -101,7 +108,7 @@ export async function cancelOffer(
 
     // Record the return in transaction history (creates a new lot in portfolio)
     transaction.set(transactionRef, {
-      type: TX_TYPE_RETURN,
+      type: TxType.RETURN,
       buyerId: sellerId,
       startupId,
       startupName,
@@ -116,8 +123,7 @@ export async function cancelOffer(
     if (startupData) {
       const totalTokens = Number(startupData.totalTokens ?? 1000);
       const precoAtual = Number(startupData.precoToken ?? 0);
-      const impacto = (amount / totalTokens) * FATOR_IMPACTO;
-      const precoRevertido = Math.round(precoAtual * (1 + impacto));
+      const precoRevertido = calcularNovoPreco(precoAtual, amount, totalTokens, TxType.CANCEL_OFFER);
 
       transaction.update(startupRef, {
         precoToken: precoRevertido,
@@ -130,8 +136,8 @@ export async function cancelOffer(
         .collection(PRICE_HISTORY).doc();
       transaction.set(priceHistoryRef, {
         price: precoRevertido,
-        type: TX_TYPE_CANCEL_OFFER,
-        source: TX_SOURCE_SELL_OFFER,
+        type: TxType.CANCEL_OFFER,
+        source: TxSource.SELL_OFFER,
         quantity: amount,
         createdAt: FieldValue.serverTimestamp(),
       });
@@ -146,11 +152,6 @@ export async function cancelOffer(
     };
   });
 
-  try {
-    await updateTodaySnapshot(sellerId);
-  } catch (e) {
-    console.warn("updateTodaySnapshot failed (non-fatal):", e);
-  }
 
   return result;
 }

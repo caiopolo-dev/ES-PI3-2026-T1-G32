@@ -6,8 +6,17 @@ import {FieldValue, Timestamp} from "firebase-admin/firestore";
 import {db} from "../../../shared/firebase";
 import {
   USERS, TRANSACTIONS, STARTUPS, WALLET, WALLET_SALDO, USER_TOKENS,
-  PRICE_HISTORY, TX_TYPE_SELL, TX_TYPE_DEPOSIT,
+  PRICE_HISTORY, TxType,
 } from "../../../shared/collections";
+
+// Repositório da carteira do usuário (saldo, posições e histórico).
+// Notas de implementação:
+// - Saldo e preços são armazenados em centavos (inteiros) para evitar
+//   problemas com ponto flutuante.
+// - Consultas de transações usam limites e tentativas de fallback quando
+//   índices necessários ainda não estão prontos (ex.: `sellerId`).
+// - A função `getUserTokensByUserId` prefere preço de fechamento diário
+//   do histórico para calcular variações exibidas no frontend.
 
 /**
  * Returns wallet balance and portfolio summary for a user.
@@ -79,7 +88,7 @@ export async function getTransactionHistoryByUserId(uid: string) {
     const data = doc.data();
     return {
       id: doc.id,
-      type: TX_TYPE_SELL,
+      type: TxType.SELL,
       startupId: data.startupId ?? null,
       startupName: data.startupName ?? null,
       quantity: Number(data.quantity ?? 0),
@@ -199,7 +208,7 @@ export async function addBalanceToWallet(uid: string, amountCents: number) {
       {merge: true}
     );
     transaction.set(txRef, {
-      type: TX_TYPE_DEPOSIT,
+      type: TxType.DEPOSIT,
       buyerId: uid,
       totalCents: amountCents,
       createdAt: FieldValue.serverTimestamp(),

@@ -29,6 +29,8 @@ export const getStartupById = onCall(async (request) => {
     };
   } catch (error) {
     if (error instanceof HttpsError) throw error;
+    // Em caso de erro inesperado retornamos `internal` para não vazar
+    // detalhes internos à aplicação no payload da função.
     throw new HttpsError("internal", "Erro ao buscar startup");
   }
 });

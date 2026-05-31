@@ -19,7 +19,12 @@ class WalletPage extends StatefulWidget {
   final void Function(int)? onTabSwitch;
   final bool isActive;
 
-  const WalletPage({super.key, this.usuario, this.onTabSwitch, this.isActive = false});
+  const WalletPage({
+    super.key,
+    this.usuario,
+    this.onTabSwitch,
+    this.isActive = false,
+  });
 
   @override
   State<WalletPage> createState() => _WalletPageState();
@@ -42,13 +47,14 @@ class _WalletPageState extends State<WalletPage>
   TokenSort _tokenSort = TokenSort.alfa;
   TxFilter _txFilter = TxFilter.todos;
 
-  final currencyFormat =
-      NumberFormat.currency(locale: 'pt_BR', symbol: 'R\$');
+  final currencyFormat = NumberFormat.currency(locale: 'pt_BR', symbol: 'R\$');
 
   @override
   void didUpdateWidget(WalletPage oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.isActive && !oldWidget.isActive) {
+      // Quando a aba é ativada, recarregamos visibilidade e dados.
+      // `_loadVisibility` lê a preferência local; `_loadAll` busca dados remotos.
       _loadVisibility();
       _loadAll();
     }
@@ -58,14 +64,23 @@ class _WalletPageState extends State<WalletPage>
     var list = List<Map<String, dynamic>>.from(_tokens);
     switch (_tokenSort) {
       case TokenSort.alfa:
-        list.sort((a, b) => (a['startupNome'] as String? ?? '')
-            .compareTo(b['startupNome'] as String? ?? ''));
+        list.sort(
+          (a, b) => (a['startupNome'] as String? ?? '').compareTo(
+            b['startupNome'] as String? ?? '',
+          ),
+        );
       case TokenSort.precoAsc:
-        list.sort((a, b) => ((a['valorAtual'] as num?) ?? 0)
-            .compareTo((b['valorAtual'] as num?) ?? 0));
+        list.sort(
+          (a, b) => ((a['valorAtual'] as num?) ?? 0).compareTo(
+            (b['valorAtual'] as num?) ?? 0,
+          ),
+        );
       case TokenSort.precoDesc:
-        list.sort((a, b) => ((b['valorAtual'] as num?) ?? 0)
-            .compareTo((a['valorAtual'] as num?) ?? 0));
+        list.sort(
+          (a, b) => ((b['valorAtual'] as num?) ?? 0).compareTo(
+            (a['valorAtual'] as num?) ?? 0,
+          ),
+        );
     }
     return list;
   }
@@ -104,6 +119,11 @@ class _WalletPageState extends State<WalletPage>
   }
 
   Future<void> _loadAll() async {
+    // Carrega todos os dados visíveis na tela de carteira em paralelo:
+    // - WalletService.getWalletData: saldo total e resumo
+    // - WalletService.getTransactionHistory: histórico de transações
+    // - WalletService.getUserTokens: tokens do usuário
+    // Resultado agrupado reduz round-trips e simplifica o loading state.
     setState(() {
       _isLoading = true;
       _errorText = '';
@@ -126,6 +146,8 @@ class _WalletPageState extends State<WalletPage>
     final history = results[1];
     final tokens = results[2];
 
+    // Atualiza estado com dados do backend, usando valores default quando
+    // campos esperados estiverem ausentes, para evitar crashes.
     if (wallet['success'] == true) {
       _saldo = wallet['saldo'] ?? 0.0;
       _totalTokens = wallet['totalTokens'] ?? 0;
@@ -134,8 +156,9 @@ class _WalletPageState extends State<WalletPage>
     }
 
     if (history['success'] == true) {
-      _transactions =
-          List<Map<String, dynamic>>.from(history['transactions'] ?? []);
+      _transactions = List<Map<String, dynamic>>.from(
+        history['transactions'] ?? [],
+      );
     }
 
     if (tokens['success'] == true) {
@@ -165,10 +188,14 @@ class _WalletPageState extends State<WalletPage>
         idToNome[id] = nome;
       }
     }
+    // Busca as URLs de logo por nome da startup. Fazemos as requisições em
+    // paralelo e armazenamos um mapa id->url para uso nos cards.
     final entries = await Future.wait(
       idToNome.entries.map((e) async {
-        final url =
-            await StorageService.getStartupAsset(e.value, 'logoPhoto.jpeg');
+        final url = await StorageService.getStartupAsset(
+          e.value,
+          'logoPhoto.jpeg',
+        );
         return MapEntry(e.key, url);
       }),
     );
@@ -177,10 +204,10 @@ class _WalletPageState extends State<WalletPage>
   }
 
   double get _valorAtualPortfolio => _tokens.fold(0.0, (sum, t) {
-        final valorAtual = (t['valorAtual'] as num?)?.toDouble() ?? 0.0;
-        final quantidade = (t['quantidade'] as num?)?.toInt() ?? 0;
-        return sum + valorAtual * quantidade;
-      });
+    final valorAtual = (t['valorAtual'] as num?)?.toDouble() ?? 0.0;
+    final quantidade = (t['quantidade'] as num?)?.toInt() ?? 0;
+    return sum + valorAtual * quantidade;
+  });
 
   Future<void> _showAddBalanceDialog() async {
     final amountCents = await showDialog<int>(
@@ -189,6 +216,7 @@ class _WalletPageState extends State<WalletPage>
     );
     if (!mounted || amountCents == null) return;
 
+    // Atualiza UI imediatamente para mostrar loading e chama o serviço.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) setState(() => _isLoading = true);
     });
@@ -196,6 +224,7 @@ class _WalletPageState extends State<WalletPage>
     final result = await WalletService.addBalance(amountCents);
     if (!mounted) return;
     if (result['success'] == true) {
+      // Recarrega todos os dados para refletir o novo saldo.
       _loadAll();
     } else {
       setState(() => _isLoading = false);
@@ -214,7 +243,11 @@ class _WalletPageState extends State<WalletPage>
       saldoVisivel: _saldoVisivel,
       usuario: widget.usuario,
       onTabSwitch: widget.onTabSwitch,
-      onRefresh: () { if (mounted) _loadAll(); },
+      onRefresh: () {
+        // Ao fechar o diálogo com ação (compra/venda), recarregamos a lista
+        // para refletir alterações no portfolio.
+        if (mounted) _loadAll();
+      },
     );
   }
 
@@ -255,7 +288,8 @@ class _WalletPageState extends State<WalletPage>
                           logoUrls: _logoUrls,
                           saldoVisivel: _saldoVisivel,
                           tokenSort: _tokenSort,
-                          onSortChanged: (sort) => setState(() => _tokenSort = sort),
+                          onSortChanged: (sort) =>
+                              setState(() => _tokenSort = sort),
                           onTokenTap: _openTokenActions,
                           currencyFormat: currencyFormat,
                         ),
@@ -264,7 +298,8 @@ class _WalletPageState extends State<WalletPage>
                           logoUrls: _logoUrls,
                           saldoVisivel: _saldoVisivel,
                           txFilter: _txFilter,
-                          onFilterChanged: (filter) => setState(() => _txFilter = filter),
+                          onFilterChanged: (filter) =>
+                              setState(() => _txFilter = filter),
                           currencyFormat: currencyFormat,
                         ),
                       ],
@@ -299,8 +334,11 @@ class _WalletPageState extends State<WalletPage>
             const SizedBox(height: 8),
             Row(
               children: [
-                const Icon(Icons.warning_amber_rounded,
-                    size: 14, color: AppColors.laranja),
+                const Icon(
+                  Icons.warning_amber_rounded,
+                  size: 14,
+                  color: AppColors.laranja,
+                ),
                 const SizedBox(width: 6),
                 Expanded(
                   child: Text(
@@ -335,7 +373,4 @@ class _WalletPageState extends State<WalletPage>
       ),
     );
   }
-
 }
-
-

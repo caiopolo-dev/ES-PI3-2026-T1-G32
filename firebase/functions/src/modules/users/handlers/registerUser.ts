@@ -7,6 +7,13 @@ import {registerUser, verificarRgExiste,
 import {requireAuth} from "../../../shared/validation";
 
 
+// Handler para criação de documento de usuário no Firestore.
+// Pontos chave:
+// - Requer autenticação; o `uid` do Auth é usado como ID do documento.
+// - Verifica duplicidade de RG e e-mail antes de criar.
+// - Inicia saldo em centavos (`saldoCentavos = 0`); depósitos são externos.
+
+
 export const createUser = onCall(async (request)=>{
   requireAuth(request.auth);
 

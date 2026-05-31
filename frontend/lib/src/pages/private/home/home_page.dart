@@ -21,12 +21,24 @@ class HomePage extends StatefulWidget {
   final void Function(int)? onTabSwitch;
   final bool isActive;
 
-  const HomePage({super.key, this.usuario, this.onTabSwitch, this.isActive = false});
+  const HomePage({
+    super.key,
+    this.usuario,
+    this.onTabSwitch,
+    this.isActive = false,
+  });
 
   @override
   State<HomePage> createState() => _HomePageState();
 }
 
+/// Tela inicial pós-login que agrega resumo financeiro, gráfico de
+/// performance do portfólio e lista de investimentos do usuário.
+///
+/// Responsabilidades principais:
+/// - Carregar dados da carteira, tokens do usuário e startups
+/// - Controlar visibilidade do saldo usando `SharedPreferences`
+/// - Preparar dados do gráfico e indicar tendência por cor
 class _HomePageState extends State<HomePage> {
   bool _isLoading = true;
   bool _saldoVisivel = false;
@@ -36,7 +48,7 @@ class _HomePageState extends State<HomePage> {
   int _totalTokens = 0;
 
   int _selectedPeriodPortfolio = 1;
-  static const _periodsPortfolio = ['7D', '1M', '6M', '1A', 'Tudo'];
+  static const _periodsPortfolio = ['7D', '1M', '6M', 'YTD'];
 
   List<Map<String, dynamic>> _meusInvestimentos = [];
   List<Map<String, dynamic>> _portfolioHistory = [];
@@ -54,7 +66,9 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _loadVisibility() async {
     final prefs = await SharedPreferences.getInstance();
-    if (mounted) setState(() => _saldoVisivel = prefs.getBool('balance_visible') ?? false);
+    if (mounted) {
+      setState(() => _saldoVisivel = prefs.getBool('balance_visible') ?? false);
+    }
   }
 
   Future<void> _saveVisibility(bool value) async {
@@ -94,6 +108,9 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _loadData() async {
+    // Recarrega todos os dados relevantes da tela em paralelo para reduzir
+    // latência: carteira, tokens do usuário, lista de startups e histórico
+    // do portfólio. Mantemos `_isLoading` enquanto as chamadas estão em curso.
     setState(() {
       _isLoading = true;
       _portfolioHistory = [];
@@ -108,12 +125,14 @@ class _HomePageState extends State<HomePage> {
 
     if (!mounted) return;
 
+    // Wallet data
     final wallet = results[0];
     if (wallet['success'] == true) {
       _saldo = wallet['saldo'] ?? 0.0;
       _totalTokens = wallet['totalTokens'] ?? 0;
     }
 
+    // Tokens do usuário — usamos isso para calcular o valor do portfólio
     final tokens = results[1];
     final Map<String, int> tokenMap = {};
     if (tokens['success'] == true) {
@@ -131,6 +150,8 @@ class _HomePageState extends State<HomePage> {
       }
     }
 
+    // Startups: filtramos localmente para mostrar apenas as que o usuário
+    // possui tokens (na seção "Meus investimentos").
     final startups = results[2];
     if (startups['success'] == true) {
       final lista = List<Map<String, dynamic>>.from(startups['data'] as List);
@@ -140,6 +161,7 @@ class _HomePageState extends State<HomePage> {
       _tokenMap = tokenMap;
     }
 
+    // Histórico do portfólio (pontos de retorno percentual) usado pelo gráfico
     final portfolioHistory = results[3];
     if (portfolioHistory['success'] == true) {
       _portfolioHistory = List<Map<String, dynamic>>.from(
@@ -156,40 +178,51 @@ class _HomePageState extends State<HomePage> {
       _meusInvestimentos.map((data) async {
         final id = data['id'] as String? ?? '';
         final url = await StorageService.getStartupAsset(
-          data['nome'] as String? ?? '', 'logoPhoto.jpeg');
+          data['nome'] as String? ?? '',
+          'logoPhoto.jpeg',
+        );
         return MapEntry(id, url);
       }),
     );
     if (!mounted) return;
+    // Mapeia id -> url para que as cards consigam requisitar a imagem
+    // sem acessar storage repetidamente.
     setState(() => _logoUrls = Map.fromEntries(entries));
   }
-
-
-
-
-
 
   List<Map<String, dynamic>> _portfolioHistoricoFiltrado() {
     if (_portfolioHistory.isEmpty) return [];
     final agora = DateTime.now();
-    DateTime? dataInicial;
-    switch (_selectedPeriodPortfolio) {
-      case 0: dataInicial = agora.subtract(const Duration(days: 7)); break;
-      case 1: dataInicial = agora.subtract(const Duration(days: 30)); break;
-      case 2: dataInicial = agora.subtract(const Duration(days: 180)); break;
-      case 3: dataInicial = DateTime(agora.year, 1, 1); break;
-      default: dataInicial = null;
-    }
+    final dataInicial = switch (_selectedPeriodPortfolio) {
+      0 => agora.subtract(const Duration(days: 7)),
+      1 => agora.subtract(const Duration(days: 30)),
+      2 => agora.subtract(const Duration(days: 180)),
+      3 => DateTime(agora.year, 1, 1),
+      _ => null,
+    };
     if (dataInicial == null) return _portfolioHistory;
     return _portfolioHistory.where((item) {
       final date = DateTime.tryParse(item['date']?.toString() ?? '');
       if (date == null) return false;
-      return date.isAfter(dataInicial!);
+      return date.isAfter(dataInicial);
     }).toList();
   }
 
   List<String> _labelsGraficoPortfolio() {
-    const meses = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+    const meses = [
+      'Jan',
+      'Fev',
+      'Mar',
+      'Abr',
+      'Mai',
+      'Jun',
+      'Jul',
+      'Ago',
+      'Set',
+      'Out',
+      'Nov',
+      'Dez',
+    ];
     return _portfolioHistoricoFiltrado().map((item) {
       final date = DateTime.tryParse(item['date']?.toString() ?? '');
       if (date == null) return '';
@@ -209,7 +242,8 @@ class _HomePageState extends State<HomePage> {
   Color _corGraficoPortfolio() {
     final filtrado = _portfolioHistoricoFiltrado();
     if (filtrado.length < 2) return AppColors.cinza400;
-    final primeiro = (filtrado.first['returnPercent'] as num?)?.toDouble() ?? 0.0;
+    final primeiro =
+        (filtrado.first['returnPercent'] as num?)?.toDouble() ?? 0.0;
     final ultimo = (filtrado.last['returnPercent'] as num?)?.toDouble() ?? 0.0;
     if (ultimo > primeiro) return AppColors.verde;
     if (ultimo < primeiro) return AppColors.vermelho;
@@ -220,9 +254,6 @@ class _HomePageState extends State<HomePage> {
     final sinal = valor > 0 ? '+' : '';
     return '$sinal${valor.toStringAsFixed(2)}%';
   }
-
-
-
 
   @override
   Widget build(BuildContext context) {
@@ -286,19 +317,20 @@ class _HomePageState extends State<HomePage> {
             ),
 
             if (!_isLoading) ...[
-            const SizedBox(height: 28),
+              const SizedBox(height: 28),
 
-            PortfolioChartSection(
-              pontos: _gerarPontosPercentuaisPortfolio(),
-              labels: _labelsGraficoPortfolio(),
-              cor: _corGraficoPortfolio(),
-              periods: _periodsPortfolio,
-              selectedPeriod: _selectedPeriodPortfolio,
-              onPeriodChanged: (i) => setState(() => _selectedPeriodPortfolio = i),
-              formatLabel: _formatarPercentualGrafico,
-              portfolioHistory: _portfolioHistory,
-            ),
-
+              PortfolioChartSection(
+                pontos: _gerarPontosPercentuaisPortfolio(),
+                labels: _labelsGraficoPortfolio(),
+                cor: _corGraficoPortfolio(),
+                periods: _periodsPortfolio,
+                selectedPeriod: _selectedPeriodPortfolio,
+                onPeriodChanged: (i) =>
+                    setState(() => _selectedPeriodPortfolio = i),
+                formatLabel: _formatarPercentualGrafico,
+                portfolioHistory: _portfolioHistory,
+                valorPortfolio: _valorPortfolio,
+              ),
             ], // end if (!_isLoading)
 
             const SizedBox(height: 28),
@@ -328,7 +360,11 @@ class _HomePageState extends State<HomePage> {
                 child: const Center(
                   child: Column(
                     children: [
-                      Icon(Icons.business_center_outlined, size: 32, color: AppColors.cinza300),
+                      Icon(
+                        Icons.business_center_outlined,
+                        size: 32,
+                        color: AppColors.cinza300,
+                      ),
                       SizedBox(height: 8),
                       Text(
                         'Você ainda não investiu em nenhuma startup',
@@ -378,6 +414,3 @@ class _HomePageState extends State<HomePage> {
     );
   }
 }
-
-
-

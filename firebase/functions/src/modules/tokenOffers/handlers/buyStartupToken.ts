@@ -6,7 +6,11 @@ import {buyStartupTokenDirectly} from
   "../repositories/startupPurchaseRepository";
 
 export const buyStartupToken = onCall(async (request)=>{
+  // Requer usuário autenticado.
   requireAuth(request.auth);
+
+  // Valida inputs do payload. `startupId` deve ser string e `quantity`
+  // deve ser inteiro positivo.
   const {startupId, quantity} = request.data?? {};
   if (!startupId || typeof startupId !== "string") {
     throw new HttpsError(
@@ -23,6 +27,9 @@ export const buyStartupToken = onCall(async (request)=>{
       "Quantidade inválida"
     );
   }
+
+  // Encaminha para o repositório que realiza a compra direta de tokens.
+  // O repositório deve tratar lógica de saldo, tokens disponíveis e atomicidade.
   const result = await buyStartupTokenDirectly({
     startupId,
     buyerId: request.auth.uid,

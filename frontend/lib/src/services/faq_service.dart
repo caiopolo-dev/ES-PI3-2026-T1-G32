@@ -43,7 +43,7 @@ class FaqService {
     required bool privada,
   }) async {
     try {
-      // O backend lê email e nome do token de autenticação — nunca do payload.
+     // O backend lê email e nome do token de autenticação — nunca do payload.
       await FirebaseFunctions.instance
           .httpsCallable('createFaq')
           .call({'startupId': startupId, 'pergunta': pergunta, 'privada': privada});

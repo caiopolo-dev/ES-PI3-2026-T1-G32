@@ -43,6 +43,12 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   Future<void> login() async {
+    // Fluxo de login:
+    // 1) Validação local via `validateLogin`.
+    // 2) Chamada a `AuthService.loginUser` para autenticar.
+    // 3) Tratamento de 2FA: `FirebaseAuthMultiFactorException` redireciona para
+    //    `TwoFactorVerifyPage` responsável por completar o fluxo.
+    // 4) Em sucesso, redireciona para `MainScaffold` removendo a pilha.
     if (validateLogin()) {
       setState(() => isLoading = true);
 
@@ -124,6 +130,7 @@ class _LoginPageState extends State<LoginPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.branco,
+      resizeToAvoidBottomInset: true,
       appBar: AppBar(
         backgroundColor: AppColors.branco,
         elevation: 0,
@@ -133,124 +140,122 @@ class _LoginPageState extends State<LoginPage> {
         ),
       ),
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 40),
-          child: Column(
-            children: [
-              Expanded(
-                child: Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      // Logo
-                      Center(
-                        child: SizedBox(
-                          width: 100,
-                          height: 100,
-                          child: Image.asset('assets/MesclaLogoPequena.png'),
-                        ),
-                      ),
+        child: SingleChildScrollView(
+          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 40),
+            child: Column(
+              children: [
+                SizedBox(height: MediaQuery.of(context).size.height * 0.08),
 
-                      const SizedBox(height: 40),
-
-                      // Título
-                      const Text(
-                        'Log-in',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 30,
-                          fontWeight: FontWeight.bold,
-                          fontFamily: 'JosefinSans',
-                        ),
-                      ),
-
-                      const SizedBox(height: 30),
-
-                      // email
-                      TextField(
-                        keyboardType: TextInputType.emailAddress,
-                        controller: emailController,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(fontFamily: 'JosefinSans', fontSize: 18),
-                        decoration: const InputDecoration(
-                          hintText: 'Digite seu email',
-                          hintStyle: TextStyle(color: AppColors.cinza400),
-                          enabledBorder: UnderlineInputBorder(
-                            borderSide: BorderSide(color: AppColors.cinza400),
-                          ),
-                          focusedBorder: UnderlineInputBorder(
-                            borderSide: BorderSide(color: AppColors.azul, width: 2),
-                          ),
-                        ),
-                      ),
-
-                      const SizedBox(height: 20),
-
-                      // Senha
-                      TextField(
-                        controller: passwordController,
-                        obscureText: true,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(fontFamily: 'JosefinSans', fontSize: 18),
-                        decoration: const InputDecoration(
-                          hintText: 'Digite sua senha',
-                          hintStyle: TextStyle(color: AppColors.cinza400),
-                          enabledBorder: UnderlineInputBorder(
-                            borderSide: BorderSide(color: AppColors.cinza400),
-                          ),
-                          focusedBorder: UnderlineInputBorder(
-                            borderSide: BorderSide(color: AppColors.azul, width: 2),
-                          ),
-                        ),
-                      ),
-
-                      const SizedBox(height: 20),
-
-                      // Erro
-                      if (errorText.isNotEmpty)
-                        Text(
-                          errorText,
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(color: AppColors.vermelho),
-                        ),
-                    ],
+                // Logo
+                Center(
+                  child: SizedBox(
+                    width: 100,
+                    height: 100,
+                    child: Image.asset('assets/MesclaLogoPequena.png'),
                   ),
                 ),
-              ),
 
-              // Botão Login
-              SizedBox(
-                width: 260,
-                child: AppPrimaryButton(
-                  label: 'Entrar',
-                  onPressed: login,
-                  isLoading: isLoading,
-                  elevated: true,
-                  verticalPadding: 14,
+                const SizedBox(height: 40),
+
+                // Título
+                const Text(
+                  'Log-in',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 30,
+                    fontWeight: FontWeight.bold,
+                    fontFamily: 'JosefinSans',
+                  ),
                 ),
-              ),
 
-              const SizedBox(height: 16),
+                const SizedBox(height: 30),
 
-              // Botão Recuperar Senha
-              SizedBox(
-                width: 200,
-                child: AppSecondaryButton(
-                  label: 'Recuperar senha',
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const PasswordRecoveryPage(),
-                      ),
-                    );
-                  },
-                  verticalPadding: 12,
+                // email
+                TextField(
+                  keyboardType: TextInputType.emailAddress,
+                  controller: emailController,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontFamily: 'JosefinSans', fontSize: 18),
+                  decoration: const InputDecoration(
+                    hintText: 'Digite seu email',
+                    hintStyle: TextStyle(color: AppColors.cinza400),
+                    enabledBorder: UnderlineInputBorder(
+                      borderSide: BorderSide(color: AppColors.cinza400),
+                    ),
+                    focusedBorder: UnderlineInputBorder(
+                      borderSide: BorderSide(color: AppColors.azul, width: 2),
+                    ),
+                  ),
                 ),
-              ),
 
-              const SizedBox(height: 60),
-            ],
+                const SizedBox(height: 20),
+
+                // Senha
+                TextField(
+                  controller: passwordController,
+                  obscureText: true,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontFamily: 'JosefinSans', fontSize: 18),
+                  decoration: const InputDecoration(
+                    hintText: 'Digite sua senha',
+                    hintStyle: TextStyle(color: AppColors.cinza400),
+                    enabledBorder: UnderlineInputBorder(
+                      borderSide: BorderSide(color: AppColors.cinza400),
+                    ),
+                    focusedBorder: UnderlineInputBorder(
+                      borderSide: BorderSide(color: AppColors.azul, width: 2),
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 20),
+
+                // Erro
+                if (errorText.isNotEmpty)
+                  Text(
+                    errorText,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(color: AppColors.vermelho),
+                  ),
+
+                const SizedBox(height: 40),
+
+                // Botão Login
+                SizedBox(
+                  width: 260,
+                  child: AppPrimaryButton(
+                    label: 'Entrar',
+                    onPressed: login,
+                    isLoading: isLoading,
+                    elevated: true,
+                    verticalPadding: 14,
+                  ),
+                ),
+
+                const SizedBox(height: 16),
+
+                // Botão Recuperar Senha
+                SizedBox(
+                  width: 200,
+                  child: AppSecondaryButton(
+                    label: 'Recuperar senha',
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const PasswordRecoveryPage(),
+                        ),
+                      );
+                    },
+                    verticalPadding: 12,
+                  ),
+                ),
+
+                SizedBox(height: MediaQuery.of(context).viewInsets.bottom + 24),
+              ],
+            ),
           ),
         ),
       ),

@@ -6,6 +6,11 @@
 import {onCall, HttpsError} from "firebase-functions/v2/https";
 import {getAuth} from "firebase-admin/auth";
 
+// Handler que verifica se um e-mail está cadastrado no Firebase Auth.
+// Propósito: permitir validação antes de iniciar fluxo de recuperação
+// de senha sem expor diretamente mensagens internas do Auth.
+// Comportamento: lança `HttpsError` com códigos apropriados para o cliente.
+
 export const checkUserExists = onCall(async (request) => {
   const {email} = request.data;
 

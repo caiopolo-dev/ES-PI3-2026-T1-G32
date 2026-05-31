@@ -4,6 +4,10 @@ import {onCall, HttpsError} from "firebase-functions/v2/https";
 import {getWalletDataByUserId} from "../repositories/walletRepository";
 import {requireAuth} from "../../../shared/validation";
 
+// Retorna saldo e resumo da carteira do usuário.
+// - Requer autenticação.
+// - Retorna dados agregados (saldo em centavos, resumo de posições, etc.).
+
 export const getWalletInfo = onCall(async (request) => {
   requireAuth(request.auth);
 

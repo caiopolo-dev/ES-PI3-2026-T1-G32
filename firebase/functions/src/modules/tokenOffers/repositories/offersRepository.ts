@@ -7,11 +7,9 @@ import {HttpsError} from "firebase-functions/v2/https";
 import {
   USERS, STARTUPS, TOKEN_OFFERS, TRANSACTIONS,
   WALLET, WALLET_SALDO, USER_TOKENS, PRICE_HISTORY,
-  OFFER_STATUS_OPEN, TX_TYPE_BUY, TX_SOURCE_OFFER,
+  TxType, TxSource,
 } from "../../../shared/collections";
-import {updateTodaySnapshot} from
-  "../../wallet/repositories/portfolioSnapshotRepository";
-import {FATOR_IMPACTO} from "../../../shared/tokenPricing";
+import {calcularNovoPreco} from "../../../shared/tokenPricing";
 
 import {
   BuyTokenOfferParams,
@@ -29,6 +27,10 @@ export async function listOffersBySeller(sellerId: string) {
     .where("sellerId", "==", sellerId)
     .get();
 
+  // Retorna apenas ofertas com status "open" do vendedor informado.
+  // Essa lista é formatada para o frontend: contém IDs, quantidades,
+  // preços em centavos e timestamps ISO. Não altera estado no banco.
+
   const offers: Array<{
     offerId: string;
     startupId: string;
@@ -40,8 +42,8 @@ export async function listOffersBySeller(sellerId: string) {
 
   snapshot.docs.forEach((doc) => {
     const data = doc.data();
-    const status = String(data.status ?? OFFER_STATUS_OPEN);
-    if (status !== OFFER_STATUS_OPEN) {
+    const status = String(data.status ?? "open");
+    if (status !== "open") {
       return;
     }
     offers.push({
@@ -75,8 +77,8 @@ export async function listAllOffers(excludeSellerId?: string) {
 
   snapshot.docs.forEach((doc) => {
     const data = doc.data();
-    const status = String(data.status ?? OFFER_STATUS_OPEN);
-    if (status !== OFFER_STATUS_OPEN) {
+    const status = String(data.status ?? "open");
+    if (status !== "open") {
       return;
     }
     const sellerId = data.sellerId as string;
@@ -128,8 +130,6 @@ export async function buyTokenOffer(
   // Created OUTSIDE runTransaction so retries reuse the same doc IDs
   const transactionRef = db.collection(TRANSACTIONS).doc();
 
-  let capturedSellerId: string | null = null;
-
   // Toda a operação é atômica: débito do comprador, crédito do vendedor,
   // atualização da oferta e registro da transação acontecem juntos ou falham.
   const result = await db.runTransaction(async (transaction) => {
@@ -137,6 +137,7 @@ export async function buyTokenOffer(
     const offerSnap = await transaction.get(offerRef);
 
 
+    // Verifica existência e integridade da oferta.
     if (!offerSnap.exists) {
       throw new HttpsError(
         "not-found",
@@ -153,8 +154,8 @@ export async function buyTokenOffer(
       );
     }
 
-    const status = String(offerData.status ?? OFFER_STATUS_OPEN);
-    if (status !== OFFER_STATUS_OPEN) {
+    const status = String(offerData.status ?? "open");
+    if (status !== "open") {
       throw new HttpsError(
         "failed-precondition",
         "Oferta não está ativa"
@@ -162,7 +163,6 @@ export async function buyTokenOffer(
     }
 
     const sellerId = offerData.sellerId;
-    capturedSellerId = sellerId as string;
     const startupId = offerData.startupId;
     const availableAmount = Number(offerData.amount ?? 0);
     const pricePerTokenCents = Number(
@@ -179,6 +179,7 @@ export async function buyTokenOffer(
     const startupRef = db.collection(STARTUPS).doc(startupId);
     const startupSnap = await transaction.get(startupRef);
 
+    // Proteção: usuário não pode comprar sua própria oferta.
     if (sellerId === buyerId) {
       throw new HttpsError(
         "failed-precondition",
@@ -214,6 +215,7 @@ export async function buyTokenOffer(
       );
     }
 
+    // Cálculo em centavos para evitar problemas com ponto flutuante.
     const totalCents = quantity * pricePerTokenCents;
 
     const buyerWalletRef = db
@@ -241,6 +243,7 @@ export async function buyTokenOffer(
     const buyerBalance = Number(buyerWalletSnap.data()?.saldo ?? 0);
     const sellerBalance = Number(sellerWalletSnap.data()?.saldo ?? 0);
 
+    // Valida saldo do comprador antes de efetuar débito.
     if (buyerBalance < totalCents) {
       throw new HttpsError(
         "failed-precondition",
@@ -277,6 +280,8 @@ export async function buyTokenOffer(
       });
     }
 
+    // Atualiza posição do comprador: calcula novo `precoMedio` ponderado
+    // entre posição anterior e nova compra, em centavos.
     const existingQty = Number(userTokenSnap.data()?.quantidade ?? 0);
     const existingPreco = Number(userTokenSnap.data()?.precoMedio ?? 0);
     const newQty = existingQty + quantity;
@@ -305,8 +310,7 @@ export async function buyTokenOffer(
     if (startupData) {
       const totalTokens = Number(startupData.totalTokens ?? 1000);
       const precoAtual = Number(startupData.precoToken ?? 0);
-      const impacto = (quantity / totalTokens) * FATOR_IMPACTO;
-      const novoPreco = Math.round(precoAtual * (1 + impacto));
+      const novoPreco = calcularNovoPreco(precoAtual, quantity, totalTokens, TxType.BUY);
       transaction.update(startupRef, {
         precoToken: novoPreco,
         precoTokenAnterior: precoAtual,
@@ -317,8 +321,8 @@ export async function buyTokenOffer(
         .collection(PRICE_HISTORY).doc();
       transaction.set(priceHistoryRef, {
         price: novoPreco,
-        type: TX_TYPE_BUY,
-        source: TX_SOURCE_OFFER,
+        type: TxType.BUY,
+        source: TxSource.OFFER,
         quantity,
         createdAt: FieldValue.serverTimestamp(),
       });
@@ -333,8 +337,8 @@ export async function buyTokenOffer(
       quantity,
       pricePerTokenCents,
       totalCents,
-      type: TX_TYPE_BUY,
-      source: TX_SOURCE_OFFER,
+      type: TxType.BUY,
+      source: TxSource.OFFER,
       createdAt: FieldValue.serverTimestamp(),
     });
 
@@ -349,15 +353,6 @@ export async function buyTokenOffer(
     };
   });
 
-  try {
-    await Promise.all([
-      updateTodaySnapshot(buyerId),
-      capturedSellerId ?
-        updateTodaySnapshot(capturedSellerId) : Promise.resolve(),
-    ]);
-  } catch (e) {
-    console.warn("updateTodaySnapshot failed (non-fatal):", e);
-  }
 
   return result;
 }

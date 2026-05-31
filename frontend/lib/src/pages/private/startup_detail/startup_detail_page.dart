@@ -44,25 +44,35 @@ class _StartupDetailPageState extends State<StartupDetailPage> {
   String? _videoUrl;
   String? _summaryUrl;
   PriceHistoryPeriod _selectedPeriod = PriceHistoryPeriod.sixMonths;
+  StartupDetailSection _selectedSection = StartupDetailSection.chart;
   List<Map<String, dynamic>> _faqs = [];
   bool _faqsLoading = false;
   FaqFilter _faqFilter = FaqFilter.todas;
   bool _priceHistoryLoading = false;
   double _valorizacaoPercentual = 0.0;
   List<Map<String, dynamic>> _priceHistory = [];
+  List<Map<String, dynamic>> _offers = [];
+  bool _offersLoading = false;
+  String? _offersError;
 
-  final List<String> _periods = ['1D', '7D', '1M', '6M', '1A', 'Tudo'];
+  final List<String> _periods = ['1D', '7D', '1M', '6M', 'YTD'];
   final List<String> _faqFilters = ['Todas', 'Públicas', 'Privadas'];
 
   @override
   void initState() {
     super.initState();
+    // Carregamento inicial coordenado:
+    // - `_initPage` busca metadados da startup e tokens do usuário em paralelo.
+    // - `_loadFaqs`, `_loadPriceHistory` e `_loadOffers` populam seções
+    //   específicas da página (FAQs, gráfico e ofertas).
     _initPage();
     _loadFaqs();
     _loadPriceHistory();
+    _loadOffers();
   }
 
   Future<void> _initPage() async {
+    // Busca startup e tokens em paralelo para reduzir latência.
     final results = await Future.wait([
       StartupService.getStartupById(widget.startupId),
       WalletService.getUserTokens(),
@@ -76,6 +86,7 @@ class _StartupDetailPageState extends State<StartupDetailPage> {
         : <Map<String, dynamic>>[];
     final match = tokens.where((t) => t['startupId'] == widget.startupId);
 
+    // Atualiza o estado com segurança após as chamadas assíncronas.
     setState(() {
       isLoading = false;
       if (startupResult['success'] as bool) {
@@ -95,6 +106,7 @@ class _StartupDetailPageState extends State<StartupDetailPage> {
   }
 
   Future<void> _loadStorageAssets(String nome) async {
+    // Baixa URLs de ativos (vídeo e sumário) em paralelo e grava no estado.
     final results = await Future.wait([
       StorageService.getStartupAsset(nome, 'video.mp4'),
       StorageService.getStartupAsset(nome, 'summary.pdf'),
@@ -107,15 +119,18 @@ class _StartupDetailPageState extends State<StartupDetailPage> {
   }
 
   Future<void> _loadPriceHistory() async {
+    // Carrega o histórico de preços e ordena por data crescente.
     setState(() => _priceHistoryLoading = true);
     final result = await StartupService.getPriceHistory(widget.startupId);
     if (!mounted) return;
     if (result['success'] == true) {
       final history = List<Map<String, dynamic>>.from(result['data'] ?? []);
       history.sort((a, b) {
-        final dateA = DateTime.tryParse(a['createdAt']?.toString() ?? '') ??
+        final dateA =
+            DateTime.tryParse(a['createdAt']?.toString() ?? '') ??
             DateTime.fromMillisecondsSinceEpoch(0);
-        final dateB = DateTime.tryParse(b['createdAt']?.toString() ?? '') ??
+        final dateB =
+            DateTime.tryParse(b['createdAt']?.toString() ?? '') ??
             DateTime.fromMillisecondsSinceEpoch(0);
         return dateA.compareTo(dateB);
       });
@@ -125,6 +140,40 @@ class _StartupDetailPageState extends State<StartupDetailPage> {
       });
     } else {
       setState(() => _priceHistoryLoading = false);
+    }
+  }
+
+  Future<void> _loadOffers() async {
+    // Lista ofertas do balcão e filtra apenas as válidas para esta startup.
+    if (!mounted) return;
+    setState(() {
+      _offersLoading = true;
+      _offersError = null;
+    });
+    final result = await WalletService.listOffers();
+    if (!mounted) return;
+    if (result['success'] == true) {
+      final list = (result['data'] as List? ?? [])
+          .map((e) => Map<String, dynamic>.from(e as Map))
+          .where((o) => (o['startupId'] ?? '').toString() == widget.startupId)
+          .where((o) {
+            final amount = (o['amount'] as num?)?.toInt() ?? 0;
+            final unitCents =
+                (o['valorUnitarioCentavos'] as num?)?.toInt() ?? 0;
+            final offerId = (o['offerId'] ?? '').toString();
+            return amount > 0 && unitCents > 0 && offerId.isNotEmpty;
+          })
+          .toList();
+      setState(() {
+        _offers = list;
+        _offersLoading = false;
+      });
+    } else {
+      setState(() {
+        _offersError =
+            result['message'] as String? ?? 'Erro ao carregar ofertas';
+        _offersLoading = false;
+      });
     }
   }
 
@@ -138,7 +187,9 @@ class _StartupDetailPageState extends State<StartupDetailPage> {
         : 0;
     setState(() {
       _userTokenQuantity = qty;
-      if (qty == 0 && _faqFilter == FaqFilter.privadas) _faqFilter = FaqFilter.todas;
+      if (qty == 0 && _faqFilter == FaqFilter.privadas) {
+        _faqFilter = FaqFilter.todas;
+      }
     });
   }
 
@@ -168,7 +219,21 @@ class _StartupDetailPageState extends State<StartupDetailPage> {
     }
   }
 
-  Future<void> _refresh() => Future.wait([_initPage(), _loadPriceHistory(), _loadFaqs()]);
+  Future<void> _refresh() => Future.wait([
+    _initPage(),
+    _loadPriceHistory(),
+    _loadFaqs(),
+    _loadOffers(),
+  ]);
+
+  void _handleOfferPurchase() {
+    _houvePurchase = true;
+    _loadUserTokens();
+    _loadFaqs();
+    _fetchDetail();
+    _loadPriceHistory();
+    _loadOffers();
+  }
 
   // O backend filtra FAQs privadas: o usuário só vê as próprias — as de outros são excluídas.
   Future<void> _loadFaqs() async {
@@ -186,7 +251,10 @@ class _StartupDetailPageState extends State<StartupDetailPage> {
   Future<void> _showFaqDialog() async {
     final result = await showDialog<FaqResult>(
       context: context,
-      builder: (_) => FaqDialog(startupId: widget.startupId, temTokens: _userTokenQuantity > 0),
+      builder: (_) => FaqDialog(
+        startupId: widget.startupId,
+        temTokens: _userTokenQuantity > 0,
+      ),
     );
     // addPostFrameCallback evita chamar setState durante a fase de build após o pop do dialog.
     if (result != null && mounted) {
@@ -216,16 +284,21 @@ class _StartupDetailPageState extends State<StartupDetailPage> {
     final pricePerTokenCents = (data['precoToken'] as num?)?.toInt() ?? 0;
     final availableQuantity = (data['tokensDisponiveis'] as num?)?.toInt() ?? 0;
 
+    // Validações rápidas antes de abrir o fluxo de compra:
+    // - Se não houver tokens disponíveis ou preço inválido mostramos snackbar
+    //   e impedimos a navegação.
     if (availableQuantity <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Essa startup não possui tokens disponíveis.')),
+        const SnackBar(
+          content: Text('Essa startup não possui tokens disponíveis.'),
+        ),
       );
       return;
     }
     if (pricePerTokenCents <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Preço do token inválido.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Preço do token inválido.')));
       return;
     }
 
@@ -264,7 +337,11 @@ class _StartupDetailPageState extends State<StartupDetailPage> {
         ),
         title: Text(
           startup?['nome'] as String? ?? widget.startupNome,
-          style: const TextStyle(color: AppColors.preto, fontSize: 22, fontWeight: FontWeight.w400),
+          style: const TextStyle(
+            color: AppColors.preto,
+            fontSize: 22,
+            fontWeight: FontWeight.w400,
+          ),
         ),
         centerTitle: true,
         actions: [
@@ -281,13 +358,18 @@ class _StartupDetailPageState extends State<StartupDetailPage> {
         mainAxisSize: MainAxisSize.min,
         children: [
           Row(
-            children: List.generate(5, (i) => Expanded(
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                height: 2.5,
-                color: widget.activeTabIndex == i ? AppColors.azul : AppColors.cinza200,
+            children: List.generate(
+              5,
+              (i) => Expanded(
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  height: 2.5,
+                  color: widget.activeTabIndex == i
+                      ? AppColors.azul
+                      : AppColors.cinza200,
+                ),
               ),
-            )),
+            ),
           ),
           BottomNavigationBar(
             type: BottomNavigationBarType.fixed,
@@ -301,11 +383,26 @@ class _StartupDetailPageState extends State<StartupDetailPage> {
               widget.onTabSwitch?.call(index);
             },
             items: const [
-              BottomNavigationBarItem(icon: Icon(Icons.home_outlined), label: 'Início'),
-              BottomNavigationBarItem(icon: Icon(Icons.store), label: 'Mercado'),
-              BottomNavigationBarItem(icon: Icon(Icons.list), label: 'Catálogo'),
-              BottomNavigationBarItem(icon: Icon(Icons.account_balance_wallet), label: 'Carteira'),
-              BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: 'Perfil'),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.home_outlined),
+                label: 'Início',
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.store),
+                label: 'Mercado',
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.list),
+                label: 'Catálogo',
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.account_balance_wallet),
+                label: 'Carteira',
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.person_outline),
+                label: 'Perfil',
+              ),
             ],
           ),
         ],
@@ -313,37 +410,48 @@ class _StartupDetailPageState extends State<StartupDetailPage> {
       body: isLoading
           ? const AppLoadingIndicator()
           : error != null
-              ? Center(child: Text('Erro: $error'))
-              : Column(
-                  children: [
-                    Expanded(
-                      child: StartupDetailContent(
-                        startup: startup!,
-                        priceHistoryLoading: _priceHistoryLoading,
-                        priceHistory: _priceHistory,
-                        selectedPeriod: _selectedPeriod,
-                        videoUrl: _videoUrl,
-                        summaryUrl: _summaryUrl,
-                        userTokenQuantity: _userTokenQuantity,
-                        faqsLoading: _faqsLoading,
-                        faqs: _faqs,
-                        faqFilter: _faqFilter,
-                        valorizacaoPercentual: _valorizacaoPercentual,
-                        periods: _periods,
-                        faqFilterLabels: _faqFilters,
-                        onFaqDialogOpen: _showFaqDialog,
-                        onPeriodChanged: (i) => setState(() => _selectedPeriod = PriceHistoryPeriod.values[i]),
-                        onFaqFilterChanged: (i) => setState(() => _faqFilter = FaqFilter.values[i]),
-                        onRefresh: _refresh,
-                      ),
+          ? Center(child: Text('Erro: $error'))
+          : Column(
+              children: [
+                Expanded(
+                  child: StartupDetailContent(
+                    startup: startup!,
+                    priceHistoryLoading: _priceHistoryLoading,
+                    priceHistory: _priceHistory,
+                    selectedPeriod: _selectedPeriod,
+                    selectedSection: _selectedSection,
+                    offers: _offers,
+                    offersLoading: _offersLoading,
+                    offersError: _offersError,
+                    videoUrl: _videoUrl,
+                    summaryUrl: _summaryUrl,
+                    userTokenQuantity: _userTokenQuantity,
+                    faqsLoading: _faqsLoading,
+                    faqs: _faqs,
+                    faqFilter: _faqFilter,
+                    valorizacaoPercentual: _valorizacaoPercentual,
+                    periods: _periods,
+                    faqFilterLabels: _faqFilters,
+                    onFaqDialogOpen: _showFaqDialog,
+                    onPeriodChanged: (i) => setState(
+                      () => _selectedPeriod = PriceHistoryPeriod.values[i],
                     ),
-                    BottomActionBar(
-                      onComprar: _openBuyStepsFromStartup,
-                      onVender: _openSellSteps,
-                      temTokens: _userTokenQuantity > 0,
-                    ),
-                  ],
+                    onFaqFilterChanged: (i) =>
+                        setState(() => _faqFilter = FaqFilter.values[i]),
+                    onSectionChanged: (section) =>
+                        setState(() => _selectedSection = section),
+                    onOffersRefresh: _loadOffers,
+                    onOfferPurchased: _handleOfferPurchase,
+                    onRefresh: _refresh,
+                  ),
                 ),
+                BottomActionBar(
+                  onComprar: _openBuyStepsFromStartup,
+                  onVender: _openSellSteps,
+                  temTokens: _userTokenQuantity > 0,
+                ),
+              ],
+            ),
     );
   }
 }

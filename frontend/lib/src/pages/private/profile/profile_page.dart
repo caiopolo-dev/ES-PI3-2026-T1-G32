@@ -21,6 +21,10 @@ class ProfilePage extends StatefulWidget {
   State<ProfilePage> createState() => _ProfilePageState();
 }
 
+/// Página de perfil do usuário. Entre as responsabilidades desta tela:
+/// - Exibir informações públicas da conta (nome, email, telefone)
+/// - Mostrar e controlar o estado da autenticação de dois fatores (2FA)
+/// - Permitir logout e persistir preferências locais (ex: visibilidade do saldo)
 class _ProfilePageState extends State<ProfilePage> {
   bool _twoFactorEnabled = false;
 
@@ -55,6 +59,13 @@ class _ProfilePageState extends State<ProfilePage> {
     }
   }
 
+  // Nota sobre segurança e UX:
+  // - A checagem é feita client-side contra o SDK do Firebase porque o
+  //   próprio Firebase já mantém a lista de fatores no token local; isso
+  //   evita uma chamada remota extra e torna a UI mais responsiva.
+  // - Em casos onde a informação estiver inconsistente, o fallback é mostrar
+  //   o toggle como desativado, evitando expor estados inseguros.
+
   // Faz logout e retorna para a tela inicial, limpando toda a pilha de navegação.
   Future<void> _logout() async {
     final prefs = await SharedPreferences.getInstance();
@@ -68,6 +79,12 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
+  // O toggle de 2FA no UI faz duas coisas dependendo da direção:
+  // - Ativar (value == true): navega para `TwoFactorSetupPage` e espera um
+  //   retorno `true` para confirmar a ativação antes de atualizar o estado.
+  // - Desativar (value == false): por segurança, não permite desativação
+  //   direta no cliente; instrui o usuário a contatar o suporte.
+
   @override
   Widget build(BuildContext context) {
     final usuario = widget.usuario ?? {};
@@ -75,6 +92,10 @@ class _ProfilePageState extends State<ProfilePage> {
     final email = usuario['email'] as String? ?? '—';
     final telefone = usuario['telefone'] as String? ?? '—';
 
+    // O layout principal exibe avatar, informações da conta e o bloco de
+    // segurança onde o usuário pode ativar o 2FA. A ativação redireciona
+    // para `TwoFactorSetupPage` e o toggle só é atualizado se o fluxo
+    // retornar sucesso.
     return Scaffold(
       backgroundColor: AppColors.branco,
       appBar: AppBar(
@@ -231,6 +252,8 @@ class _InfoTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Widget simples reutilizável para mostrar par label/value na tela de
+    // perfil, com ícone à esquerda. Mantém espaçamento e estilo padronizados.
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),

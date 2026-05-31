@@ -13,5 +13,5 @@ export {listOffers, listMyOffers, buyOffer, buyStartupToken, createSellOffer,
   cancelOffer}
   from "./modules/tokenOffers";
 export {getWalletInfo, getTransactionHistory, getUserTokens, addBalance,
-  getPortfolioHistory, dailyPortfolioSnapshot}
+  getPortfolioHistory, dailyPortfolioSnapshot, onStartupPriceChange}
   from "./modules/wallet";

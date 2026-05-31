@@ -22,6 +22,16 @@ class InitialCatalogPage extends StatefulWidget {
   State<InitialCatalogPage> createState() => _InitialCatalogPageState();
 }
 
+/// Estado da página de catálogo. Responsável por:
+/// - Buscar a lista de startups via `StartupService`
+/// - Buscar tokens do usuário via `WalletService` e mapear quantidades
+/// - Carregar URLs de banner via `StorageService` (cache local por id)
+/// - Aplicar filtros locais (texto e somente investidas)
+///
+/// Observações importantes:
+/// - Usa `_requestId` para proteger contra race conditions quando o
+///   usuário altera o filtro rapidamente (apenas a resposta mais recente
+///   é aplicada)
 class _InitialCatalogPageState extends State<InitialCatalogPage> {
   int selectedFilter = 0;
   List<Map<String, dynamic>> startups = [];
@@ -75,6 +85,10 @@ class _InitialCatalogPageState extends State<InitialCatalogPage> {
         includeDailyVariation: true,
       ),
       WalletService.getUserTokens(),
+
+  /// Carrega as URLs de banner para cada startup consultando `StorageService`.
+  /// Executa em paralelo via `Future.wait` e mapeia por `id` para acesso
+  /// rápido pelo `StartupCard` na listagem.
     ]);
 
     if (requestId != _requestId) return;

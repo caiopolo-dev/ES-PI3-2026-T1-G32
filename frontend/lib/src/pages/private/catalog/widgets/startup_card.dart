@@ -20,6 +20,8 @@ const Map<String, Color> estagioColors = {
 };
 
 class StartupCard extends StatelessWidget {
+  static final _fmt = NumberFormat.currency(locale: 'pt_BR', symbol: 'R\$');
+
   final String nome;
   final String setor;
   final String estagio;
@@ -43,7 +45,16 @@ class StartupCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final fmt = NumberFormat.currency(locale: 'pt_BR', symbol: 'R\$');
+    // O `StartupCard` é responsável por apresentar informações resumidas
+    // da startup no catálogo, incluindo preço atual, variação diária,
+    // estágio (com cor) e se o usuário possui tokens.
+    //
+    // Estratégia de cor/variação:
+    // - Se não houver `fechamentoOntem` (<= 0) exibimos o preço em preto
+    //   sem badge de variação.
+    // - Caso exista valor anterior calculamos `variacaoPct` em porcentagem
+    //   e definimos `precoColor` conforme positivo (verde), negativo
+    //   (vermelho) ou neutro (cinza).
     final accentColor = estagioColors[estagio] ?? AppColors.azul;
     final Color precoColor;
     final double? variacaoPct;
@@ -56,8 +67,8 @@ class StartupCard extends StatelessWidget {
       precoColor = variacaoPct > 0
           ? AppColors.verde
           : variacaoPct < 0
-              ? AppColors.vermelho
-              : AppColors.cinza500;
+          ? AppColors.vermelho
+          : AppColors.cinza500;
     }
 
     final estagioChip = Container(
@@ -67,6 +78,7 @@ class StartupCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(6),
       ),
       child: Text(
+        // Rótulo legível para o estágio (ex: 'Nova', 'Em Operação').
         estagioLabels[estagio] ?? estagio,
         style: TextStyle(
           fontFamily: 'JosefinSans',
@@ -96,14 +108,9 @@ class StartupCard extends StatelessWidget {
                   width: double.infinity,
                   child: logoUrl != null
                       ? Image.network(logoUrl!, fit: BoxFit.cover)
-                      : Container(
-                          color: accentColor.withValues(alpha: 0.08)),
+                      : Container(color: accentColor.withValues(alpha: 0.08)),
                 ),
-                Positioned(
-                  top: 10,
-                  right: 10,
-                  child: estagioChip,
-                ),
+                Positioned(top: 10, right: 10, child: estagioChip),
               ],
             ),
             Padding(
@@ -142,7 +149,7 @@ class StartupCard extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
                           Text(
-                            fmt.format(precoToken),
+                            _fmt.format(precoToken),
                             style: TextStyle(
                               fontFamily: 'JosefinSans',
                               fontSize: 14,
@@ -175,7 +182,9 @@ class StartupCard extends StatelessWidget {
                     children: [
                       Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 4),
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
                           color: AppColors.azul.withValues(alpha: 0.08),
                           borderRadius: BorderRadius.circular(20),
@@ -183,8 +192,11 @@ class StartupCard extends StatelessWidget {
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Icon(Icons.toll_outlined,
-                                size: 13, color: AppColors.azul),
+                            const Icon(
+                              Icons.toll_outlined,
+                              size: 13,
+                              color: AppColors.azul,
+                            ),
                             const SizedBox(width: 4),
                             Text(
                               '${NumberFormat('#,##0', 'pt_BR').format(totalTokens)} tokens',
@@ -198,12 +210,13 @@ class StartupCard extends StatelessWidget {
                           ],
                         ),
                       ),
-                      if (quantidadeToken != null &&
-                          quantidadeToken! > 0) ...[
+                      if (quantidadeToken != null && quantidadeToken! > 0) ...[
                         const Spacer(),
                         Container(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 10, vertical: 4),
+                            horizontal: 10,
+                            vertical: 4,
+                          ),
                           decoration: BoxDecoration(
                             color: AppColors.verde.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(20),
@@ -211,8 +224,11 @@ class StartupCard extends StatelessWidget {
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Icon(Icons.check_circle_outline,
-                                  size: 13, color: AppColors.verde),
+                              const Icon(
+                                Icons.check_circle_outline,
+                                size: 13,
+                                color: AppColors.verde,
+                              ),
                               const SizedBox(width: 4),
                               Text(
                                 'Você tem $quantidadeToken',

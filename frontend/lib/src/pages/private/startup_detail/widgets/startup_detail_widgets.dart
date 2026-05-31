@@ -98,42 +98,94 @@ class PriceRow extends StatelessWidget {
 class TokensInfo extends StatelessWidget {
   final int totalTokens;
   final int tokensDisponiveis;
-  const TokensInfo({super.key, required this.totalTokens, required this.tokensDisponiveis});
+  final int? tokensBalcao;
+
+  const TokensInfo({
+    super.key,
+    required this.totalTokens,
+    required this.tokensDisponiveis,
+    this.tokensBalcao,
+  });
 
   @override
-  Widget build(BuildContext context) => IntrinsicHeight(
-        child: Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Tokens em circulação', style: TextStyle(fontSize: 14, color: AppColors.cinza700)),
-                  const SizedBox(height: 4),
-                  Text(
-                    NumberFormat('#,##0', 'pt_BR').format(totalTokens),
-                    style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-                  ),
-                ],
-              ),
-            ),
-            VerticalDivider(color: AppColors.cinza300, thickness: 1, width: 32),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text('Tokens disponíveis', style: TextStyle(fontSize: 14, color: AppColors.cinza700)),
-                  const SizedBox(height: 4),
-                  Text(
-                    NumberFormat('#,##0', 'pt_BR').format(tokensDisponiveis),
-                    style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
+  Widget build(BuildContext context) {
+    final hasTokensBalcao = (tokensBalcao ?? 0) > 0;
+
+    Widget buildInfo({
+      required String label,
+      required int value,
+      required CrossAxisAlignment crossAxisAlignment,
+      required TextAlign textAlign,
+    }) {
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: crossAxisAlignment,
+        children: [
+          Text(
+            label,
+            textAlign: textAlign,
+            style: TextStyle(fontSize: 14, color: AppColors.cinza700),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            NumberFormat('#,##0', 'pt_BR').format(value),
+            textAlign: textAlign,
+            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+          ),
+        ],
       );
+    }
+
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Expanded(
+            child: Center(
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: buildInfo(
+                  label: 'Tokens em circulação',
+                  value: totalTokens,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  textAlign: TextAlign.start,
+                ),
+              ),
+            ),
+          ),
+          VerticalDivider(color: AppColors.cinza300, thickness: 1, width: 32),
+          Expanded(
+            child: Center(
+              child: Align(
+                alignment: Alignment.centerRight,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    buildInfo(
+                      label: 'Tokens disponíveis',
+                      value: tokensDisponiveis,
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      textAlign: TextAlign.end,
+                    ),
+                    if (hasTokensBalcao) ...[
+                      const SizedBox(height: 12),
+                      buildInfo(
+                        label: 'Tokens disponiveis no balcao',
+                        value: tokensBalcao!,
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        textAlign: TextAlign.end,
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class BottomActionBar extends StatelessWidget {

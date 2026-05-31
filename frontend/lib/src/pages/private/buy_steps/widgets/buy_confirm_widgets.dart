@@ -8,6 +8,16 @@ import 'package:mescla_invest/src/utils/currency_formatter.dart';
 import 'package:mescla_invest/src/widgets/widgets.dart';
 import 'package:mescla_invest/src/pages/private/buy_steps/widgets/buy_steps_widgets.dart';
 
+/// Widget de revisão/confirmação (passo 1) antes de executar a compra/venda.
+///
+/// Mostra:
+/// - `startupName` e quantidade selecionada
+/// - Preço efetivo por token (usa `sellPriceCents` para venda ou
+///   `pricePerTokenCents` para compra)
+/// - Total a pagar/receber e, no caso de compra, o saldo restante estimado
+///
+/// Recebe `onConfirm` para disparar a ação final e `isLoading` para
+/// indicar estado de aguardando resposta.
 class BuyStepConfirm extends StatelessWidget {
   final String startupName;
   final bool isSellMode;
@@ -36,6 +46,9 @@ class BuyStepConfirm extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Define o preço efetivo usado na revisão: em vendas o usuário pode
+    // ter alterado o preço (`sellPriceCents`), enquanto em compra usa-se
+    // o preço da oferta/startup (`pricePerTokenCents`).
     final effectivePrice = isSellMode ? sellPriceCents : pricePerTokenCents;
     return Column(
       children: [
@@ -93,6 +106,10 @@ class BuyStepConfirm extends StatelessWidget {
                         color: AppColors.cinza500,
                       ),
                     ),
+                    // Calcula o saldo estimado após a compra. Usa `clamp` para
+                    // evitar valores negativos no texto, porém a cor indica
+                    // saldo insuficiente quando `walletBalance - totalCents` é
+                    // negativo.
                     Text(
                       CurrencyFormatter.formatCents(
                           (walletBalance - totalCents).clamp(0, walletBalance)),
@@ -128,6 +145,9 @@ class BuyStepConfirm extends StatelessWidget {
 }
 
 class BuyStepSuccess extends StatelessWidget {
+  /// Tela exibida quando a operação foi concluída com sucesso.
+  /// Mostra um ícone simbólico, mensagem baseada no tipo (venda/compra)
+  /// e um botão para concluir (fechar/retornar ao fluxo anterior).
   final bool isSellMode;
   final VoidCallback onConcluir;
 

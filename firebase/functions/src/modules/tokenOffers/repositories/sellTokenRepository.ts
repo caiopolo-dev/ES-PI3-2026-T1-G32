@@ -6,11 +6,9 @@ import {HttpsError} from "firebase-functions/v2/https";
 import {db} from "../../../shared/firebase";
 import {
   USERS, STARTUPS, TOKEN_OFFERS, USER_TOKENS, PRICE_HISTORY,
-  OFFER_STATUS_OPEN, TX_TYPE_SELL, TX_SOURCE_SELL_OFFER,
+  TxType, TxSource,
 } from "../../../shared/collections";
-import {updateTodaySnapshot} from
-  "../../wallet/repositories/portfolioSnapshotRepository";
-import {FATOR_IMPACTO} from "../../../shared/tokenPricing";
+import {calcularNovoPreco} from "../../../shared/tokenPricing";
 import {
   CreateSellOfferParams,
   CreateSellOfferResult,
@@ -25,6 +23,14 @@ export async function createSellOffer(
   params: CreateSellOfferParams
 ): Promise<CreateSellOfferResult> {
   const {startupId, sellerId, quantity, pricePerTokenCents} = params;
+
+  // Cria uma oferta de venda bloqueando tokens do vendedor.
+  // Observações:
+  // - Executado em transação para garantir que a remoção/atualização da
+  //   posição do usuário e a criação da oferta sejam atômicas.
+  // - `pricePerTokenCents` é expressado em centavos (inteiro).
+  // - O repositório valida existência da startup, saldo de tokens e
+  //   atualiza histórico de preço da startup (impacto de oferta).
 
   const result = await db.runTransaction(async (transaction) => {
     const startupRef = db.collection(STARTUPS).doc(startupId);
@@ -91,7 +97,7 @@ export async function createSellOffer(
       valorUnitarioCentavos: pricePerTokenCents,
       precoMedio,
       valorAtual,
-      status: OFFER_STATUS_OPEN,
+      status: "open",
       createdAt: FieldValue.serverTimestamp(),
       updatedAt: FieldValue.serverTimestamp(),
     });
@@ -99,8 +105,7 @@ export async function createSellOffer(
     // Oferta de venda aumenta a oferta disponível → pressão de baixa no preço
     const totalTokens = Number(startupData.totalTokens ?? 1000);
     const precoAtual = Number(startupData.precoToken ?? 100);
-    const impacto = (quantity / totalTokens) * FATOR_IMPACTO;
-    const novoPreco = Math.max(1, Math.round(precoAtual * (1 - impacto)));
+    const novoPreco = calcularNovoPreco(precoAtual, quantity, totalTokens, TxType.SELL);
     transaction.update(startupRef, {
       precoToken: novoPreco,
       precoTokenAnterior: precoAtual,
@@ -111,8 +116,8 @@ export async function createSellOffer(
       .collection(PRICE_HISTORY).doc();
     transaction.set(priceHistoryRef, {
       price: novoPreco,
-      type: TX_TYPE_SELL,
-      source: TX_SOURCE_SELL_OFFER,
+      type: TxType.SELL,
+      source: TxSource.SELL_OFFER,
       quantity,
       createdAt: FieldValue.serverTimestamp(),
     });
@@ -126,11 +131,6 @@ export async function createSellOffer(
     };
   });
 
-  try {
-    await updateTodaySnapshot(sellerId);
-  } catch (e) {
-    console.warn("updateTodaySnapshot failed (non-fatal):", e);
-  }
 
   return result;
 }

@@ -11,25 +11,59 @@ class OfferCard extends StatelessWidget {
   final NumberFormat currency;
   final VoidCallback onTap;
   final String? logoUrl;
+  final bool showLogo;
 
-  const OfferCard({super.key, required this.data, required this.currency, required this.onTap, this.logoUrl});
+  const OfferCard({
+    super.key,
+    required this.data,
+    required this.currency,
+    required this.onTap,
+    this.logoUrl,
+    this.showLogo = true,
+  });
+
+  /// Card que representa uma oferta pública no balcão de negociação.
+  ///
+  /// Responsabilidades principais:
+  /// - Exibir nome da startup (ou ID), quantidade disponível e preço por token.
+  /// - Indicar diferença em relação ao preço de mercado quando disponível
+  ///   (com cores/ícones para cima/baixo).
+  /// - Opcionalmente mostrar a logo quando `logoUrl` estiver presente e
+  ///   `showLogo` for `true`.
+  ///
+  /// Observação: a ação de tocar no card é delegada pelo `onTap` recebido
+  /// pelo construtor — normalmente isto navega para o fluxo de compra.
 
   @override
   Widget build(BuildContext context) {
+    // Normalização dos campos recebidos no `data` map. Usamos valores
+    // padrão defensivos (fallbacks) para evitar crashes por campos ausentes.
     final name = (data['startupName'] ?? data['startupId'] ?? '—').toString();
     final amount = (data['amount'] as num?)?.toInt() ?? 0;
+
+    // `valorUnitarioCentavos` armazena preço em centavos (inteiro).
+    // Convertendo para `double` e depois para reais dividindo por 100.
     final centavos = (data['valorUnitarioCentavos'] as num?)?.toDouble() ?? 0;
     final preco = centavos / 100;
+
+    // Preço de referência de mercado (quando disponível) também vem em centavos.
     final mercadoCentavos = (data['precoMercadoCentavos'] as num?)?.toDouble() ?? 0;
+
+    // Flags derivadas usadas para mostrar indicadores visuais:
+    // - `temMercado`: existe preço de mercado válido
+    // - `abaixo`: oferta está abaixo do preço de mercado (bom para comprador)
+    // - `acima`: oferta está acima do preço de mercado
     final temMercado = mercadoCentavos > 0;
     final abaixo = temMercado && centavos < mercadoCentavos;
     final acima = temMercado && centavos > mercadoCentavos;
 
+    // Cor de destaque do card: vermelho quando acima do mercado, verde caso contrário.
     final accentColor = acima ? AppColors.vermelho : AppColors.verde;
 
+    // Diferença percentual absoluta entre oferta e mercado — mostrada como badge.
     final double diffPct = temMercado && mercadoCentavos > 0
-        ? ((centavos - mercadoCentavos) / mercadoCentavos * 100).abs()
-        : 0;
+      ? ((centavos - mercadoCentavos) / mercadoCentavos * 100).abs()
+      : 0;
 
     return GestureDetector(
       onTap: onTap,
@@ -46,6 +80,8 @@ class OfferCard extends StatelessWidget {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                // Barra lateral colorida indicando se a oferta está acima/abaixo
+                // do preço de mercado (ou verde por padrão).
                 Container(width: 5, color: accentColor),
                 Expanded(
                   child: Padding(
@@ -55,15 +91,19 @@ class OfferCard extends StatelessWidget {
                       children: [
                         Row(
                           children: [
-                            CircleAvatar(
-                              radius: 22,
-                              backgroundColor: accentColor.withValues(alpha: 0.1),
-                              backgroundImage: logoUrl != null ? NetworkImage(logoUrl!) : null,
-                              child: logoUrl == null
-                                  ? Icon(Icons.business, color: accentColor, size: 20)
-                                  : null,
-                            ),
-                            const SizedBox(width: 12),
+                            // Avatar da startup: mostra a `logoUrl` quando disponível
+                            // e um ícone placeholder quando não houver logo.
+                            if (showLogo) ...[
+                              CircleAvatar(
+                                radius: 22,
+                                backgroundColor: accentColor.withValues(alpha: 0.1),
+                                backgroundImage: logoUrl != null ? NetworkImage(logoUrl!) : null,
+                                child: logoUrl == null
+                                    ? Icon(Icons.business, color: accentColor, size: 20)
+                                    : null,
+                              ),
+                              const SizedBox(width: 12),
+                            ],
                             Expanded(
                               child: Text(
                                 name,
@@ -140,6 +180,8 @@ class OfferCard extends StatelessWidget {
                             ),
 
                             if (temMercado)
+                              // Badge que mostra o preço de mercado e a diferença
+                              // percentual entre a oferta atual e esse preço.
                               Row(
                                 children: [
                                   Text(
@@ -157,6 +199,9 @@ class OfferCard extends StatelessWidget {
                                       color: accentColor.withValues(alpha: 0.12),
                                       borderRadius: BorderRadius.circular(6),
                                     ),
+                                    // Quando não há diferença (diffPct == 0) mostramos
+                                    // o texto "No mercado"; caso contrário mostramos
+                                    // a seta e o percentual formatado.
                                     child: !temMercado || diffPct == 0
                                         ? Text(
                                             'No mercado',

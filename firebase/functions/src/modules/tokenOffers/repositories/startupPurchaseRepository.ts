@@ -11,11 +11,9 @@ import {
   WALLET_SALDO,
   USER_TOKENS,
   PRICE_HISTORY,
-  TX_TYPE_BUY, TX_SOURCE_STARTUP,
+  TxType, TxSource,
 } from "../../../shared/collections";
-import {updateTodaySnapshot} from
-  "../../wallet/repositories/portfolioSnapshotRepository";
-import {FATOR_IMPACTO} from "../../../shared/tokenPricing";
+import {calcularNovoPreco} from "../../../shared/tokenPricing";
 
 /**
  * @param {object} params Dados necessários para realizar a compra.
@@ -55,6 +53,7 @@ export async function buyStartupTokenDirectly(params: {
     const buyerWalletSnap = await transaction.get(buyerWalletRef);
     const userTokenSnap = await transaction.get(userTokenRef);
 
+    // Valida existência da startup e dados necessários para compra direta.
     if (!startupSnap.exists) {
       throw new HttpsError(
         "not-found",
@@ -73,6 +72,7 @@ export async function buyStartupTokenDirectly(params: {
 
 
     const startupName = String(startupData.nome ?? startupId);
+    // Preço da startup é armazenado em centavos (inteiro).
     const pricePerTokenCents = Number(startupData.precoToken ?? 0);
     const availableTokens = Number(startupData.tokensDisponiveis ?? 0);
 
@@ -96,6 +96,7 @@ export async function buyStartupTokenDirectly(params: {
         "Quantidade maior que a disponível"
       );
     }
+    // Calcula total em centavos para evitar imprecisão de ponto flutuante.
     const totalCents = quantity * pricePerTokenCents;
     const buyerBalance = Number(buyerWalletSnap.data()?.saldo ?? 0);
 
@@ -108,6 +109,7 @@ export async function buyStartupTokenDirectly(params: {
     const newBuyerBalance = buyerBalance - totalCents;
     const newAvailableTokens = availableTokens - quantity;
 
+    // Atualiza posição do comprador: recalcula `precoMedio` ponderado em centavos.
     const existingQty = Number(userTokenSnap.data()?.quantidade ?? 0);
     const existingPreco = Number(userTokenSnap.data()?.precoMedio ?? 0);
     const newQty = existingQty + quantity;
@@ -132,8 +134,7 @@ export async function buyStartupTokenDirectly(params: {
     );
 
     const totalTokens = Number(startupData.totalTokens ?? 1000);
-    const impacto = (quantity / totalTokens) * FATOR_IMPACTO;
-    const novoPreco = Math.round(pricePerTokenCents * (1 + impacto));
+    const novoPreco = calcularNovoPreco(pricePerTokenCents, quantity, totalTokens, TxType.BUY);
 
     transaction.update(startupRef, {
       tokensDisponiveis: newAvailableTokens,
@@ -144,8 +145,8 @@ export async function buyStartupTokenDirectly(params: {
 
     transaction.set(priceHistoryRef, {
       price: novoPreco,
-      type: TX_TYPE_BUY,
-      source: TX_SOURCE_STARTUP,
+      type: TxType.BUY,
+      source: TxSource.STARTUP,
       quantity,
       createdAt: FieldValue.serverTimestamp(),
     });
@@ -172,8 +173,8 @@ export async function buyStartupTokenDirectly(params: {
       quantity,
       pricePerTokenCents,
       totalCents,
-      type: TX_TYPE_BUY,
-      source: TX_SOURCE_STARTUP,
+      type: TxType.BUY,
+      source: TxSource.STARTUP,
       createdAt: FieldValue.serverTimestamp(),
     });
 
@@ -188,11 +189,6 @@ export async function buyStartupTokenDirectly(params: {
     };
   });
 
-  try {
-    await updateTodaySnapshot(buyerId);
-  } catch (e) {
-    console.warn("updateTodaySnapshot failed (non-fatal):", e);
-  }
 
   return result;
 }
